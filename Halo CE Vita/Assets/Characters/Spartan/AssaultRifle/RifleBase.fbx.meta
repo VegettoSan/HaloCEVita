@@ -1,0 +1,163 @@
+fileFormatVersion: 2
+guid: fef9d7318ce96294bb0bc79cdde65693
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: __unnamed
+    100002: _flashlight
+    100004: _left_hand_cyborg
+    100006: _left_hand_marine
+    100008: _primary_ejection
+    100010: _primary_trigger
+    100012: _smoke
+    100014: frame_display
+    100016: frame_gun
+    100018: frame_magazine
+    100020: frame_ophandle
+    100022: frame_safety_button
+    100024: Piel
+    100026: Piel_2
+    100028: Piel_2_2
+    100030: //RootNode
+    400000: __unnamed
+    400002: _flashlight
+    400004: _left_hand_cyborg
+    400006: _left_hand_marine
+    400008: _primary_ejection
+    400010: _primary_trigger
+    400012: _smoke
+    400014: frame_display
+    400016: frame_gun
+    400018: frame_magazine
+    400020: frame_ophandle
+    400022: frame_safety_button
+    400024: Piel
+    400026: Piel_2
+    400028: Piel_2_2
+    400030: //RootNode
+    2100000: No Name
+    2100002: Mat
+    2300000: _flashlight
+    2300002: _left_hand_cyborg
+    2300004: _left_hand_marine
+    2300006: _primary_ejection
+    2300008: _primary_trigger
+    2300010: _smoke
+    2300012: frame_display
+    2300014: frame_gun
+    2300016: frame_magazine
+    2300018: frame_ophandle
+    2300020: frame_safety_button
+    3300000: _flashlight
+    3300002: _left_hand_cyborg
+    3300004: _left_hand_marine
+    3300006: _primary_ejection
+    3300008: _primary_trigger
+    3300010: _smoke
+    3300012: frame_display
+    3300014: frame_gun
+    3300016: frame_magazine
+    3300018: frame_ophandle
+    3300020: frame_safety_button
+    4300000: frame_gun
+    4300002: frame_display
+    4300004: frame_magazine
+    4300006: frame_ophandle
+    4300008: frame_safety_button
+    4300010: _flashlight
+    4300012: _left_hand_cyborg
+    4300014: _left_hand_marine
+    4300016: _primary_ejection
+    4300018: _primary_trigger
+    4300020: _smoke
+    4300022: __unnamed
+    9500000: //RootNode
+    13700000: __unnamed
+    2186277476908879412: ImportLogs
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: gun
+    second: {fileID: 2100000, guid: 4d3a788e702498a47ae766c6a857c636, type: 2}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 0
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 0.0254
+    hasPreviousCalculatedGlobalScale: 1
+  tangentSpace:
+    normalSmoothAngle: 180
+    normalImportMode: 1
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

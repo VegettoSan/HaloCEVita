@@ -1,0 +1,211 @@
+fileFormatVersion: 2
+guid: 1ed353083f03aa344baa59e3182f9ea9
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: //RootNode
+    100002: Clusters_000
+    100004: Clusters_001
+    100006: Clusters_002
+    100008: Clusters_003
+    100010: Clusters_004
+    100012: Clusters_005
+    100014: Clusters_006
+    100016: Clusters_007
+    100018: Clusters_008
+    100020: Clusters_009
+    100022: Clusters_010
+    100024: Clusters_011
+    100026: Clusters_012
+    100028: Clusters_013
+    100030: Clusters_014
+    100032: Clusters_015
+    400000: //RootNode
+    400002: Clusters_000
+    400004: Clusters_001
+    400006: Clusters_002
+    400008: Clusters_003
+    400010: Clusters_004
+    400012: Clusters_005
+    400014: Clusters_006
+    400016: Clusters_007
+    400018: Clusters_008
+    400020: Clusters_009
+    400022: Clusters_010
+    400024: Clusters_011
+    400026: Clusters_012
+    400028: Clusters_013
+    400030: Clusters_014
+    400032: Clusters_015
+    2100000: cap_cliff01b
+    2100002: beavercreek boulder
+    2100004: cap_cliff01b.1
+    2100006: blood ground
+    2100008: cap_cliff01b.2
+    2100010: cap_cliff01b.3
+    2100012: cap_cliff01b.4
+    2100014: cap_cliff01b.5
+    2100016: cap_cliff01b.6
+    2100018: metal flat generic
+    2100020: metal panels generic ext clean
+    2100022: metal panels generic ext
+    2100024: cap_metal
+    2100026: metal flat generic.1
+    2100028: metal panels generic ext clean.1
+    2100030: metal panels generic ext.1
+    2100032: cap_metal.1
+    2100034: metal panels ext unearthed
+    2100036: metal flat generic.2
+    2100038: cap_ramp
+    2100040: metal flat generic.3
+    2100042: cap_ramp.1
+    2100044: metal flat generic.4
+    2100046: cap_ramp.2
+    2100048: metal flat generic.5
+    2100050: cap_ramp_blue
+    2100052: metal flat generic.6
+    2100054: metal panels generic ext.2
+    2100056: cap_metal.2
+    2100058: cap_ramp.3
+    2100060: cap_ramp_blue.1
+    2100062: metal flat generic.7
+    2100064: metal panels generic ext.3
+    2100066: cap_metal.3
+    2100068: cap_ramp.4
+    2100070: cap_moss01b
+    2100072: teleporter_shield
+    2100074: greenlight
+    2100076: bloodgulch light red
+    2100078: bloodgulch light yellow
+    2100080: bloodgulch light yellow.1
+    2100082: bloodgulch light black
+    2300000: Clusters_000
+    2300002: Clusters_001
+    2300004: Clusters_002
+    2300006: Clusters_003
+    2300008: Clusters_004
+    2300010: Clusters_005
+    2300012: Clusters_006
+    2300014: Clusters_007
+    2300016: Clusters_008
+    2300018: Clusters_009
+    2300020: Clusters_010
+    2300022: Clusters_011
+    2300024: Clusters_012
+    2300026: Clusters_013
+    2300028: Clusters_014
+    2300030: Clusters_015
+    3300000: Clusters_000
+    3300002: Clusters_001
+    3300004: Clusters_002
+    3300006: Clusters_003
+    3300008: Clusters_004
+    3300010: Clusters_005
+    3300012: Clusters_006
+    3300014: Clusters_007
+    3300016: Clusters_008
+    3300018: Clusters_009
+    3300020: Clusters_010
+    3300022: Clusters_011
+    3300024: Clusters_012
+    3300026: Clusters_013
+    3300028: Clusters_014
+    3300030: Clusters_015
+    4300000: Clusters_000
+    4300002: Clusters_001
+    4300004: Clusters_002
+    4300006: Clusters_003
+    4300008: Clusters_004
+    4300010: Clusters_005
+    4300012: Clusters_006
+    4300014: Clusters_007
+    4300016: Clusters_008
+    4300018: Clusters_009
+    4300020: Clusters_010
+    4300022: Clusters_011
+    4300024: Clusters_012
+    4300026: Clusters_013
+    4300028: Clusters_014
+    4300030: Clusters_015
+  externalObjects: {}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 0
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations: []
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 1
+    hasPreviousCalculatedGlobalScale: 0
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 0
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

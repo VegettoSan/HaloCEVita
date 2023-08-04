@@ -1,0 +1,262 @@
+fileFormatVersion: 2
+guid: 7f340c4ce6f756144b3b6f115205697d
+ModelImporter:
+  serializedVersion: 23
+  fileIDToRecycleName:
+    100000: _antenna
+    100002: _body
+    100004: _flashlight
+    100006: _head
+    100008: _left_foot
+    100010: _left_hand
+    100012: _right_foot
+    100014: _right_hand
+    100016: bip01_head
+    100018: bip01_l_calf
+    100020: bip01_l_clavicle
+    100022: bip01_l_foot
+    100024: bip01_l_forearm
+    100026: bip01_l_hand
+    100028: bip01_l_thigh
+    100030: bip01_l_upperarm
+    100032: bip01_neck
+    100034: bip01_pelvis
+    100036: bip01_r_calf
+    100038: bip01_r_clavicle
+    100040: bip01_r_foot
+    100042: bip01_r_forearm
+    100044: bip01_r_hand
+    100046: bip01_r_thigh
+    100048: bip01_r_upperarm
+    100050: bip01_spine
+    100052: bip01_spine1
+    100054: //RootNode
+    100056: cyborg
+    100058: Piel
+    400000: _antenna
+    400002: _body
+    400004: _flashlight
+    400006: _head
+    400008: _left_foot
+    400010: _left_hand
+    400012: _right_foot
+    400014: _right_hand
+    400016: bip01_head
+    400018: bip01_l_calf
+    400020: bip01_l_clavicle
+    400022: bip01_l_foot
+    400024: bip01_l_forearm
+    400026: bip01_l_hand
+    400028: bip01_l_thigh
+    400030: bip01_l_upperarm
+    400032: bip01_neck
+    400034: bip01_pelvis
+    400036: bip01_r_calf
+    400038: bip01_r_clavicle
+    400040: bip01_r_foot
+    400042: bip01_r_forearm
+    400044: bip01_r_hand
+    400046: bip01_r_thigh
+    400048: bip01_r_upperarm
+    400050: bip01_spine
+    400052: bip01_spine1
+    400054: //RootNode
+    400056: cyborg
+    400058: Piel
+    2100000: No Name
+    2100002: light shield generator
+    2300000: _antenna
+    2300002: _body
+    2300004: _flashlight
+    2300006: _head
+    2300008: _left_foot
+    2300010: _left_hand
+    2300012: _right_foot
+    2300014: _right_hand
+    2300016: bip01_head
+    2300018: bip01_l_calf
+    2300020: bip01_l_clavicle
+    2300022: bip01_l_foot
+    2300024: bip01_l_forearm
+    2300026: bip01_l_hand
+    2300028: bip01_l_thigh
+    2300030: bip01_l_upperarm
+    2300032: bip01_neck
+    2300034: bip01_pelvis
+    2300036: bip01_r_calf
+    2300038: bip01_r_clavicle
+    2300040: bip01_r_foot
+    2300042: bip01_r_forearm
+    2300044: bip01_r_hand
+    2300046: bip01_r_thigh
+    2300048: bip01_r_upperarm
+    2300050: bip01_spine
+    2300052: bip01_spine1
+    3300000: _antenna
+    3300002: _body
+    3300004: _flashlight
+    3300006: _head
+    3300008: _left_foot
+    3300010: _left_hand
+    3300012: _right_foot
+    3300014: _right_hand
+    3300016: bip01_head
+    3300018: bip01_l_calf
+    3300020: bip01_l_clavicle
+    3300022: bip01_l_foot
+    3300024: bip01_l_forearm
+    3300026: bip01_l_hand
+    3300028: bip01_l_thigh
+    3300030: bip01_l_upperarm
+    3300032: bip01_neck
+    3300034: bip01_pelvis
+    3300036: bip01_r_calf
+    3300038: bip01_r_clavicle
+    3300040: bip01_r_foot
+    3300042: bip01_r_forearm
+    3300044: bip01_r_hand
+    3300046: bip01_r_thigh
+    3300048: bip01_r_upperarm
+    3300050: bip01_spine
+    3300052: bip01_spine1
+    4300000: bip01_pelvis
+    4300002: bip01_l_thigh
+    4300004: bip01_l_calf
+    4300006: bip01_l_foot
+    4300008: _left_foot
+    4300010: bip01_r_thigh
+    4300012: bip01_r_calf
+    4300014: bip01_r_foot
+    4300016: _right_foot
+    4300018: bip01_spine
+    4300020: bip01_spine1
+    4300022: bip01_l_clavicle
+    4300024: bip01_l_upperarm
+    4300026: bip01_l_forearm
+    4300028: bip01_l_hand
+    4300030: _left_hand
+    4300032: bip01_neck
+    4300034: bip01_head
+    4300036: _flashlight
+    4300038: _head
+    4300040: bip01_r_clavicle
+    4300042: bip01_r_upperarm
+    4300044: bip01_r_forearm
+    4300046: bip01_r_hand
+    4300048: _right_hand
+    4300050: _antenna
+    4300052: _body
+    4300054: cyborg
+    7400000: C4D Animation Take
+    9500000: //RootNode
+    13700000: cyborg
+  externalObjects: {}
+  materials:
+    importMaterials: 1
+    materialName: 0
+    materialSearch: 1
+    materialLocation: 1
+  animations:
+    legacyGenerateAnimations: 4
+    bakeSimulation: 0
+    resampleCurves: 1
+    optimizeGameObjects: 0
+    motionNodeName: 
+    rigImportErrors: 
+    rigImportWarnings: 
+    animationImportErrors: 
+    animationImportWarnings: 
+    animationRetargetingWarnings: 
+    animationDoRetargetingWarnings: 0
+    importAnimatedCustomProperties: 0
+    importConstraints: 0
+    animationCompression: 1
+    animationRotationError: 0.5
+    animationPositionError: 0.5
+    animationScaleError: 0.5
+    animationWrapMode: 0
+    extraExposedTransformPaths: []
+    extraUserProperties: []
+    clipAnimations:
+    - serializedVersion: 16
+      name: C4D Animation Take
+      takeName: C4D Animation Take
+      firstFrame: 0
+      lastFrame: 33
+      wrapMode: 0
+      orientationOffsetY: 0
+      level: 0
+      cycleOffset: 0
+      loop: 0
+      hasAdditiveReferencePose: 0
+      loopTime: 1
+      loopBlend: 0
+      loopBlendOrientation: 0
+      loopBlendPositionY: 0
+      loopBlendPositionXZ: 0
+      keepOriginalOrientation: 0
+      keepOriginalPositionY: 1
+      keepOriginalPositionXZ: 0
+      heightFromFeet: 0
+      mirror: 0
+      bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
+      curves: []
+      events: []
+      transformMask: []
+      maskType: 3
+      maskSource: {instanceID: 0}
+      additiveReferencePoseFrame: 0
+    isReadable: 1
+  meshes:
+    lODScreenPercentages: []
+    globalScale: 1
+    meshCompression: 0
+    addColliders: 0
+    importVisibility: 1
+    importBlendShapes: 1
+    importCameras: 1
+    importLights: 1
+    swapUVChannels: 0
+    generateSecondaryUV: 0
+    useFileUnits: 1
+    optimizeMeshForGPU: 1
+    keepQuads: 0
+    weldVertices: 1
+    preserveHierarchy: 0
+    indexFormat: 0
+    secondaryUVAngleDistortion: 8
+    secondaryUVAreaDistortion: 15.000001
+    secondaryUVHardAngle: 88
+    secondaryUVPackMargin: 4
+    useFileScale: 1
+    previousCalculatedGlobalScale: 0.0254
+    hasPreviousCalculatedGlobalScale: 1
+  tangentSpace:
+    normalSmoothAngle: 60
+    normalImportMode: 0
+    tangentImportMode: 3
+    normalCalculationMode: 4
+  importAnimation: 1
+  copyAvatar: 0
+  humanDescription:
+    serializedVersion: 2
+    human: []
+    skeleton: []
+    armTwist: 0.5
+    foreArmTwist: 0.5
+    upperLegTwist: 0.5
+    legTwist: 0.5
+    armStretch: 0.05
+    legStretch: 0.05
+    feetSpacing: 0
+    rootMotionBoneName: 
+    hasTranslationDoF: 0
+    hasExtraRoot: 0
+    skeletonHasParents: 1
+  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  animationType: 2
+  humanoidOversampling: 1
+  additionalBone: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
