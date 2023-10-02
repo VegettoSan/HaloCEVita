@@ -524,7 +524,7 @@ PlayerSettings:
   ps4attribEyeToEyeDistanceSettingVR: 0
   ps4IncludedModules: []
   monoEnv: 
-  psp2Splashimage: {fileID: 2800000, guid: 313e9176aa4d1dc44951af5a7f9faa7a, type: 3}
+  psp2Splashimage: {fileID: 2800000, guid: 854ae49ad7727c94bb87b55159cfc358, type: 3}
   psp2NPTrophyPackPath: 
   psp2NPSupportGBMorGJP: 0
   psp2NPAgeRating: 12
