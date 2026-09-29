@@ -1,0 +1,12 @@
+# Keep Unix scripts executable/readable under WSL/Linux even when Git is used from Windows.
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Build/configuration scripts are also expected to use Unix line endings.
+*.py text eol=lf
+CMakeLists.txt text eol=lf
+*.cmake text eol=lf
+
+# Documentation can remain normalized as text.
+*.md text
+*.txt text
