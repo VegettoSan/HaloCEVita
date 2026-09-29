@@ -31,6 +31,8 @@ rsync -a \
   --exclude='README.md' \
   --exclude='AGENTS.md' \
   --exclude='.gitignore' \
+  --exclude='.gitattributes' \
+  --exclude='LICENSE' \
   --exclude='docs/' \
   --exclude='prompts/' \
   --exclude='templates/' \
@@ -38,7 +40,7 @@ rsync -a \
   --exclude='port/vita/' \
   "$src/" "$dst/"
 
-# Preserve the upstream root license explicitly if present.
+# Keep upstream licensing separately without replacing HaloCEVita's own root LICENSE.
 if [ -f "$src/LICENSE.md" ]; then
   cp "$src/LICENSE.md" "$dst/LICENSE.md"
 fi
