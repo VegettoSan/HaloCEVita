@@ -1,0 +1,38 @@
+# Build outputs
+build/
+*.vpk
+*.elf
+*.self
+*.suprx
+*.skprx
+*.o
+*.a
+*.so
+*.d
+
+# Proprietary/user game data
+maps/
+assets/maps/
+*.xiso
+*.iso
+*.map
+save/
+
+# Runtime logs/config copied from console
+runtime/
+debug.txt
+config.toml
+
+# SDK/runtime binaries that must not be committed
+libshacccg.suprx
+
+# IDE / OS
+.vscode/
+.idea/
+.vs/
+.DS_Store
+Thumbs.db
+
+# Python
+__pycache__/
+*.pyc
