@@ -12,6 +12,8 @@ The upstream repository was actively changing on 2026-09-28. The Vita repository
 
 After importing source, replace the placeholder below:
 
+Verified during A001: this SHA is already imported; `.upstream-base-sha` matches, all required source/platform/build directories exist, and no reimport was performed. HaloCEVita's independent baseline HEAD was `080e0c5b2eca00e809f5b2c5b70fbbd004ca8f4a`. Import helper excluded platform README files; the preserved upstream root README is `docs/upstream/README.md`; Linux/Android source/build scripts were inspected directly.
+
 ```text
 UPSTREAM_REPOSITORY=https://github.com/cybersecurity/halo-ce-universal
 UPSTREAM_COMMIT=21714ac0860e9b9ca08fbdc8a1d620f1b8a03797

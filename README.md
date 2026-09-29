@@ -6,6 +6,10 @@ This repository is intentionally **not a GitHub fork**. It is a separate Vita-fo
 
 ## Project goal
 
+Current milestone (2026-09-28): **LINKS**. Native ARM32 `build/vita/eboot.bin` and `HaloCE.vpk` are generated and package-verified. The executable links real Halo core/memory/cache-verification/NV2A code and includes console diagnostics; full main/menu/gameplay and Vita boot have not been verified. All 466 configured game C units compile separately. Follow [the build and console test instructions](docs/BUILD.md).
+
+Package correction **00.02**: the user reported VitaShell installation error `0x8010113D` for 00.01. LiveArea images now use opaque indexed PNG-8, and the verifier checks every image's palette, pixels and CRC. The executable is byte-identical; installation/boot of the corrected package still awaits hardware confirmation (A012).
+
 Build a native PlayStation Vita version of Halo CE from the decompiled/source-port code, targeting VitaSDK and the Vita's native 32-bit ARM environment.
 
 The preferred architecture is:

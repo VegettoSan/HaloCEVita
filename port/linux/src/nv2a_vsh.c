@@ -140,7 +140,9 @@ static void operand(struct xgpu_text *text, const DWORD *instruction, char which
 }
 
 static const char shader_prologue[] =
-#ifdef HALO_ANDROID
+#if defined(HALO_VITA)
+	"#version 120\n"
+#elif defined(HALO_ANDROID)
 	/* the #version line comes first, from the context's capabilities */
 	"precision highp float;\n"
 	"precision highp int;\n"
@@ -153,6 +155,17 @@ static const char shader_prologue[] =
 	"uniform float point_size;\n"
 	/* columns the menus shift by to center on a wide screen (d3d8_gl.c) */
 	"uniform float screen_offset;\n"
+#ifdef HALO_VITA
+	"varying vec4 xD0;\n"
+	"varying vec4 xD1;\n"
+	"varying vec4 xB0;\n"
+	"varying vec4 xB1;\n"
+	"varying vec4 xT0;\n"
+	"varying vec4 xT1;\n"
+	"varying vec4 xT2;\n"
+	"varying vec4 xT3;\n"
+	"varying float xFog;\n"
+#else
 	"out vec4 xD0;\n"
 	"out vec4 xD1;\n"
 	"out vec4 xB0;\n"
@@ -162,7 +175,9 @@ static const char shader_prologue[] =
 	"out vec4 xT2;\n"
 	"out vec4 xT3;\n"
 	"out float xFog;\n"
+#endif
 	"invariant gl_Position;\n"
+#ifndef HALO_VITA
 	"vec4 unpack_normpacked3(uint p)\n"
 	"{\n"
 	"	int x = int(p << 21) >> 21;\n"
@@ -170,6 +185,7 @@ static const char shader_prologue[] =
 	"	int z = int(p) >> 22;\n"
 	"	return vec4(float(x) / 1023.0, float(y) / 1023.0, float(z) / 511.0, 1.0);\n"
 	"}\n"
+#endif
 	"vec4 nv2a_rcc(float x)\n"
 	"{\n"
 	"	float r = 1.0 / x;\n"
@@ -200,16 +216,29 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 	struct xgpu_text text = { 0 };
 	unsigned long index;
 
+#ifdef HALO_VITA
+	/* GLSL 1.20 has no integer vertex attributes/bit shifts. A later Vita
+	 * vertex upload wrapper must unpack NORMPACKED3 on CPU before this path. */
+	if (packed_attribute_mask) {
+		platform_log("HALO_VITA BLOCKED: NORMPACKED3 requires CPU attribute unpacking");
+		return NULL;
+	}
+#endif
+
 #ifdef HALO_ANDROID
 	xgpu_text_append(&text, "#version %s\n", xgpu_capabilities.shading_language);
 #endif
 	xgpu_text_append(&text, "%s", shader_prologue);
 	for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
 	{
+#ifdef HALO_VITA
+		xgpu_text_append(&text, "attribute vec4 v%lu_in;\n", index);
+#else
 		if (packed_attribute_mask & (1UL << index))
 			xgpu_text_append(&text, "layout(location = %lu) in uint v%lu_packed;\n", index, index);
 		else
 			xgpu_text_append(&text, "layout(location = %lu) in vec4 v%lu_in;\n", index, index);
+#endif
 	}
 
 	xgpu_text_append(&text, "void main()\n{\n");
@@ -355,7 +384,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		"\tvec3 ndc = (vec3(oPos.xy + vec2(0.5 + screen_offset, 0.5), oPos.z) - viewport_offset.xyz) / scale;\n"
 		"\tgl_Position = vec4(ndc * oPos.w, oPos.w);\n"
 #endif
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 		/* what glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE) does on desktop
 		GL: rows from the top, depth 0..1 */
 		"\tgl_Position.y = -gl_Position.y;\n"

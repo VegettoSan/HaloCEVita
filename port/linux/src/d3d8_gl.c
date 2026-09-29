@@ -267,7 +267,12 @@ static struct framebuffer_entry *framebuffers;
 
 /* ---------- the device */
 
-#ifdef HALO_ANDROID
+#if defined(HALO_VITA)
+#include "../../vita/include/halo_vita_graphics.h"
+#define STREAM_BUFFER_SIZE HALO_VITA_STREAM_SIZE
+#define INDEX_BUFFER_SIZE HALO_VITA_INDEX_SIZE
+#define STREAM_BUFFER_RING HALO_VITA_STREAM_RING
+#elif defined(HALO_ANDROID)
 /* Mobile drivers (Mali) keep every orphaned copy of a buffer until the GPU
 is done with it, so a large buffer orphaned each frame costs its size per
 frame in flight and more. Instead each frame streams into the next of a few

@@ -231,7 +231,11 @@ void debug_check_memory_globals(
 		145,
 		debug_memory_globals.signature == debug_memory_signature &&
 			debug_memory_globals.trailing_signature == debug_memory_signature,
+#ifdef HALO_VITA
+		csprintf(temporary,
+#else
 		((char *(__cdecl *)(char *, ...))csprintf)(
+#endif
 			"Debug memory manager is uninitialized or corrupted. (%s:%d)",
 			file,
 			line));

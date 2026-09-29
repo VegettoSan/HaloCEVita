@@ -1069,8 +1069,13 @@ void network_game_accept_remote_connections(
 void ui_start_main_menu_music(
 	void);
 void error(
+#ifdef HALO_VITA
+	short priority,
+	const char *format,
+#else
 	long priority,
 	char *format,
+#endif
 	...);
 void playlist_profile_delete(
 	long profile_index);

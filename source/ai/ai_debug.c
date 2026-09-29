@@ -151,6 +151,9 @@ typedef char ai_debug_actor_iterator_size_assert[
 
 /* ---------- prototypes */
 
+#ifdef HALO_VITA
+static
+#endif
 void ai_debug_drawstack_setup(
 	union real_point3d const *drawstack_base);
 static real_point3d *ai_debug_drawstack(
