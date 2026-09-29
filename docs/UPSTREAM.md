@@ -14,8 +14,8 @@ After importing source, replace the placeholder below:
 
 ```text
 UPSTREAM_REPOSITORY=https://github.com/cybersecurity/halo-ce-universal
-UPSTREAM_COMMIT=REPLACE_WITH_IMPORTED_SHA
-UPSTREAM_IMPORT_DATE=REPLACE_WITH_DATE
+UPSTREAM_COMMIT=21714ac0860e9b9ca08fbdc8a1d620f1b8a03797
+UPSTREAM_IMPORT_DATE=2026-09-28
 ```
 
 ## Initial import procedure
