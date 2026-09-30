@@ -353,6 +353,9 @@ symbols in this file:
 #include "saved games/playlist_profile.h"
 #include "text/text_group.h"
 #include "text/unicode.h"
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 
 /* ---------- constants */
 
@@ -675,6 +678,22 @@ void ui_widget_game_data_function_invoke(
 		0x10A,
 		widget);
 
+#ifdef HALO_VITA
+	/* The mounted retail ui.map Main Menu graph uses 0, 8 and 21.
+	 * Invoke the original handlers for those indices. Unexpected indices
+	 * fail explicitly until their game dependencies are integrated. */
+	if (function == 0)
+		widget_function_null(widget);
+	else if (function == 8)
+		set_textbox_to_build_number(widget);
+	else if (function == 21)
+		main_menu_animation_fakery(widget);
+	else
+	{
+		vita_log("MAIN MENU BLOCKED: unsupported original game-data function index=%u", function);
+		vita_fatal("original UI game-data handler is not linked on Vita");
+	}
+#else
 	if ((short)function >= 0 && function < NUMBEROF(game_data_input_function_list))
 	{
 		game_data_input_function_list[(short)function](widget);
@@ -682,6 +701,7 @@ void ui_widget_game_data_function_invoke(
 	}
 
 	error(2, "invalid game_data_input_reference_function");
+#endif
 	return;
 }
 
