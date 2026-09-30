@@ -56,7 +56,6 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
-    ${ROOT}/source/sound/sound_manager.c
     ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
     ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
     ${ROOT}/source/interface/interface.c
