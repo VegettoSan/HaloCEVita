@@ -63,7 +63,9 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/interface/interface.c
     ${ROOT}/source/text/draw_string.c
     ${ROOT}/source/text/unicode.c
+    "${ROOT}/source/saved games/game_state.c"
     ${ROOT}/source/rasterizer/rasterizer.c
+    ${ROOT}/source/rasterizer/rasterizer_geometry.c
     ${ROOT}/source/rasterizer/rasterizer_text.c
     ${ROOT}/source/rasterizer/rasterizer_cinematics.c
     ${ROOT}/source/rasterizer/rasterizer_debug.c
