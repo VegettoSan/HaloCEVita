@@ -21,6 +21,10 @@ jobs:
       - uses: actions/checkout@v4
       - name: Configure Vita target
         run: cmake -S port/vita -B build/vita -G Ninja
+      - name: Link Vita ELF
+        run: cmake --build build/vita --target HaloCE.elf -j2
+      - name: Inspect Vita ELF LOAD layout
+        run: arm-vita-eabi-readelf -l build/vita/HaloCE.elf
       - name: Build VPK
         run: cmake --build build/vita --target vita_vpk -j2
       - name: Upload Vita test package and symbols
