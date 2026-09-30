@@ -703,3 +703,11 @@ Current priority order:
 14. performance caches and memory optimization.
 
 The Main Menu should drive the order inside this list: if tracing proves a later item is needed by the very first UI draw, promote it based on evidence.
+
+## 23. Local A018/A019 integration evidence (2026-09-29)
+
+R0 baseline00.06 BOOTS:96MiB native arena/original memory-state functions and real ui/a10 tags PASS,016=2/2/CRC match. Existing DIAGNOSTIC RENDERS is established. Installed vitaGL hashes unchanged; actual hardware revision6e7fe40 differs from master research, so proposed capabilities still require installed-runtime validation.
+
+A019/00.07 LINKS prepares actual menu metadata with transactional typed rebasing, real widget graph and original bitmap/Unicode/font accessors. New017..020 is a required changed ARM pointer contract before UI dependence. No another synthetic renderer, full UI state or menu draw is claimed. ui-only startup avoids another57s campaign test.
+
+Partial R1: actual d3d8_gl Vita program_get binds v0_in..v15_in before link and stores192 explicit constant locations. Uploads active changed registers individually; sparse/nonconsecutive/missing c[0]/c[191] CPU tests pass; backend unit COMPILES.768B/program extra. Whole backend not linked/activated by this VPK. Shader compaction, paired compile-cache policy, GL binding/streams and first-draw instrumentation remain pending. No HALO DRAW REACHED/RENDERS. Follow original main_load_ui_scenario/main_menu_load and widget rendering after complete initialization/resource dependencies.

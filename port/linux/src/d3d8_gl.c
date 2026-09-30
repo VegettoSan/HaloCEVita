@@ -25,6 +25,9 @@ Conventions carried over from the Xbox:
 #include "sdl_platform.h"
 #include "halo_ui_pointer.h"
 #include "port_config.h"
+#ifdef HALO_VITA
+#include "../../vita/include/halo_vita_program.h"
+#endif
 
 #include <math.h>
 #include <stdio.h>
@@ -205,6 +208,9 @@ struct program_entry
 	GLuint fragment_shader;
 	GLuint program;
 	GLint constants;
+#ifdef HALO_VITA
+	GLint constant_locations[XGPU_VERTEX_CONSTANT_COUNT];
+#endif
 	GLint viewport_scale;
 	GLint viewport_offset;
 	GLint point_size;
@@ -1899,6 +1905,9 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 	entry->program = glCreateProgram();
 	glAttachShader(entry->program, vertex_shader);
 	glAttachShader(entry->program, fragment_shader);
+#ifdef HALO_VITA
+	halo_vita_bind_vertex_inputs(entry->program);
+#endif
 	glLinkProgram(entry->program);
 	glGetProgramiv(entry->program, GL_LINK_STATUS, &status);
 	if (!status)
@@ -1911,6 +1920,9 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 		return NULL;
 	}
 	state_program(entry->program);
+#ifdef HALO_VITA
+	halo_vita_find_vertex_constants(entry->program, entry->constant_locations);
+#else
 	entry->constants = glGetUniformLocation(entry->program, "c");
 	entry->constant_count = XGPU_VERTEX_CONSTANT_COUNT;
 	if (entry->constants >= 0)
@@ -1940,6 +1952,7 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 			}
 		}
 	}
+#endif
 	entry->viewport_scale = glGetUniformLocation(entry->program, "viewport_scale");
 	entry->viewport_offset = glGetUniformLocation(entry->program, "viewport_offset");
 	entry->point_size = glGetUniformLocation(entry->program, "point_size");
@@ -2533,6 +2546,12 @@ static struct program_entry *prepare_draw(BOOL immediate)
 			(GLintptr)(device.counter_active * sizeof(GLuint)), sizeof(GLuint));
 #endif
 
+#ifdef HALO_VITA
+	if (!entry->constants_serial || entry->constants_serial != constants_serial) {
+		halo_vita_upload_vertex_constants(entry->constant_locations, device.constants, constant_serials, entry->constants_serial);
+		entry->constants_serial = constants_serial;
+	}
+#else
 	if (entry->constants >= 0 && entry->constants_serial != constants_serial)
 	{
 		unsigned long first = entry->constant_count, last = 0, index;
@@ -2573,6 +2592,8 @@ static struct program_entry *prepare_draw(BOOL immediate)
 		}
 		entry->constants_serial = constants_serial;
 	}
+
+#endif
 
 	/* the state the other uniforms come from: most draws share it with the
 	draw before them, and so share its uniforms */

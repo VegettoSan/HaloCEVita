@@ -1,3 +1,7 @@
+**A019:**00.07 LINKS, SHA6f8c72b892f3c1c2793a8ee57b1adaeff8efad23686ca3a3498e1b489a8e8ae4. Tags reales del menú:3362 punteros tipados,485 widgets/4 fuentes/122 listas/195 grupos bitmap,9 widgets del menú; originales accesores enlazados. Host17 casos y ui.map PASS; nuevos017..020 ARM pendientes. D3D8 original: atributos explícitos y constantes independientes COMPILES/CPU PASS; renderer completo aún no enlazado/activado. Menú/primer draw Halo pendientes.
+
+**Actualización A018:**00.06 BOOTS en Vita: arena96MiB y memoria/estado originales PASS; ui983/a10 3357 tags, CRCs idénticos al host,016=2/2. Lecturas4,82s/57,12s; user libre62MiB. Menú real y primer draw Halo pendientes. Evidencia y símbolos00.06 preservados; no prueba nueva de STABLE/exit.
+
 # Entrega de la sesión — 2026-09-28
 
 **Actualización 2026-09-29/A017:** entrega **00.06, LINKS**, SHAb637bf5af94ce765a830b5725fe62ba9c6c22dca3db3bafb9c4765290cc29e05. Se integra una arena nativa96MiB con offsets Xbox y las funciones originales de memoria/estado, más lectura de tags comprimidos y montaje temporal del índice mediante tag_iterator/tag_get. Host:25 casos del lector y ui983/a10 3357 tags pasan; asignador/estado pasan2 ciclos con SDK simulado. Falta prueba Vita013/014/015/016, relocación interna/BSP/recursos y renderer/XAPI/main/menú completos. TAG INDEX PASS no significa menú. Baseline00.05 y símbolos preservados en build/vita/attempts/a017-baseline-00.05/. Estado máximo demostrado sigue RENDERS del triángulo00.05; ver BUILD/D010/KI-016.

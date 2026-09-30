@@ -218,7 +218,7 @@ void vita_graphics_frame(int maps_valid, int core_valid, int shader_valid)
 	text(40, 424, shader_valid < 0 ? "GLSL TEST PENDING" : shader_valid ? "GLSL PASS" : "GLSL BLOCKED SEE LOG", 3);
 	glColor4f(cache_checkpoint > 0 ? 0.2f : 1, cache_checkpoint > 0 ? 1 : 0.65f, 0.4f, 1);
 	text(40, 466, cache_checkpoint == -2 ? "ENGINE MEMORY AND TAG TEST PENDING" :
-		cache_checkpoint < 0 ? "READING REAL MAP TAGS" : cache_checkpoint ? "TAG INDEX PASS - ENGINE PENDING" : "TAG INDEX BLOCKED SEE LOG", 2);
+		cache_checkpoint < 0 ? "READING REAL MAP TAGS" : cache_checkpoint ? "MENU TAGS PASS - ENGINE PENDING" : "TAG INDEX BLOCKED SEE LOG", 2);
 	glColor4f(0.7f, 0.75f, 0.8f, 1);
 	text(40, 496, "START EXIT   CROSS RECHECK MAPS", 2);
 	vglSwapBuffers(GL_FALSE);

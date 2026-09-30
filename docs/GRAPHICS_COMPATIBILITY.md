@@ -13,7 +13,7 @@ Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp 
 | `glActiveTexture` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glAttachShader` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glBeginQuery` | DIRECT | yes / yes | Export exists; actual lens-flare sample-count fidelity remains unverified. |
-| `glBindAttribLocation` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
+| `glBindAttribLocation` | DIRECT | yes / yes | A019 original d3d8_gl Vita binds16 NV2A inputs before link; COMPILES/CPU contract PASS, hardware pending. |
 | `glBindBuffer` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glBindBufferBase` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glBindBufferRange` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
@@ -82,7 +82,7 @@ Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp 
 | `glGetShaderiv` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glGetString` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glGetTexImage` | BLOCKED | no / no | Missing declaration or implementation; investigate exact upstream use. |
-| `glGetUniformLocation` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
+| `glGetUniformLocation` | DIRECT | yes / yes | A019 Vita backend queries each c[i]; sparse/nonconsecutive CPU contract PASS. No192-vector/retail shader proof. |
 | `glInvalidateFramebuffer` | BLOCKED | no / no | Missing declaration or implementation; investigate exact upstream use. |
 | `glLineWidth` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glLinkProgram` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
@@ -111,7 +111,7 @@ Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp 
 | `glUniform1i` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glUniform1iv` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glUniform2f` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
-| `glUniform4fv` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
+| `glUniform4fv` | DIRECT | yes / yes | A019 Vita vertex constants upload by explicit location/count1; COMPILES, full backend hardware pending. |
 | `glUseProgram` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glVertexAttrib4fv` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glVertexAttribI4ui` | EMULATE | no / no | Integer attributes require conversion; no silent stub. |

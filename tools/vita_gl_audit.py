@@ -36,6 +36,9 @@ special = {
  'glSamplerParameterfv': ('EMULATE', 'Texture-state wrapper pending.'),
 }
 notes = {
+ 'glBindAttribLocation': 'A019 original d3d8_gl Vita binds16 NV2A inputs before link; COMPILES/CPU contract PASS, hardware pending.',
+ 'glGetUniformLocation': 'A019 Vita backend queries each c[i]; sparse/nonconsecutive CPU contract PASS. No192-vector/retail shader proof.',
+ 'glUniform4fv': 'A019 Vita vertex constants upload by explicit location/count1; COMPILES, full backend hardware pending.',
  'glMapBufferRange': 'Export exists; desktop persistent/coherent flags are not established. Requires Vita streaming path.',
  'glGenQueries': 'Export exists; supported target/count semantics need hardware testing. No Android atomics copied.',
  'glBeginQuery': 'Export exists; actual lens-flare sample-count fidelity remains unverified.',

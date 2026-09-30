@@ -46,7 +46,7 @@ int main(void)
 		vita_log("cache checkpoint skipped: memory=%d maps=%d", memory, maps);
 	}
 	if (memory && maps && vita_cache_probe(graphics, core, shaders) < 0) goto cleanup;
-	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): nested tag/BSP/resource relocation and renderer integration pending");
+	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): menu tag accessors ready; full scenario/BSP/resources, startup contracts and original renderer still pending");
 	/* Keep the process available even without maps or runtime shader compiler. */
 	for (;;) {
 		uint64_t begin = vita_time_us(), elapsed;

@@ -26,12 +26,12 @@ static int cache_progress(uint32_t position, void *context)
 }
 int vita_cache_probe(int graphics, int core, int shaders)
 {
-	const char *names[2] = { "ui.map", "a10.map" };
+	const char *names[1] = { "ui.map" };
 	int i, passed = 0;
 	void *tags = (void *)halo_vita_memory_address(HALO_XBOX_TAG_BASE);
 	if (!tags) return 0;
 	vita_graphics_cache_status(-1);
-	for (i = 0; i < 2; ++i) {
+	for (i = 0; i < 1; ++i) {
 		char path[320], error[160] = {0};
 		FILE *file;
 		struct vita_cache_info info;
@@ -50,7 +50,7 @@ int vita_cache_probe(int graphics, int core, int shaders)
 		fclose(file);
 		if (state.cancelled) { vita_graphics_cache_status(0); return -1; }
 	}
-	vita_log("[VITA 016] real map directory checkpoint=%d/2; nested tags/BSP/resources not activated; full main still blocked", passed);
-	vita_graphics_cache_status(passed == 2);
-	return passed == 2;
+	vita_log("[VITA 016] real UI menu-tag checkpoint=%d/1; widget state/BSP/resources not activated; full main still blocked", passed);
+	vita_graphics_cache_status(passed == 1);
+	return passed == 1;
 }

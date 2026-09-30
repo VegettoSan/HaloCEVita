@@ -2,7 +2,7 @@
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
 
-Current deliverable is **00.06: LINKS**, adding the memory/tag-directory integration checkpoint (A017). Its kernel reservation, tag read and original tag APIs need a Vita test. The known00.05 graphics baseline and matching symbols are in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending; TAG INDEX PASS is not a menu or gameplay claim.
+Current deliverable is **00.07: LINKS** (A019), a real menu-tag/accessor prerequisite awaiting Vita. Hardware baseline00.06 BOOTS: A018 hardware validates kernel reservation, original memory/state functions and both real map tag-directory checkpoints. The known00.05 graphics baseline and matching symbols are in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending; TAG INDEX PASS is not a menu or gameplay claim.
 
 ## Toolchain
 
@@ -57,7 +57,7 @@ cmake --build build/vita --target vita_vpk -j6
 python3 tools/vita_verify.py
 ```
 
-Current build log: `build/vita/logs/build-a017-delivery.txt`; historical logs retained. Package hashes/byte sizes: `build/vita/artifacts.json` and `SHA256SUMS`. Generated build/Ninja/ELF/VPK artifacts are ignored, not committed.
+Current build log: `build/vita/logs/build-a019-final-delivery.txt`; historical logs retained. Package hashes/byte sizes: `build/vita/artifacts.json` and `SHA256SUMS`. Generated build/Ninja/ELF/VPK artifacts are ignored, not committed.
 
 ## Expected outputs
 
@@ -71,7 +71,7 @@ Optional debug assets/log maps may also be generated under `build/vita/`.
 Keep `HaloCE.elf`, `HaloCE.elf.map`, `HaloCE.elf.velf` and artifacts.json for crash analysis. Final package SHA-256:
 
 ```text
-b637bf5af94ce765a830b5725fe62ba9c6c22dca3db3bafb9c4765290cc29e05  HaloCE.vpk
+6f8c72b892f3c1c2793a8ee57b1adaeff8efad23686ca3a3498e1b489a8e8ae4  HaloCE.vpk
 ```
 
 Rebuilding can change package timestamps/hash; use the verifier's fresh SHA256SUMS for the package actually installed.
@@ -114,7 +114,7 @@ Host comparisons compile the actual pre/post generators and string builder for11
 
 ### Hardware acceptance 00.05 (A016)
 
-The new user log and visible result verify both compiles (status1, GL error0), program link1, runtime result1 and011 shaders1; the triangle is visible. Header/input rechecks continue until Start clean exit at34.3s. Runtime shader sources are byte-identical to the intended correction: vertex loses only the invariant line, fragment unchanged. Evidence copies are docs/runtime/2026-09-29-00.05-*. Current VPK/eboot/ELF hashes above remain unchanged; no new binary was needed for recording this result. Broader shader/state/texture coverage, real menu and multipass invariance remain pending.
+The new user log and visible result verify both compiles (status1, GL error0), program link1, runtime result1 and011 shaders1; the triangle is visible. Header/input rechecks continue until Start clean exit at34.3s. Runtime shader sources are byte-identical to the intended correction: vertex loses only the invariant line, fragment unchanged. Evidence copies are docs/runtime/2026-09-29-00.05-*. The00.05 hashes in A016 were unchanged when that result was recorded. Broader shader/state/texture coverage, real menu and multipass invariance remain pending.
 
 ## Libraries actually used
 
@@ -133,12 +133,23 @@ No retail Halo data belongs in the build tree.
 
 The imported engine is the Xbox reconstruction: its real verifier requires **Xbox cache version 5**. PC Halo/Custom Edition caches/version7/609 and PC-style separate bitmaps.map/sounds.map are not accepted substitutes. Put Xbox `ui.map`, `a10.map` and the other map files from your own game in the target directory. ui/a10 names are found case-insensitively. The current milestone verifies headers only; it does not yet decompress/rebase/load their tags.
 
-## Current 00.06 integration test (A017)
+## Current00.07 Main Menu tag checkpoint (A019)
+
+Install current HaloCE.vpk, verify banner00.07 and keep the matching ELF/map. Same Xbox-v5 ui.map; no conversion. Startup reads ui only, avoiding another57s a10 read. Existing diagnostic remains visible. Expect MENU TAGS PASS - ENGINE PENDING after these completed operations:
+
+- 017: typed relocation committed,3362 pointers for exact user ui.map; rule counts1025 tag_block.address/866 tag_data.address/1471 tag_reference.name.
+- 018: original tag_loaded resolves ui\shell\main_menu\main_menu and9 reachable widgets.
+- 019: original bitmap_group_get_bitmap_from_sequence, unicode_string_list_get_string and font_get_character_by_ascii_code complete.
+- 020: detach restores original CRCe22586e4;016 reports UI checkpoint1/1.
+
+Cross repeats the changed UI contract; Start cancels/exits. Return debug.txt, or matching dump on crash. This VPK does not initialize UI widget state or draw the menu;010 is still withheld. New00.07 remains LINKS until tested. Host commands: python3 tools/vita_menu_regression.py /path/to/ui.map /path/to/a10.map and python3 tools/vita_program_regression.py. Campaign a10 safely rejects this menu-only plan because its main-menu tag is absent; A018 campaign read stays BOOTS. Journal/hash1.5MiB + at most32KiB graph state are transient within existing heap; no pool increase, full-map copy or retail data in outputs.
+
+## Historical 00.06 integration test (A017/A018)
 
 1. Install the current build/vita/HaloCE.vpk (banner/SFO00.06, SHA above). Keep the matching ELF/map/manifest for crashes. Use the same Xbox-v5 maps already under ux0:data/HaloCE/maps/; no map conversion or replacement is required.
 2. Expect the existing diagnostic/triangle, then `READING REAL MAP TAGS`, then `TAG INDEX PASS - ENGINE PENDING` if both directory checkpoints pass. This still is a diagnostic, not Halo's menu. Streaming compressed a10 traverses274MiB logically; completed progress logs appear approximately once per second, frames/control polling continue, and Start cancels with cleanup.
 3. Log expectations:013 reserves96MiB;014 original memory/state functions PASS;015 reads each map; `Halo original tag_iterator/tag_get/tag_index_is_group PASS` appears for both maps, then016 checkpoint2/2. Expected ui983 tags/a10 3357; section CRCs e22586e4/1c90dc0f for the exact host-tested files. These CRCs identify tag sections, not a retail cache-integrity guarantee. A different legitimate build/map may differ. Allocation failures or invalid/corrupt/missing data log and leave a diagnostic; nested tags/BSP/GPU resources remain inactive and010 stays withheld.
-4. Cross rescans headers and repeats tag reads; Start exits, including during streaming. Test without maps as well. Return debug.txt and the visible result; retain the matching dump if there is a crash. New00.06 BOOTS/RENDERS/STABLE requires actual console evidence.
+4. Cross rescans headers and repeats tag reads; Start exits, including during streaming. Test without maps as well. Return debug.txt and the visible result; retain the matching dump if there is a crash. A018 confirms00.06 BOOTS with013/014 PASS, both original tag API checks and016=2/2. ui4.82s/a10 57.12s, tag CRCs match. Supplied log does not demonstrate cancellation/recheck/exit or repeated stability.
 
 Host verification of actual allocator/reader (no ARM/kernel/GXM execution):
 

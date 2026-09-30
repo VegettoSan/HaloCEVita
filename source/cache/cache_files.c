@@ -877,6 +877,8 @@ static void *vita_tag_span(void *tags, size_t length, const void *pointer, size_
 int halo_vita_cache_index_probe(void *tags, size_t length)
 {
 	struct vita_cache_info info;
+	struct vita_menu_stats menu_stats;
+	struct vita_menu_relocation *menu_plan;
 	struct tag_iterator iterator;
 	struct scenario *scenario;
 	long i, index, count = 0, bitmaps = 0;
@@ -885,6 +887,14 @@ int halo_vita_cache_index_probe(void *tags, size_t length)
 	if (cache_file_globals.tags_loaded || !vita_cache_validate_index(tags, length, &info, reason, sizeof(reason))) {
 		vita_log("cache index mount rejected (already mounted or invalid directory)"); return 0;
 	}
+	menu_plan = vita_cache_relocate_menu(tags, length, (uint32_t)(uintptr_t)tags,
+        &menu_stats, reason, sizeof(reason));
+    if (!menu_plan) { vita_log("menu typed relocation FAILED: %s", reason); return 0; }
+    vita_log("[VITA 017] typed menu relocation committed: pointers=%u blocks=%u references=%u widgets=%u fonts=%u strings=%u bitmaps=%u; metadata only",
+        menu_stats.pointers, menu_stats.blocks, menu_stats.references, menu_stats.widgets,
+        menu_stats.fonts, menu_stats.string_lists, menu_stats.bitmap_groups);
+    vita_log("Vita typed rebase rules: tag_block.address=%u tag_data.address=%u tag_reference.name=%u; directory/root/name handled by mount; BSP/GPU words unchanged",
+        menu_stats.block_addresses, menu_stats.data_addresses, menu_stats.reference_names);
 	cache_file_globals.tag_header = tags;
 	global_tag_instances = vita_tag_span(tags, length, cache_file_globals.tag_header->tag_instances, info.tag_count * 32);
 	cache_file_globals.tag_header->tag_instances = global_tag_instances;
@@ -903,15 +913,26 @@ int halo_vita_cache_index_probe(void *tags, size_t length)
 	scenario = tag_get(SCENARIO_TAG, info.scenario_index);
 	if (scenario->type < _scenario_type_solo || scenario->type > _scenario_type_main_menu ||
 		scenario->sky_references.count < 0 || scenario->structure_bsp_references.count < 0) goto detach;
-	if (scenario->sky_references.count && (scenario->sky_references.count > 32767 ||
-		!vita_tag_span(tags, length, scenario->sky_references.address, scenario->sky_references.count * 16))) goto detach;
-	if (scenario->structure_bsp_references.count && (scenario->structure_bsp_references.count > 32767 ||
-		!vita_tag_span(tags, length, scenario->structure_bsp_references.address, scenario->structure_bsp_references.count * 32))) goto detach;
 	vita_log("Halo original tag_iterator/tag_get/tag_index_is_group PASS: tags=%ld bitmaps=%ld scenario=%08lx type=%d skies=%ld BSPs=%ld name=%s",
 		count, bitmaps, (unsigned long)info.scenario_index, scenario->type, scenario->sky_references.count,
 		scenario->structure_bsp_references.count, tag_get_name(info.scenario_index));
-	result = 1;
+	result = halo_vita_menu_tags_probe(menu_stats.menu_index, &menu_stats);
 detach:
+    /* Restore directory pointers as well as typed fields, so a repeat begins
+     * with the original Xbox image and never rebases an already-native value. */
+    for (i = 0; i < (long)info.tag_count; ++i) {
+        global_tag_instances[i].name = (char *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances[i].name - (uintptr_t)tags);
+        if (global_tag_instances[i].base_address)
+            global_tag_instances[i].base_address = (void *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances[i].base_address - (uintptr_t)tags);
+    }
+    cache_file_globals.tag_header->tag_instances = (void *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances - (uintptr_t)tags);
+    vita_cache_restore_menu(menu_plan);
+	{
+		struct vita_cache_info restored;
+		if (!vita_cache_validate_index(tags, length, &restored, reason, sizeof(reason)) || restored.tag_crc != info.tag_crc) {
+			vita_log("menu relocation rollback FAILED: source tag image changed"); result = 0;
+		} else vita_log("[VITA 020] menu tag checkpoint detached; original Xbox image CRC=%08x restored", restored.tag_crc);
+	}
 	cache_file_globals.tags_loaded = FALSE;
 	cache_file_globals.tag_header = NULL; global_tag_instances = NULL;
 	if (!result) vita_log("cache scenario/index checkpoint FAILED; detached");
