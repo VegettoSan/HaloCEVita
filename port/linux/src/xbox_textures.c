@@ -593,7 +593,17 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	if (target == GL_TEXTURE_3D)
 		vita_fatal("Xbox volume texture upload requires a Vita 3D texture fallback");
 	#endif
+	#ifdef HALO_VITA
+	if (!description->width || !description->height || !description->depth ||
+		!description->levels || largest / description->width / description->height != description->depth ||
+		largest > (64UL << 20) / sizeof(unsigned long))
+		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 64MiB bound");
+	#endif
 	converted = description->compressed && !decode_compressed ? NULL : malloc(largest * sizeof(unsigned long));
+#ifdef HALO_VITA
+	if ((!description->compressed || decode_compressed) && !converted)
+		vita_fatal("Xbox texture conversion allocation failed on Vita");
+#endif
 	glBindTexture(target, texture);
 	xgpu_gl_state_invalidate();
 #ifdef HALO_ANDROID
@@ -647,6 +657,20 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 			}
 		}
 	}
+	#ifdef HALO_VITA
+	{
+		GLenum error = glGetError();
+		static BOOL first_upload_logged;
+		if (!first_upload_logged || error != GL_NO_ERROR)
+		{
+			first_upload_logged = TRUE;
+			vita_log("[VITA TEXTURE] upload id=%u target=%x format=%lx dims=%lux%lux%lu levels=%lu bytes/face=%lu gl_error=%x",
+				texture, target, (unsigned long)description->format, description->width,
+				description->height, description->depth, description->levels, face_size, error);
+		}
+		if (error != GL_NO_ERROR) vita_fatal("Xbox texture upload failed in vitaGL");
+	}
+	#endif
 	free(converted);
 	texture_dump(target, description);
 }
