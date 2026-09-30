@@ -538,7 +538,7 @@ static GLenum compressed_format(unsigned char kind)
 /* debug.texture_dump_directory writes level 0 of every upload as a TGA, read back from GL */
 static void texture_dump(GLenum target, const struct xgpu_texture_description *description)
 {
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 	/* ES cannot read textures back */
 	(void)target;
 	(void)description;
