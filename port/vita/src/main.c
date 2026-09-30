@@ -8,7 +8,7 @@
 int main(void)
 {
 	int platform, core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
-	int root_active = 0, ui_disposed;
+	int root_active = 0, ui_disposed, renderer = 0;
 	char *vertex, *fragment;
 	char menu_map_path[320];
 	uint32_t user, cdram, phycont;
@@ -40,17 +40,13 @@ int main(void)
 	if (graphics) {
 		vita_log("[VITA 006] vitaGL ready");
 #ifdef HALO_VITA_MENU_BRINGUP
-		/* 00.11/00.12 removed the synthetic diagnostic frame but also removed
-		 * the only SwapBuffers call. Present one neutral application frame so
-		 * vitaGL's startup image cannot masquerade as an engine hang while the
-		 * original Halo menu path is running. This is not a substitute menu. */
+		/* Present one neutral application frame so vitaGL's startup image cannot
+		 * masquerade as an engine hang before the original rasterizer takes over. */
 		if (!vita_graphics_handoff_frame()) {
 			vita_log("MAIN MENU BLOCKED: failed to present the first application frame");
 			goto cleanup;
 		}
 #else
-		/* Replace vitaGL's splash before any GPU-copy/compiler experiment.
-		 * A later failure is then localized by the next begin/result log. */
 		vita_log("initial diagnostic frame begin");
 		vita_graphics_frame(maps, core, -1);
 		vita_log("initial diagnostic frame returned; GPU framebuffer/blit probe begin");
@@ -83,22 +79,28 @@ int main(void)
 	#endif
 	if (menu_cache < 0) goto cleanup;
 #ifdef HALO_VITA_MENU_BRINGUP
+#ifdef HALO_VITA_MENU_RENDER_PROBE
+	if (menu_cache) renderer = halo_vita_renderer_initialize();
+	if (!renderer) {
+		vita_log("MAIN MENU BLOCKED: original rasterizer runtime did not initialize");
+		goto cleanup;
+	}
+#endif
 	if (menu_cache) root_active = halo_vita_menu_root_checkpoint();
 	if (!root_active) {
 		vita_log("MAIN MENU BLOCKED: original root creation did not complete");
 		goto cleanup;
 	}
-	vita_log("[VITA 032] original Main Menu root active; UI renderer and D3D8 present are not linked in this build");
+	vita_log("[VITA 032] original Main Menu root active; original renderer=%s",
+		renderer ? "READY" : "DISABLED");
 #ifdef HALO_VITA_MENU_UPDATE_PROBE
 	if (!halo_vita_menu_update_checkpoint()) goto cleanup;
-#endif
-#ifdef HALO_VITA_MENU_RENDER_PROBE
-	if (!halo_vita_menu_render_checkpoint()) goto cleanup;
 #endif
 #else
 	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): UI cache/runtime-init checkpoint=%d; Main Menu root/events, scenario/BSP/resources and original renderer pending", menu_cache);
 #endif
-	/* Keep the process available even without maps or runtime shader compiler. */
+	/* Keep the process available and let the original renderer own visible menu
+	 * frames once the root and D3D8/vitaGL bridge are ready. */
 	for (;;) {
 		uint64_t begin = vita_time_us(), elapsed;
 		command = vita_controls_poll();
@@ -111,7 +113,11 @@ int main(void)
 			vita_log("Cross remount disabled while original widgets are active");
 #endif
 		}
-#ifndef HALO_VITA_MENU_BRINGUP
+#ifdef HALO_VITA_MENU_BRINGUP
+#ifdef HALO_VITA_MENU_RENDER_PROBE
+		if (renderer && root_active && !halo_vita_renderer_render_menu_frame()) break;
+#endif
+#else
 		if (graphics) vita_graphics_frame(maps, core, shaders);
 #endif
 		elapsed = vita_time_us() - begin;
