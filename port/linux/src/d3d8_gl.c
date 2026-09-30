@@ -576,7 +576,13 @@ static void state_attribute_pointer(GLuint index, GLuint buffer, GLint size, GLe
 	}
 	state_array_buffer(buffer);
 	if (integer)
+	{
+#ifdef HALO_VITA
+		vita_fatal("D3D8 packed integer vertex attribute requires CPU conversion on Vita");
+#else
 		glVertexAttribIPointer(index, size, type, stride, (const void *)offset);
+#endif
+	}
 	else
 		glVertexAttribPointer(index, size, type, normalized, stride, (const void *)offset);
 	pointer->buffer = buffer;
@@ -837,7 +843,9 @@ struct xgpu_render_target *xgpu_render_target_find(unsigned long data)
 static GLuint framebuffer_get(GLuint color, GLuint depth)
 {
 	struct framebuffer_entry *entry;
+	#ifndef HALO_VITA
 	GLenum draw_buffer = color ? GL_COLOR_ATTACHMENT0 : GL_NONE;
+	#endif
 
 	for (entry = framebuffers; entry; entry = entry->next)
 	{
@@ -853,7 +861,11 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 	if (depth)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
+	#ifdef HALO_VITA
+	if (!color) vita_fatal("D3D8 depth-only framebuffer needs draw-buffer selection unavailable in vitaGL");
+	#else
 	glDrawBuffers(1, &draw_buffer);
+	#endif
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		platform_log("framebuffer %u/%u is incomplete", color, depth);
 	xgpu_gl_state_invalidate();
@@ -2412,7 +2424,15 @@ static void apply_raster_state(BOOL has_depth)
 		if (memcmp(gl_state.blend_color, blend_color, sizeof(blend_color)))
 		{
 			memcpy(gl_state.blend_color, blend_color, sizeof(blend_color));
+			#ifdef HALO_VITA
+			/* GL constant blend factors are 0x8001..0x8004; the color
+			 * register has no effect for every other factor. */
+			if ((gl_state.blend_source >= 0x8001 && gl_state.blend_source <= 0x8004) ||
+				(gl_state.blend_destination >= 0x8001 && gl_state.blend_destination <= 0x8004))
+				vita_fatal("D3D8 constant blend factor requires glBlendColor unavailable in vitaGL");
+			#else
 			glBlendColor(blend_color[0], blend_color[1], blend_color[2], blend_color[3]);
+			#endif
 		}
 	}
 	color_mask = (unsigned char)(((write & D3DCOLORWRITEENABLE_RED) ? 1 : 0) | ((write & D3DCOLORWRITEENABLE_GREEN) ? 2 : 0) |
