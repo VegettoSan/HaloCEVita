@@ -149,7 +149,7 @@ add_custom_command(OUTPUT ${ASSETS}/icon0.png ${ASSETS}/bg.png ${ASSETS}/startup
   COMMAND ${Python3_EXECUTABLE} ${ROOT}/tools/vita_assets.py ${ASSETS}
   DEPENDS ${ROOT}/tools/vita_assets.py)
 add_custom_target(vita_assets DEPENDS ${ASSETS}/icon0.png ${ASSETS}/bg.png ${ASSETS}/startup.png)
-vita_create_vpk(HaloCE.vpk HCEV00001 eboot.bin UNSAFE VERSION ${VITA_APP_VERSION} NAME "Halo CE Vita"
+vita_create_vpk(HaloCE.vpk HCEV00001 eboot.bin VERSION ${VITA_APP_VERSION} NAME "Halo CE Vita"
   FILE ${ASSETS}/icon0.png sce_sys/icon0.png
        ${ASSETS}/bg.png sce_sys/livearea/contents/bg.png
        ${ASSETS}/startup.png sce_sys/livearea/contents/startup.png
