@@ -12,6 +12,7 @@ include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math/src/*.c)
 
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
@@ -21,6 +22,7 @@ add_library(halo_core STATIC
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
   ${ROOT}/source/math/random_math.c
+  ${MUSL_MATH_SOURCES}
   ${ROOT}/source/memory/data.c
   ${ROOT}/source/memory/memory_pool.c
   ${ROOT}/source/memory/stack_memory_pool.c
@@ -60,6 +62,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
     ${ROOT}/source/effects/decals.c
+    ${ROOT}/source/game/game_time.c
     ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
     ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
     ${ROOT}/source/interface/interface.c
@@ -67,6 +70,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/text/unicode.c
     "${ROOT}/source/saved games/game_state.c"
     ${ROOT}/source/math/real_math.c
+    ${ROOT}/source/math/matrix_math.c
     ${ROOT}/source/rasterizer/rasterizer.c
     ${ROOT}/source/rasterizer/rasterizer_lights.c
     ${ROOT}/source/rasterizer/rasterizer_geometry.c
@@ -127,6 +131,9 @@ target_compile_options(halo_core PRIVATE -std=gnu89 -fms-extensions -fshort-wcha
   "SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/include/halo_vita_prefix.h" "SHELL:-include ${SEMANTICS}"
   -idirafter ${ROOT}/port/include/xdk)
 target_compile_definitions(halo_core PRIVATE __STRICT_ANSI__ DEBUG xbox)
+# Use the same deterministic musl libm subset as the upstream native ports.
+set_source_files_properties(${MUSL_MATH_SOURCES} PROPERTIES COMPILE_OPTIONS
+  "-std=gnu11;-w;-I${ROOT}/port/third_party/musl-math/include;-include;${ROOT}/port/third_party/musl-math/include/libm.h")
 # Exactly the game include paths used by upstream's halobetacache project.
 file(READ "${ROOT}/config/config.json" CONFIG)
 string(JSON INCLUDE_COUNT LENGTH "${CONFIG}" projects 0 options include_dirs)
