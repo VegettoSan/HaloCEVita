@@ -16,6 +16,9 @@ memory_watch.c detects that by write-protecting the pages.
 
 #include "xgpu.h"
 #include "port_config.h"
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 
 #include <stdio.h>
 #ifdef HALO_ANDROID
@@ -586,6 +589,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 #ifdef HALO_ANDROID
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
 #endif
+	#ifdef HALO_VITA
+	if (target == GL_TEXTURE_3D)
+		vita_fatal("Xbox volume texture upload requires a Vita 3D texture fallback");
+	#endif
 	converted = description->compressed && !decode_compressed ? NULL : malloc(largest * sizeof(unsigned long));
 	glBindTexture(target, texture);
 	xgpu_gl_state_invalidate();
@@ -613,10 +620,12 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 
 			if (description->compressed && !decode_compressed)
 			{
+				#ifndef HALO_VITA
 				if (target == GL_TEXTURE_3D)
 					glCompressedTexImage3D(image_target, (GLint)level, compressed_format(information.kind), width, height, depth, 0,
 						(GLsizei)level_bytes(description, level), source);
 				else
+				#endif
 					glCompressedTexImage2D(image_target, (GLint)level, compressed_format(information.kind), width, height, 0,
 						(GLsizei)level_bytes(description, level), source);
 			}
@@ -629,9 +638,11 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 				else
 #endif
 				decode_level(description, level, source, palette, converted);
+				#ifndef HALO_VITA
 				if (target == GL_TEXTURE_3D)
 					glTexImage3D(image_target, (GLint)level, GL_RGBA8, width, height, depth, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 				else
+				#endif
 					glTexImage2D(image_target, (GLint)level, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 			}
 		}
