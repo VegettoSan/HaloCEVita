@@ -4,6 +4,7 @@
 /* Read newlib before MSVC inline/type macros. _WCHAR_T_DEFINED would
  * otherwise suppress GCC's wchar_t typedef, and newlib uses static __inline. */
 #include <stddef.h>
+#include <sys/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
