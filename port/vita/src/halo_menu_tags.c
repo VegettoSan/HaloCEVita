@@ -8,6 +8,7 @@
 #include "bitmaps/bitmap_group.h"
 #include "text/font_group.h"
 #include "text/text_group.h"
+#include "interface/ui_widget.h"
 
 #define CHECK_LAYOUT(name, expression) typedef char name[(expression) ? 1 : -1]
 CHECK_LAYOUT(menu_bitmap_size, sizeof(struct bitmap_group) == 108);
@@ -30,6 +31,7 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
     struct ui_widget_definition *menu;
     struct tag_iterator iterator;
     long index, bitmaps = 0, strings = 0, fonts = 0;
+    int bitmap_logged = 0, string_logged = 0, font_logged = 0;
     long found = tag_loaded('DeLa', "ui\\shell\\main_menu\\main_menu");
     if (found == NONE || (uint32_t)found != menu_index) {
         vita_log("menu original tag_loaded FAILED"); return 0;
@@ -64,7 +66,7 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
                         }
                     }
                 }
-                vita_log("menu original bitmap accessor begin tag=%08lx", (unsigned long)index);
+                if (!bitmap_logged++) vita_log("menu original bitmap accessor begin tag=%08lx", (unsigned long)index);
                 if (bitmap_group_get_bitmap_from_sequence(index, 0, 0) != expected) return 0;
                 ++bitmaps;
             }
@@ -73,7 +75,7 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
             if (list->strings.count) {
                 struct string_list_entry *entry = TAG_BLOCK_GET_ELEMENT(&list->strings, 0, struct string_list_entry);
                 if (entry->string.size) {
-                    vita_log("menu original Unicode accessor begin tag=%08lx", (unsigned long)index);
+                    if (!string_logged++) vita_log("menu original Unicode accessor begin tag=%08lx", (unsigned long)index);
                     if (unicode_string_list_get_string(index, 0) != entry->string.address) return 0;
                 }
                 ++strings;
@@ -87,7 +89,7 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
                     long c;
                     for (c = 0; c < 256; ++c) if (indices[c] != NONE) {
                         void *expected = tag_block_get_element_with_size(&font->characters, indices[c], FONT_CHARACTER_SIZE);
-                        vita_log("menu original font accessor begin tag=%08lx code=%lu", (unsigned long)index, (unsigned long)c);
+                        if (!font_logged++) vita_log("menu original font accessor begin tag=%08lx code=%lu", (unsigned long)index, (unsigned long)c);
                         if (font_get_character_by_ascii_code(font, (word)c) != expected) return 0;
                         ++fonts; break;
                     }
@@ -100,5 +102,28 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
     }
     vita_log("[VITA 019] original menu bitmap/string/font accessors PASS: bitmap_groups=%ld string_lists=%ld fonts=%ld; pixels/GPU/widget events not activated",
         bitmaps, strings, fonts);
+    return 1;
+}
+
+int halo_vita_ui_runtime_initialize(void)
+{
+    if (!halo_vita_ui_widgets_initialized()) ui_widgets_initialize();
+    if (!halo_vita_ui_widgets_initialized()) {
+        vita_log("MAIN MENU BLOCKED: original ui_widgets_initialize did not establish widget globals/pool");
+        return 0;
+    }
+    vita_log("[VITA 022] original ui_widgets_initialize PASS: widget globals and pool ready");
+    return 1;
+}
+
+int halo_vita_ui_runtime_dispose(void)
+{
+    if (halo_vita_ui_widgets_initialized()) {
+        if (!halo_vita_ui_widgets_dispose_checkpoint()) {
+            vita_log("MAIN MENU BLOCKED: checkpoint disposal found active widgets");
+            return 0;
+        }
+        vita_log("[VITA 023] original widget pool freed; globals reset");
+    }
     return 1;
 }

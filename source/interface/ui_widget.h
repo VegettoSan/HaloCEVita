@@ -76,6 +76,10 @@ void set_ui_plasma_effect_color(
 	real b);
 void ui_widgets_initialize(
 	void);
+#ifdef HALO_VITA
+boolean halo_vita_ui_widgets_initialized(void);
+boolean halo_vita_ui_widgets_dispose_checkpoint(void);
+#endif
 void ui_widgets_safe_to_load(
 	boolean safe);
 void ui_widgets_set_fade_value(

@@ -31,5 +31,12 @@ struct vita_menu_relocation *vita_cache_relocate_menu(void *tags, size_t length,
 void vita_cache_restore_menu(struct vita_menu_relocation *plan);
 int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats *stats);
 int halo_vita_cache_index_probe(void *tags, size_t length);
+/* Mount a validated ui tag image for original Halo consumers. The caller must
+ * unmount before replacing/freeing the image; unmount restores every pointer. */
+int halo_vita_cache_mount_menu(void *tags, size_t length);
+int halo_vita_cache_validate_menu(void);
+int halo_vita_cache_unmount_menu(void);
+int halo_vita_ui_runtime_initialize(void);
+int halo_vita_ui_runtime_dispose(void);
 int vita_cache_probe(int graphics, int core, int shaders);
 #endif

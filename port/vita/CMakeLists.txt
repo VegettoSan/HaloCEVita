@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.07")
+set(VITA_APP_VERSION "00.09")
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -19,11 +19,13 @@ add_library(halo_core STATIC
   ${ROOT}/source/math/random_math.c
   ${ROOT}/source/memory/data.c
   ${ROOT}/source/memory/memory_pool.c
+  ${ROOT}/source/memory/stack_memory_pool.c
   ${ROOT}/source/memory/crc.c
   ${ROOT}/source/tag_files/tag_groups.c
   ${ROOT}/source/bitmaps/bitmap_group.c
   ${ROOT}/source/text/font_group.c
   ${ROOT}/source/text/text_group.c
+  ${ROOT}/source/interface/ui_widget.c
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/source/cache/cache_files.c
   ${ROOT}/source/cache/physical_memory_map.c

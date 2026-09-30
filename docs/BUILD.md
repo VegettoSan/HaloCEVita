@@ -2,7 +2,7 @@
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
 
-Current deliverable is **00.07: LINKS** (A019), a real menu-tag/accessor prerequisite awaiting Vita. Hardware baseline00.06 BOOTS: A018 hardware validates kernel reservation, original memory/state functions and both real map tag-directory checkpoints. The known00.05 graphics baseline and matching symbols are in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending; TAG INDEX PASS is not a menu or gameplay claim.
+Current deliverable is **00.09: LINKS** (A023), with checked teardown of the original UI pool awaiting Vita. Hardware **00.08: BOOTS** (A022) validates persistent `ui.map` mount, original UI globals/pool initialization, Cross recheck, CRC restoration and Start clean exit; its heap dump identifies the 16 KiB pool left allocated. The known00.05 diagnostic graphics baseline and matching symbols remain in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending.
 
 ## Toolchain
 
@@ -57,7 +57,7 @@ cmake --build build/vita --target vita_vpk -j6
 python3 tools/vita_verify.py
 ```
 
-Current build log: `build/vita/logs/build-a019-final-delivery.txt`; historical logs retained. Package hashes/byte sizes: `build/vita/artifacts.json` and `SHA256SUMS`. Generated build/Ninja/ELF/VPK artifacts are ignored, not committed.
+Current package hashes/byte sizes: `build/vita/artifacts.json` and `SHA256SUMS`. Generated build/Ninja/ELF/VPK artifacts are ignored, not committed.
 
 ## Expected outputs
 
@@ -71,7 +71,7 @@ Optional debug assets/log maps may also be generated under `build/vita/`.
 Keep `HaloCE.elf`, `HaloCE.elf.map`, `HaloCE.elf.velf` and artifacts.json for crash analysis. Final package SHA-256:
 
 ```text
-6f8c72b892f3c1c2793a8ee57b1adaeff8efad23686ca3a3498e1b489a8e8ae4  HaloCE.vpk
+cd364a2c7d692971816d9b93d92fef07fe3e7f39aa2fc6f42c183785aa88ab8f  HaloCE.vpk
 ```
 
 Rebuilding can change package timestamps/hash; use the verifier's fresh SHA256SUMS for the package actually installed.
@@ -131,18 +131,20 @@ Existing SDK static libraries: vitaGL/VitaShaRK/ShaccCgExt, SDL3 3.4.12, pthread
 
 No retail Halo data belongs in the build tree.
 
-The imported engine is the Xbox reconstruction: its real verifier requires **Xbox cache version 5**. PC Halo/Custom Edition caches/version7/609 and PC-style separate bitmaps.map/sounds.map are not accepted substitutes. Put Xbox `ui.map`, `a10.map` and the other map files from your own game in the target directory. ui/a10 names are found case-insensitively. The current milestone verifies headers only; it does not yet decompress/rebase/load their tags.
+The imported engine is the Xbox reconstruction: its real verifier requires **Xbox cache version 5**. PC Halo/Custom Edition caches/version7/609 and PC-style separate bitmaps.map/sounds.map are not accepted substitutes. Put Xbox `ui.map`, `a10.map` and the other map files from your own game in the target directory. ui/a10 names are found case-insensitively. The current checkpoint reads, decompresses and partially relocates `ui.map` tags; it does not activate BSP/GPU resources or the full scenario/main loop.
 
-## Current00.07 Main Menu tag checkpoint (A019)
+## Current 00.09 UI pool cleanup checkpoint (A023)
 
-Install current HaloCE.vpk, verify banner00.07 and keep the matching ELF/map. Same Xbox-v5 ui.map; no conversion. Startup reads ui only, avoiding another57s a10 read. Existing diagnostic remains visible. Expect MENU TAGS PASS - ENGINE PENDING after these completed operations:
+Install current `build/vita/HaloCE.vpk`, verify banner00.09 and keep the matching ELF/map. Use the same Xbox-v5 `ui.map`; startup reads ui only. Existing diagnostic remains visible. Expect these completed operations:
 
 - 017: typed relocation committed,3362 pointers for exact user ui.map; rule counts1025 tag_block.address/866 tag_data.address/1471 tag_reference.name.
 - 018: original tag_loaded resolves ui\shell\main_menu\main_menu and9 reachable widgets.
 - 019: original bitmap_group_get_bitmap_from_sequence, unicode_string_list_get_string and font_get_character_by_ascii_code complete.
-- 020: detach restores original CRCe22586e4;016 reports UI checkpoint1/1.
+- 021: checked UI cache remains mounted after original accessors; 022: original UI globals and 16 KiB pool initialize.
+- On Cross, 023 frees the pool before 020 restores the original CRC `e22586e4`; 015..022 then repeat.
+- On Start, 023 frees the second pool before 020 restores the CRC and the arena exits cleanly.
 
-Cross repeats the changed UI contract; Start cancels/exits. Return debug.txt, or matching dump on crash. This VPK does not initialize UI widget state or draw the menu;010 is still withheld. New00.07 remains LINKS until tested. Host commands: python3 tools/vita_menu_regression.py /path/to/ui.map /path/to/a10.map and python3 tools/vita_program_regression.py. Campaign a10 safely rejects this menu-only plan because its main-menu tag is absent; A018 campaign read stays BOOTS. Journal/hash1.5MiB + at most32KiB graph state are transient within existing heap; no pool increase, full-map copy or retail data in outputs.
+After one Cross and Start, copy both `ux0:data/HaloCE/debug.txt` and `heap_dump.txt`. The expected dump has no 16,384-byte `ui_widget.c:117` allocation. An absent dump or 023 log does not by itself prove leak repair; hardware evidence is required. This package still does not create the root widget or draw the Halo menu; 010 stays withheld. Host commands: `python3 tools/vita_menu_regression.py /path/to/ui.map /path/to/a10.map` and `python3 tools/vita_program_regression.py`. Campaign a10 remains outside the UI fast path. No retail data is packaged.
 
 ## Historical 00.06 integration test (A017/A018)
 

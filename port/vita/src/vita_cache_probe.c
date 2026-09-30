@@ -30,6 +30,9 @@ int vita_cache_probe(int graphics, int core, int shaders)
 	int i, passed = 0;
 	void *tags = (void *)halo_vita_memory_address(HALO_XBOX_TAG_BASE);
 	if (!tags) return 0;
+	/* A recheck replaces the same arena bytes. Restore the old image first. */
+	if (!halo_vita_ui_runtime_dispose()) return -1;
+	if (!halo_vita_cache_unmount_menu()) return 0;
 	vita_graphics_cache_status(-1);
 	for (i = 0; i < 1; ++i) {
 		char path[320], error[160] = {0};
@@ -45,12 +48,24 @@ int vita_cache_probe(int graphics, int core, int shaders)
 			vita_log("cache %s loaded bytes=%u compressed=%d tags=%u vertex_buffers=%u index_buffers=%u tag_crc32=%08x time_us=%llu",
 				names[i], info.tag_size, info.compressed, info.tag_count, info.vertices, info.indices, info.tag_crc,
 				(unsigned long long)(vita_time_us() - start));
-			passed += halo_vita_cache_index_probe(tags, info.tag_size) != 0;
+			if (halo_vita_cache_mount_menu(tags, info.tag_size)) {
+				if (halo_vita_cache_validate_menu() && halo_vita_ui_runtime_initialize()) passed++;
+				else {
+					vita_log("MAIN MENU BLOCKED: original tag/accessor validation failed");
+					if (!halo_vita_ui_runtime_dispose()) return -1;
+					halo_vita_cache_unmount_menu();
+				}
+			}
 		} else vita_log("cache %s FAILED: %s", names[i], error);
 		fclose(file);
-		if (state.cancelled) { vita_graphics_cache_status(0); return -1; }
+		if (state.cancelled) {
+			if (!halo_vita_ui_runtime_dispose()) return -1;
+			halo_vita_cache_unmount_menu();
+			vita_graphics_cache_status(0); return -1;
+		}
 	}
-	vita_log("[VITA 016] real UI menu-tag checkpoint=%d/1; widget state/BSP/resources not activated; full main still blocked", passed);
+	vita_log("[VITA 016] real UI menu-tag checkpoint=%d/1; persistent mount=%s; root/events/BSP/GPU not activated",
+		passed, passed ? "YES" : "NO");
 	vita_graphics_cache_status(passed == 1);
 	return passed == 1;
 }

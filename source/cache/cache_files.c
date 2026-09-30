@@ -860,13 +860,22 @@ unsigned long tag_get_group_tag(
 }
 
 #ifdef HALO_VITA
-/* Restricted integration checkpoint: mount only the checked directory,
- * exercise the original tag APIs, then detach. Nested tag pointers and
- * BSP/GPU resources remain in their Xbox form; never enter main with this
- * temporary mount. A complete typed relocation pass is still required. */
+/* Restricted integration checkpoint. The validated image may remain mounted
+ * while original tag/UI consumers run; BSP/GPU resources are not registered. */
 typedef char vita_scenario_size[sizeof(struct scenario) == 1456 ? 1 : -1];
 typedef char vita_scenario_skies[offsetof(struct scenario, sky_references) == 48 ? 1 : -1];
 typedef char vita_scenario_bsps[offsetof(struct scenario, structure_bsp_references) == 1444 ? 1 : -1];
+struct vita_original_tag_pointers { char *name; void *base_address; };
+static struct {
+    void *tags;
+    size_t length;
+    struct vita_cache_info info;
+    struct vita_menu_stats stats;
+    struct vita_menu_relocation *plan;
+    struct vita_original_tag_pointers *instances;
+    struct cache_file_tag_instance *directory;
+    struct cache_file_tag_instance *original_directory;
+} vita_menu_mount;
 static void *vita_tag_span(void *tags, size_t length, const void *pointer, size_t bytes)
 {
 	uintptr_t value = (uintptr_t)pointer;
@@ -874,67 +883,112 @@ static void *vita_tag_span(void *tags, size_t length, const void *pointer, size_
 		bytes > length - (value - HALO_XBOX_TAG_BASE)) return NULL;
 	return (byte *)tags + value - HALO_XBOX_TAG_BASE;
 }
-int halo_vita_cache_index_probe(void *tags, size_t length)
+int halo_vita_cache_mount_menu(void *tags, size_t length)
 {
-	struct vita_cache_info info;
-	struct vita_menu_stats menu_stats;
-	struct vita_menu_relocation *menu_plan;
-	struct tag_iterator iterator;
-	struct scenario *scenario;
-	long i, index, count = 0, bitmaps = 0;
-	char reason[128];
-	int result = 0;
-	if (cache_file_globals.tags_loaded || !vita_cache_validate_index(tags, length, &info, reason, sizeof(reason))) {
-		vita_log("cache index mount rejected (already mounted or invalid directory)"); return 0;
-	}
-	menu_plan = vita_cache_relocate_menu(tags, length, (uint32_t)(uintptr_t)tags,
+    struct vita_cache_info info;
+    struct vita_menu_stats menu_stats;
+    struct vita_menu_relocation *menu_plan;
+    struct cache_file_tag_instance *directory;
+    struct vita_original_tag_pointers *instances;
+    long i;
+    char reason[128];
+    if (vita_menu_mount.tags || cache_file_globals.tags_loaded ||
+        !vita_cache_validate_index(tags, length, &info, reason, sizeof(reason))) {
+        vita_log("cache index mount rejected (already mounted or invalid directory)"); return 0;
+    }
+    directory = vita_tag_span(tags, length, ((struct cache_file_tag_header *)tags)->tag_instances,
+        info.tag_count * sizeof(*directory));
+    if (!directory) { vita_log("cache directory span invalid"); return 0; }
+    instances = malloc(info.tag_count * sizeof(*instances));
+    if (!instances) { vita_log("cache directory journal allocation failed"); return 0; }
+    for (i = 0; i < (long)info.tag_count; ++i) {
+        instances[i].name = directory[i].name;
+        instances[i].base_address = directory[i].base_address;
+    }
+    menu_plan = vita_cache_relocate_menu(tags, length, (uint32_t)(uintptr_t)tags,
         &menu_stats, reason, sizeof(reason));
-    if (!menu_plan) { vita_log("menu typed relocation FAILED: %s", reason); return 0; }
+    if (!menu_plan) {
+        vita_log("menu typed relocation FAILED: %s", reason);
+        free(instances); return 0;
+    }
+    /* All directory spans were checked by the index reader. No operation
+     * after the relocation commit may fail before this journal is installed. */
+    vita_menu_mount.tags = tags;
+    vita_menu_mount.length = length;
+    vita_menu_mount.info = info;
+    vita_menu_mount.stats = menu_stats;
+    vita_menu_mount.plan = menu_plan;
+    vita_menu_mount.instances = instances;
+    vita_menu_mount.directory = directory;
+    vita_menu_mount.original_directory = ((struct cache_file_tag_header *)tags)->tag_instances;
     vita_log("[VITA 017] typed menu relocation committed: pointers=%u blocks=%u references=%u widgets=%u fonts=%u strings=%u bitmaps=%u; metadata only",
         menu_stats.pointers, menu_stats.blocks, menu_stats.references, menu_stats.widgets,
         menu_stats.fonts, menu_stats.string_lists, menu_stats.bitmap_groups);
     vita_log("Vita typed rebase rules: tag_block.address=%u tag_data.address=%u tag_reference.name=%u; directory/root/name handled by mount; BSP/GPU words unchanged",
         menu_stats.block_addresses, menu_stats.data_addresses, menu_stats.reference_names);
 	cache_file_globals.tag_header = tags;
-	global_tag_instances = vita_tag_span(tags, length, cache_file_globals.tag_header->tag_instances, info.tag_count * 32);
-	cache_file_globals.tag_header->tag_instances = global_tag_instances;
+	global_tag_instances = directory;
+	cache_file_globals.tag_header->tag_instances = directory;
 	for (i = 0; i < (long)info.tag_count; ++i) {
 		global_tag_instances[i].name = vita_tag_span(tags, length, global_tag_instances[i].name, 1);
 		if (global_tag_instances[i].base_address)
 			global_tag_instances[i].base_address = vita_tag_span(tags, length, global_tag_instances[i].base_address, 1);
 	}
 	cache_file_globals.tags_loaded = TRUE;
+	vita_log("[VITA 021] UI cache mounted persistently: tags=%u bytes=%lu", info.tag_count, (unsigned long)length);
+	return 1;
+}
+int halo_vita_cache_validate_menu(void)
+{
+	const struct vita_cache_info *info = &vita_menu_mount.info;
+	const struct vita_menu_stats *stats = &vita_menu_mount.stats;
+	struct tag_iterator iterator;
+	struct scenario *scenario;
+	long index, count = 0, bitmaps = 0;
+	if (!vita_menu_mount.tags || !cache_file_globals.tags_loaded) return 0;
 	tag_iterator_new(&iterator, NONE);
 	while ((index = tag_iterator_next(&iterator)) != NONE) {
 		++count;
 		if (tag_get_group_tag(index) == 'bitm') ++bitmaps;
 	}
-	if (count != (long)info.tag_count || !tag_index_is_group(info.scenario_index, SCENARIO_TAG)) goto detach;
-	scenario = tag_get(SCENARIO_TAG, info.scenario_index);
+	if (count != (long)info->tag_count || !tag_index_is_group(info->scenario_index, SCENARIO_TAG)) return 0;
+	scenario = tag_get(SCENARIO_TAG, info->scenario_index);
 	if (scenario->type < _scenario_type_solo || scenario->type > _scenario_type_main_menu ||
-		scenario->sky_references.count < 0 || scenario->structure_bsp_references.count < 0) goto detach;
+		scenario->sky_references.count < 0 || scenario->structure_bsp_references.count < 0) return 0;
 	vita_log("Halo original tag_iterator/tag_get/tag_index_is_group PASS: tags=%ld bitmaps=%ld scenario=%08lx type=%d skies=%ld BSPs=%ld name=%s",
-		count, bitmaps, (unsigned long)info.scenario_index, scenario->type, scenario->sky_references.count,
-		scenario->structure_bsp_references.count, tag_get_name(info.scenario_index));
-	result = halo_vita_menu_tags_probe(menu_stats.menu_index, &menu_stats);
-detach:
-    /* Restore directory pointers as well as typed fields, so a repeat begins
-     * with the original Xbox image and never rebases an already-native value. */
-    for (i = 0; i < (long)info.tag_count; ++i) {
-        global_tag_instances[i].name = (char *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances[i].name - (uintptr_t)tags);
-        if (global_tag_instances[i].base_address)
-            global_tag_instances[i].base_address = (void *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances[i].base_address - (uintptr_t)tags);
-    }
-    cache_file_globals.tag_header->tag_instances = (void *)(HALO_XBOX_TAG_BASE + (uintptr_t)global_tag_instances - (uintptr_t)tags);
-    vita_cache_restore_menu(menu_plan);
-	{
-		struct vita_cache_info restored;
-		if (!vita_cache_validate_index(tags, length, &restored, reason, sizeof(reason)) || restored.tag_crc != info.tag_crc) {
-			vita_log("menu relocation rollback FAILED: source tag image changed"); result = 0;
-		} else vita_log("[VITA 020] menu tag checkpoint detached; original Xbox image CRC=%08x restored", restored.tag_crc);
+		count, bitmaps, (unsigned long)info->scenario_index, scenario->type, scenario->sky_references.count,
+		scenario->structure_bsp_references.count, tag_get_name(info->scenario_index));
+	return halo_vita_menu_tags_probe(stats->menu_index, stats);
+}
+int halo_vita_cache_unmount_menu(void)
+{
+	struct vita_cache_info restored;
+	char reason[128];
+	long i;
+	int result;
+	if (!vita_menu_mount.tags) return 1;
+	for (i = 0; i < (long)vita_menu_mount.info.tag_count; ++i) {
+		vita_menu_mount.directory[i].name = vita_menu_mount.instances[i].name;
+		vita_menu_mount.directory[i].base_address = vita_menu_mount.instances[i].base_address;
 	}
+	((struct cache_file_tag_header *)vita_menu_mount.tags)->tag_instances = vita_menu_mount.original_directory;
+	vita_cache_restore_menu(vita_menu_mount.plan);
+	result = vita_cache_validate_index(vita_menu_mount.tags, vita_menu_mount.length,
+		&restored, reason, sizeof(reason)) && restored.tag_crc == vita_menu_mount.info.tag_crc;
+	if (result) vita_log("[VITA 020] menu cache unmounted; original Xbox image CRC=%08x restored", restored.tag_crc);
+	else vita_log("menu cache rollback FAILED: %s", reason);
 	cache_file_globals.tags_loaded = FALSE;
 	cache_file_globals.tag_header = NULL; global_tag_instances = NULL;
+	free(vita_menu_mount.instances);
+	memset(&vita_menu_mount, 0, sizeof(vita_menu_mount));
+	return result;
+}
+int halo_vita_cache_index_probe(void *tags, size_t length)
+{
+	int result;
+	if (!halo_vita_cache_mount_menu(tags, length)) return 0;
+	result = halo_vita_cache_validate_menu();
+	if (!halo_vita_cache_unmount_menu()) result = 0;
 	if (!result) vita_log("cache scenario/index checkpoint FAILED; detached");
 	return result;
 }

@@ -7,7 +7,7 @@
 
 int main(void)
 {
-	int platform, core, maps, graphics, shaders = 0, command, arena = 0, memory = 0;
+	int platform, core, maps, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
 	char *vertex, *fragment;
 	uint32_t user, cdram, phycont;
 	platform = vita_platform_initialize();
@@ -45,8 +45,9 @@ int main(void)
 		vita_graphics_cache_status(0);
 		vita_log("cache checkpoint skipped: memory=%d maps=%d", memory, maps);
 	}
-	if (memory && maps && vita_cache_probe(graphics, core, shaders) < 0) goto cleanup;
-	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): menu tag accessors ready; full scenario/BSP/resources, startup contracts and original renderer still pending");
+	if (memory && maps) menu_cache = vita_cache_probe(graphics, core, shaders);
+	if (menu_cache < 0) goto cleanup;
+	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): UI cache/runtime-init checkpoint=%d; Main Menu root/events, scenario/BSP/resources and original renderer pending", menu_cache);
 	/* Keep the process available even without maps or runtime shader compiler. */
 	for (;;) {
 		uint64_t begin = vita_time_us(), elapsed;
@@ -61,6 +62,9 @@ int main(void)
 		if (elapsed < 33333) sceKernelDelayThread((unsigned)(33333 - elapsed));
 	}
 cleanup:
+	if (halo_vita_ui_runtime_dispose()) {
+		if (!halo_vita_cache_unmount_menu()) vita_log("UI cache restoration failed during shutdown");
+	} else vita_log("UI cache retained during shutdown because widget disposal failed");
 	if (memory || arena) halo_vita_memory_dispose();
 	if (arena) vita_memory_shutdown();
 	if (graphics) vita_graphics_shutdown();

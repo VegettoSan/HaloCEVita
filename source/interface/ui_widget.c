@@ -1993,6 +1993,30 @@ void ui_widgets_initialize(
 	return;
 }
 
+#ifdef HALO_VITA
+/* Read-only checkpoint of the original widget allocator/global state. */
+boolean halo_vita_ui_widgets_initialized(void)
+{
+	return widget_globals.initialized && widget_memory_pool->base_address != NULL;
+}
+
+/* The staged Vita checkpoint has no widget instances yet. Free the original
+ * allocation without pulling the active-widget event/disposal graph into it. */
+boolean halo_vita_ui_widgets_dispose_checkpoint(void)
+{
+	long stack;
+	for (stack = 0; stack < NUMBEROF(widget_globals.active_widgets); stack++)
+		if (widget_globals.active_widgets[stack])
+			return FALSE;
+	if (widget_memory_pool->base_address)
+		pool_free(widget_memory_pool->base_address);
+	widget_memory_pool->base_address = NULL;
+	widget_memory_pool->size = 0;
+	memset(&widget_globals, 0, sizeof(widget_globals));
+	return TRUE;
+}
+#endif
+
 void ui_widgets_dispose(
 	void)
 {

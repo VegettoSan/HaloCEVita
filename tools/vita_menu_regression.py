@@ -116,7 +116,21 @@ def main():
     assert struct.unpack_from('<I', changed, loc['string_entry'] + 12)[0] == NATIVE + loc['text']
     assert changed[loc['bitmap']:loc['bitmap'] + 48] == tags[loc['bitmap']:loc['bitmap'] + 48]
     assert stats.menu_index == 0xE1740001 and stats.fonts == stats.widgets == stats.bitmap_count == 1
-    cases = 1
+    # Keep the typed transaction active across a consumer access. A second
+    # mount attempt must reject native pointers without changing the image.
+    persistent = C.create_string_buffer(bytes(tags), len(tags))
+    error, active_stats = C.create_string_buffer(256), Stats()
+    plan = lib.vita_cache_relocate_menu(persistent, len(tags), NATIVE,
+                                        C.byref(active_stats), error, 256)
+    assert plan, error.value.decode()
+    mounted = persistent.raw
+    assert struct.unpack_from('<I', mounted, loc['root2'] + 88)[0] == NATIVE + loc['sequence']
+    second = lib.vita_cache_relocate_menu(persistent, len(tags), NATIVE,
+                                          C.byref(Stats()), error, 256)
+    assert not second and persistent.raw == mounted
+    lib.vita_cache_restore_menu(plan)
+    assert persistent.raw == bytes(tags)
+    cases = 2
     mutations = [
         ('late data out of bounds', loc['string_entry'] + 12, BASE + len(tags)),
         ('negative block count', loc['root2'] + 84, NONE),
