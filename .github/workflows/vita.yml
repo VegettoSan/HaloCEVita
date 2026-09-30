@@ -28,12 +28,13 @@ jobs:
           apt-get update
           DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 cmake ninja-build
       - name: Configure Vita only
-        run: cmake -S port/vita -B build/vita -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        run: cmake -S port/vita -B build/vita -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DHALO_VITA_MENU_RENDER_PROBE=ON
       - name: Build VPK
         run: cmake --build build/vita --target vita_vpk -j2
       - name: Verify artifacts
         run: python3 tools/vita_verify.py
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: halo-vita
           path: |
