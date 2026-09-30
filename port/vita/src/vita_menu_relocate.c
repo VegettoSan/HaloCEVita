@@ -11,7 +11,8 @@
 #define NONE 0xffffffffu
 enum kind { BLOCK, DATA, REFERENCE };
 enum schema { LEAF, REF, BSP, SPRITE, SEQUENCE, BITMAP, STR_ENTRY,
-    STRINGS, CHAR_TABLE, FONT, INPUT, SEARCH, EVENT, CHILD, WIDGET, SCENARIO };
+    STRINGS, CHAR_TABLE, FONT, INPUT, SEARCH, EVENT, CHILD, WIDGET, SCENARIO,
+    INTERFACE_REFS, GAME_GLOBALS };
 struct field { uint16_t offset, kind, schema; };
 struct layout { uint16_t size, fields; const struct field *field; };
 struct patch { uint32_t offset, before, after, pointer; };
@@ -41,11 +42,20 @@ static const struct field child[] = {R(0)};
 static const struct field widget[] = {R(56),B(72,INPUT),B(84,EVENT),B(96,SEARCH),
     R(236),R(252),R(340),R(356),R(420),B(724,CHILD),B(992,CHILD)};
 static const struct field scenario[] = {B(48,REF),B(1444,BSP)};
+/* game_globals.interface_tag_references is the one UI-global block consumed by
+ * interface_get_tag_index() during the first retail screen quad. Keep this
+ * narrow: do not recursively activate the rest of matg during menu bring-up. */
+static const struct field interface_refs[] = {
+    R(0),R(16),R(32),R(48),R(64),R(80),R(96),R(112),
+    R(128),R(144),R(160),R(176),R(192),R(208),R(224),R(240)
+};
+static const struct field game_globals[] = {B(320,INTERFACE_REFS)};
 #define L(sz,f) {sz,sizeof(f)/sizeof(f[0]),f}
 static const struct layout layouts[] = {
     {0,0,NULL},L(16,ref),L(32,bsp),{32,0,NULL},L(64,seq),L(108,bitmap),
     L(20,str_entry),L(12,strings),L(12,char_table),L(156,font),
-    {36,0,NULL},{34,0,NULL},L(72,event),L(80,child),L(1004,widget),L(1456,scenario)
+    {36,0,NULL},{34,0,NULL},L(72,event),L(80,child),L(1004,widget),L(1456,scenario),
+    L(304,interface_refs),L(428,game_globals)
 };
 static uint32_t read32(const unsigned char *p)
 { return (uint32_t)p[0] | (uint32_t)p[1]<<8 | (uint32_t)p[2]<<16 | (uint32_t)p[3]<<24; }
@@ -230,6 +240,7 @@ struct vita_menu_relocation *vita_cache_relocate_menu(void *tags, size_t length,
         else if(group==0x666f6e74u) {schema=FONT;++stats->fonts;}
         else if(group==0x75737472u) {schema=STRINGS;++stats->string_lists;}
         else if(group==0x73636e72u) schema=SCENARIO;
+        else if(group==0x6d617467u) schema=GAME_GLOBALS;
         if(schema==LEAF) continue;
         size=layouts[schema].size;
         if(!span(p,read32(p->tags+entry+20),size,&root) || !walk(p,root,schema,0)) {
