@@ -8,6 +8,7 @@
 #include "interface/marketing_and_strategic_business_development.h"
 #include "vita_runtime.h"
 #include <stdarg.h>
+#include <sched.h>
 
 #undef malloc
 #undef free
@@ -61,6 +62,19 @@ BOOL WINAPI QueryPerformanceFrequency(LARGE_INTEGER *frequency)
 	frequency->QuadPart = 1000000; return TRUE;
 }
 DWORD WINAPI GetTickCount(void) { return (DWORD)(vita_time_us() / 1000); }
+/* The Vita port uses the same scheduling contract as the native Linux layer:
+ * yield the current thread and report success. Texture-cache waits only need
+ * to let resource work make progress; this is not a success-only stub. */
+BOOL WINAPI SwitchToThread(void)
+{
+	sched_yield();
+	return TRUE;
+}
+/* VitaSDK's math headers route the game's standard sin/cos calls through
+ * halo_sin/halo_cos. Preserve the C double-precision contract and delegate to
+ * the compiler/libm implementation instead of approximating widget motion. */
+double halo_sin(double angle) { return __builtin_sin(angle); }
+double halo_cos(double angle) { return __builtin_cos(angle); }
 DWORD WINAPI GetLastError(void) { return (DWORD)vita_xapi_last_error_get(); }
 VOID WINAPI SetLastError(DWORD error) { vita_xapi_last_error_set((uint32_t)error); }
 DWORD WINAPI GetFileAttributesA(LPCSTR path)
