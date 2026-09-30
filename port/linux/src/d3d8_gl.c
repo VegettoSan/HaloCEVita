@@ -2563,6 +2563,11 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	if (!device.gl_ready || !program || !device.vertex_shader || !program->instructions)
 	{
 		stats.skipped_no_program++;
+#ifdef HALO_VITA
+		{ static BOOL reported; if (!reported) { reported = TRUE;
+			vita_log("[VITA DRAW] blocked before first original draw: gl_ready=%d program=%p vertex_shader=%p instructions=%p",
+				device.gl_ready, program, device.vertex_shader, program ? program->instructions : NULL); } }
+#endif
 		return NULL;
 	}
 	{
@@ -2580,6 +2585,10 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	if (!bind_targets(&has_depth))
 	{
 		stats.skipped_no_target++;
+#ifdef HALO_VITA
+		{ static BOOL reported; if (!reported) { reported = TRUE;
+			vita_log("[VITA DRAW] blocked before first original draw: no bound color/depth target"); } }
+#endif
 		return NULL;
 	}
 	apply_raster_state(has_depth);
@@ -2608,6 +2617,10 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	if (!entry)
 	{
 		stats.skipped_link++;
+#ifdef HALO_VITA
+		{ static BOOL reported; if (!reported) { reported = TRUE;
+			vita_log("[VITA DRAW] blocked before first original draw: NV2A program link failed"); } }
+#endif
 		gl_check_errors("program");
 		return NULL;
 	}
