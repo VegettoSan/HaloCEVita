@@ -1,0 +1,46 @@
+name: Vita build
+
+on:
+  push:
+    branches:
+      - main
+      - codex/menu-0013-ci
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "research/**"
+  workflow_dispatch:
+
+concurrency:
+  group: vita-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  vita:
+    runs-on: ubuntu-24.04
+    container:
+      image: vitasdk/vitasdk:2026.08
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Host build tools
+        run: |
+          apt-get update
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends python3 cmake ninja-build
+      - name: Configure
+        run: python3 configure.py --release
+      - name: Build VPK
+        run: ninja vita_vpk
+      - name: Verify artifacts
+        run: python3 tools/vita_verify.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: halo-vita
+          path: |
+            build/vita/HaloCE.vpk
+            build/vita/HaloCE.elf
+            build/vita/HaloCE.elf.map
+            build/vita/eboot.bin
+            build/vita/artifacts.json
+            build/vita/SHA256SUMS
+          retention-days: 3
