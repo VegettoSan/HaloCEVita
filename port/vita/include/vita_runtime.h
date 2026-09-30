@@ -36,4 +36,8 @@ int halo_vita_file_contract_probe(void);
 int vita_xapi_file_attributes(const char *xbox_path, uint32_t *attributes, uint32_t *error);
 uint32_t vita_xapi_last_error_get(void);
 void vita_xapi_last_error_set(uint32_t error);
+#ifdef HALO_VITA_MENU_RENDER_PROBE
+int halo_vita_renderer_initialize(void);
+int halo_vita_renderer_render_menu_frame(void);
+#endif
 #endif
