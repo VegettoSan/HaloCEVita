@@ -23,8 +23,15 @@ void platform_video_drawable_size(int *width, int *height)
 
 void platform_video_swap(void)
 {
+	GLenum error;
+	static int first_present;
 	vglSwapBuffers(GL_FALSE);
-	if (glGetError() != GL_NO_ERROR)
+	error = glGetError();
+	if (!first_present || error != GL_NO_ERROR) {
+		first_present = 1;
+		vita_log("[VITA PRESENT] original D3D8 frame submitted gl_error=%x", error);
+	}
+	if (error != GL_NO_ERROR)
 		vita_fatal("D3D8 present failed during Vita frame swap");
 }
 
