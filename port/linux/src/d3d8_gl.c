@@ -2887,6 +2887,7 @@ static struct
 
 /* uploads the pages of [first, last) that are absent or stale; FALSE if one
 of them turns out to be volatile */
+#ifndef HALO_VITA
 static BOOL mirror_refresh(unsigned long first, unsigned long last)
 {
 	unsigned long page, run;
@@ -3043,6 +3044,21 @@ static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buff
 	stats.mirrored_bytes += size;
 	return TRUE;
 }
+
+#else
+/* Vita has no guest page-write watch. Upload each draw through the existing
+   transient stream instead of reusing potentially stale mirrored data. */
+static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buffer, unsigned long *offset,
+	unsigned long *generation)
+{
+	(void)address;
+	(void)size;
+	(void)buffer;
+	(void)offset;
+	(void)generation;
+	return FALSE;
+}
+#endif
 
 /* the smallest and largest index of an index range the mirror holds: the
 same ranges are drawn frame after frame */
