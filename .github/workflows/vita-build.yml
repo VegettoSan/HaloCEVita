@@ -69,6 +69,12 @@ jobs:
       image: vitasdk/vitasdk:2026.08
     steps:
       - uses: actions/checkout@v4
+      - name: Discover renderer symbol owners
+        run: |
+          for symbol in halo_sin halo_cos draw_quad valid_real_argb_color sound_render_time sound_idle terminal_printf console_warning scenario_debug_to_file SwitchToThread; do
+            echo "===== ${symbol} ====="
+            grep -Rsn --include='*.c' --include='*.h' "${symbol}" source port/linux/src port/linux/include port/vita/src port/vita/include | head -40 || true
+          done
       - name: Configure original UI renderer link probe
         run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON
       - name: Link original UI renderer closure
