@@ -34,6 +34,34 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  prerelease:
+    name: Publish Vita pre-release
+    needs: vita
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Vita package
+        uses: actions/download-artifact@v4
+        with:
+          name: HaloCEVita-main-${{ github.sha }}
+          path: release
+      - name: Publish GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: vita-build-${{ github.run_number }}
+          name: HaloCEVita Vita Build #${{ github.run_number }}
+          target_commitish: ${{ github.sha }}
+          prerelease: true
+          make_latest: false
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/HaloCE.vpk
+            release/HaloCE.elf
+            release/HaloCE.elf.map
+
   renderer-closure:
     runs-on: ubuntu-latest
     continue-on-error: true
