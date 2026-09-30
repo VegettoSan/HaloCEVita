@@ -6,6 +6,28 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* Xbox D3D8 backend display contract. The Vita framebuffer is 960x544. */
+int platform_screen_mode(long *width, long *height)
+{
+	if (!width || !height) return 0;
+	*width = 960;
+	*height = 544;
+	return 1;
+}
+
+void platform_video_drawable_size(int *width, int *height)
+{
+	if (width) *width = 960;
+	if (height) *height = 544;
+}
+
+void platform_video_swap(void)
+{
+	vglSwapBuffers(GL_FALSE);
+	if (glGetError() != GL_NO_ERROR)
+		vita_fatal("D3D8 present failed during Vita frame swap");
+}
+
 static GLuint probe_program, probe_vbo;
 static const char *compiler_stage = "vitaGL";
 static int compiler_available;
