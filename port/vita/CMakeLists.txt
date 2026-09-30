@@ -51,6 +51,7 @@ add_library(halo_core STATIC
 # The default VPK does not enter this path until all device contracts link.
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_sources(halo_core PRIVATE
+    src/halo_renderer_globals.c
     ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
     ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
     ${ROOT}/source/interface/interface.c
