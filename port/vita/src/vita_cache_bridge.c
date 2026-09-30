@@ -4,8 +4,9 @@
  * sector-aligned uncompressed cache. Vita currently keeps the user's Xbox map
  * compressed and resolves each request through the checked logical-range
  * reader. The operation is synchronous: completion is TRUE only after the
- * exact requested bytes have been inflated and the zlib stream/final logical
- * length have been validated. This preserves the original caller contract
+ * exact requested bytes have been inflated from the map whose complete stream
+ * was validated during the startup tag read. Bound resource reads validate the
+ * header, range and compressed prefix; only EOF reads recheck the final checksum. This preserves the original caller contract
  * without a parallel asset loader or fake completion.
  */
 #include "cseries/cseries.h"

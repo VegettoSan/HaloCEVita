@@ -77,6 +77,8 @@ def main():
     reader.vita_cache_resource_read.argtypes = [
         C.c_uint32, C.c_void_p, C.c_size_t, C.c_char_p, C.c_size_t]
     reader.vita_cache_resource_read.restype = C.c_int
+    reader.vita_cache_resource_range_valid.argtypes = [C.c_uint32, C.c_size_t]
+    reader.vita_cache_resource_range_valid.restype = C.c_int
 
     def read(path, cancelled=False, capacity=CAPACITY):
         buffer = C.create_string_buffer(CAPACITY)
@@ -159,11 +161,22 @@ def main():
             count += 1
 
             assert reader.vita_cache_resource_bind(os.fsencode(path), LOGICAL_SIZE)
+            for offset, size, valid in [
+                (RESOURCE_OFFSET, len(RESOURCE_BYTES), True),
+                (LOGICAL_SIZE - 1, 1, True), (LOGICAL_SIZE, 1, False),
+                (LOGICAL_SIZE - 1, 2, False), (0xffffffff, 2, False),
+                (2047, 1, False), (RESOURCE_OFFSET, 0, False),
+                (RESOURCE_OFFSET, C.c_size_t(-1).value, False),
+            ]:
+                assert bool(reader.vita_cache_resource_range_valid(offset, size)) == valid
+                count += 1
             bound, bound_error = C.create_string_buffer(len(RESOURCE_BYTES)), C.create_string_buffer(160)
             assert reader.vita_cache_resource_read(RESOURCE_OFFSET, bound, len(RESOURCE_BYTES),
                                                    bound_error, len(bound_error)), bound_error.value
             assert bound.raw == RESOURCE_BYTES
             reader.vita_cache_resource_unbind()
+            assert not reader.vita_cache_resource_range_valid(RESOURCE_OFFSET, 1)
+            count += 1
             assert not reader.vita_cache_resource_read(RESOURCE_OFFSET, bound, len(RESOURCE_BYTES),
                                                        bound_error, len(bound_error))
             count += 2

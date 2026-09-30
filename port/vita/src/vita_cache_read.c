@@ -53,7 +53,7 @@ static int cache_header_read(FILE *file, struct vita_cache_header_state *state,
 	return 1;
 }
 static int cache_capture_range(FILE *file, const struct vita_cache_header_state *state,
-	uint32_t logical_offset, uint32_t bytes, void *destination,
+	uint32_t logical_offset, uint32_t bytes, void *destination, int validate_stream,
 	vita_cache_progress progress, void *context, char *error, size_t error_size)
 {
 	unsigned char *target = destination;
@@ -123,11 +123,12 @@ static int cache_capture_range(FILE *file, const struct vita_cache_header_state 
 				if (!progress(position, context)) { fail(error, error_size, "cancelled"); goto inflate_done; }
 				next_progress = position + 1024 * 1024;
 			}
-			/* Resource reads only need the requested logical prefix. Once the
+			/* After startup has validated the complete map, resource reads only
+			 * need the requested logical prefix. Once the
 			 * range is complete, do not decompress the rest of a potentially
 			 * hundreds-of-megabytes map. Requests that reach logical EOF still
 			 * run to Z_STREAM_END so zlib validates the stream/checksum. */
-			if (end < state->logical_size && captured == bytes && position >= end) {
+			if (!validate_stream && end < state->logical_size && captured == bytes && position >= end) {
 				success = 1;
 				goto inflate_done;
 			}
@@ -191,7 +192,7 @@ int vita_cache_read(FILE *file, void *tags, size_t capacity, struct vita_cache_i
 		info->tag_size > info->logical_size - info->tag_offset)
 		return fail(error, error_size, "invalid Xbox-v5 cache bounds");
 	info->compressed = state.compressed;
-	if (!cache_capture_range(file, &state, info->tag_offset, info->tag_size, tags,
+	if (!cache_capture_range(file, &state, info->tag_offset, info->tag_size, tags, 1,
 		progress, context, error, error_size)) return 0;
 	return vita_cache_validate_index(tags, info->tag_size, info, error, error_size);
 }
@@ -204,7 +205,7 @@ int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
 	if (!cache_header_read(file, &state, error, error_size)) return 0;
 	if (expected_logical_size && state.logical_size != expected_logical_size)
 		return fail(error, error_size, "cache logical size changed");
-	return cache_capture_range(file, &state, logical_offset, (uint32_t)bytes, destination,
+	return cache_capture_range(file, &state, logical_offset, (uint32_t)bytes, destination, 1,
 		progress, context, error, error_size);
 }
 int vita_cache_resource_bind(const char *path, uint32_t logical_size)
@@ -233,12 +234,19 @@ int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t 
 {
 	FILE *file;
 	int result;
+	struct vita_cache_header_state state;
 	if (!resource_map_path[0] || !resource_map_logical_size)
 		return fail(error, error_size, "no cache resource map bound");
+	if (!destination || !vita_cache_resource_range_valid(logical_offset, bytes))
+		return fail(error, error_size, "invalid bound resource range/destination");
 	file = fopen(resource_map_path, "rb");
 	if (!file) return fail(error, error_size, "cache resource map open failed");
-	result = vita_cache_read_logical_range(file, resource_map_logical_size, logical_offset,
-		destination, bytes, NULL, NULL, error, error_size);
+	result = cache_header_read(file, &state, error, error_size);
+	if (result && state.logical_size != resource_map_logical_size)
+		result = fail(error, error_size, "cache logical size changed");
+	if (result)
+		result = cache_capture_range(file, &state, logical_offset, (uint32_t)bytes,
+			destination, 0, NULL, NULL, error, error_size);
 	fclose(file);
 	return result;
 }

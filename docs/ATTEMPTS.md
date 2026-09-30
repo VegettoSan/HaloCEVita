@@ -501,3 +501,12 @@ A037 continuation: adding the original Xbox rasterizer, swizzle/bitmap helpers, 
 **Commands/result:** git diff --check. Running python3 tools/vita_cache_regression.py exposed a pre-existing failure: the reader's recent unconditional early prefix exit accepts a compressed tag read before validating a truncated trailer. This failure is retained for the next integrity correction; it is unrelated to compiled bitmap validation. No SDK is installed in this workspace; the mandatory Vita workflow will compile/link the native package. No new console run/draw claim.
 
 **Next hardware gates:** 039 compiled cache validation; 036D decal setup; 028/032 active root; 037 frame/window; VITA CACHE actual resource range; VITA TEXTURE upload; VITA DRAW shader/geometry; VITA PRESENT then 038. Any failed record reports its original tag/path/flags/offset/size/handles.
+
+
+## 2026-09-30 — A040 — Restore full compressed-map validation before resource streaming
+
+**Failure/hypothesis:** A039 runs the existing cache regression and exposes `accepted truncated/corrupt stream`. The prefix shortcut in cache_capture_range had been applied to both resource requests and the startup tag read. A short zlib prefix can contain valid tags while the final trailer is absent.
+
+**Changes:** separate complete validation from bounded resource prefix capture. vita_cache_read (startup tags) and the public vita_cache_read_logical_range integrity API run through Z_STREAM_END and check final logical length/checksum. Bound resource reads keep the prefix optimization after that full startup validation; they recheck the current header/logical size, range and destination and report the honest checksum limit. No map is rewritten or fully buffered. Add boundary/unbound/zero/overflow cases for the compiled bitmap range validator.
+
+**Commands/results:** python3 tools/vita_cache_regression.py passes 58 actual-C synthetic cases; python3 tools/vita_menu_regression.py passes 18 transactional relocation cases. git diff --check passes. Real ui/a10 files are not attached here; no new real-map or hardware claim. The first failure is retained in A039. Next: native CI and first original shader/draw review.
