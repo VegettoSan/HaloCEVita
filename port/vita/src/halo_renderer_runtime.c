@@ -30,6 +30,7 @@ void compute_window_bounds(long player_index, long num_players,
 static boolean vita_renderer_ready;
 static boolean vita_texture_cache_opened;
 static boolean vita_first_menu_frame = TRUE;
+static boolean vita_texture_idle_probe_pending = TRUE;
 
 int halo_vita_renderer_initialize(void)
 {
@@ -122,6 +123,17 @@ int halo_vita_renderer_render_menu_frame(void)
 
     if (vita_first_menu_frame)
         vita_log("[VITA 037] original Main Menu frame begin");
+
+    /* One-shot diagnostic for the 00.14/00.15 lruv_cache.c:754 halt. This is
+     * still Halo's original cache idle routine; the only side effect is one
+     * extra LRU tick on the first bring-up frame. If it returns, any later
+     * lruv_cache.c:754 assertion belongs to a different cache owner. */
+    if (vita_texture_idle_probe_pending) {
+        vita_log("[VITA 037T] original texture_cache_idle probe begin");
+        texture_cache_idle();
+        vita_texture_idle_probe_pending = FALSE;
+        vita_log("[VITA 037T] original texture_cache_idle probe PASS");
+    }
 
     rasterizer_frame_begin(&frame_parameters);
     rasterizer_windows_begin();
