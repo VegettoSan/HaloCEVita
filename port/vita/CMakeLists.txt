@@ -153,7 +153,7 @@ set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
 add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_video_backend.c src/vita_gl_compat.c
-  src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
+  src/vita_renderer_platform.c src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
 target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
 if(HALO_VITA_MENU_BRINGUP)
   target_compile_definitions(halo_core PRIVATE HALO_VITA_MENU_BRINGUP=1)
