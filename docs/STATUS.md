@@ -2,6 +2,8 @@
 
 Last updated: 2026-09-30
 
+Latest hardware evidence **00.16: BOOTS / render BLOCKED** (A038): native game state, typed UI mount, original Xbox rasterizer/device initialization and texture-cache per-map open return on real Vita. Bitmap activation then halts at `xbox_texture_cache.c:157 !TEST_FLAG(bitmap->flags, _bitmap_cached_bit)`. The staged bridge repeats tag postprocess on a compiled-cache bitmap. No original draw/present has been observed. Older 00.13 source/link descriptions below are historical and superseded by the 00.16 source and this exact log.
+
 Maximum demonstrated project state: **DIAGNOSTIC RENDERS** (diagnostic + synthetic NV2A triangle on real Vita) (A016). Tested baseline **00.05** compiles both generated shaders, links successfully and draws the triangle per user observation. It remains responsive through header/input tests and Start clean exit at34.3s. Full Halo rendering/menu/gameplay, multipass position invariance and repeated stability remain unverified.
 
 Last hardware-verified menu-root package **00.11: BOOTS** (A031). Real Vita confirms the original `ui_widget_load_by_name_or_tag` returns an active nine-widget Main Menu root, after original creation handlers 86 and 23 complete. The retained log ends at 028; the vitaGL logo remains because original UI update/render and D3D8 frame submission are not yet linked into the shipped path. HALO DRAW REACHED/RENDERS remain NO. [Original call graph](MAIN_MENU_CALL_GRAPH.md).
