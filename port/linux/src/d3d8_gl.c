@@ -2779,7 +2779,11 @@ static BOOL trace_frame(void)
 	static long frame = -2;
 
 	if (frame == -2)
+#ifdef HALO_VITA
+		frame = -1; /* Vita uses explicit first-draw logging, no port_config file. */
+#else
 		frame = config_integer("debug.gpu_trace_frame");
+#endif
 	return frame >= 0 && device.frame == (unsigned long)frame;
 }
 
@@ -3725,7 +3729,11 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	(void)unused;
 	(void)unused2;
 	if (screenshot_every < 0)
+#ifdef HALO_VITA
+		screenshot_every = 0;
+#else
 		screenshot_every = config_integer("debug.screenshot_every");
+#endif
 
 	if (device.gl_ready)
 	{
