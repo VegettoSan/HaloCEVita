@@ -47,6 +47,18 @@ add_library(halo_core STATIC
   ${ROOT}/port/linux/src/nv2a_vsh.c
   ${ROOT}/port/linux/src/nv2a_psh.c
   ${ROOT}/port/linux/src/xgpu_text.c)
+# Link the actual original UI/render units only in the separate closure probe.
+# The default VPK does not enter this path until all device contracts link.
+if(HALO_VITA_MENU_RENDER_PROBE)
+  target_sources(halo_core PRIVATE
+    ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
+    ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
+    ${ROOT}/source/interface/interface.c
+    ${ROOT}/source/text/draw_string.c
+    ${ROOT}/source/text/unicode.c
+    ${ROOT}/source/rasterizer/rasterizer.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_dynavobgeom.c)
+endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
 file(GLOB_RECURSE SEMANTIC_INPUTS CONFIGURE_DEPENDS ${ROOT}/source/*.h ${ROOT}/source/*.c ${ROOT}/port/include/xdk/*.h)
 add_custom_command(OUTPUT ${SEMANTICS}
