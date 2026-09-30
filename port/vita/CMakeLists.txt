@@ -168,7 +168,10 @@ if(HALO_VITA_MENU_RENDER_PROBE)
 endif()
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)
-target_link_options(HaloCE.elf PRIVATE -Wl,-q -Wl,--gc-sections "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")
+# vita-elf-create appends its SCE module/import metadata to the RX LOAD segment.
+# Keep the RW LOAD segment at the next 64-KiB boundary so renderer growth cannot
+# consume the small conversion gap and make ELF->VELF fail with segment overlap.
+target_link_options(HaloCE.elf PRIVATE -Wl,-q -Wl,--gc-sections -Wl,-Tdata=0x810f0000 "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")
 target_link_libraries(HaloCE.elf PRIVATE halo_core
   -Wl,--start-group vitaGL vitashark SceShaccCgExt SDL3 pthread stdc++ mathneon m z
   SceShaccCg_stub taihen_stub SceDisplay_stub SceCtrl_stub SceGxm_stub ScePower_stub
