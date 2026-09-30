@@ -36,12 +36,15 @@ static boolean trace_first_bitmap_request(long tag_index, long offset, long size
 		struct bitmap_data *bitmap = TAG_BLOCK_GET_ELEMENT(&group->bitmaps, bitmap_index, struct bitmap_data);
 		if (bitmap->pixels_offset == offset && bitmap->pixels_size == size) {
 			char *path = tag_get_name(tag_index);
+			unsigned long range_end = (unsigned long)offset + (unsigned long)size;
 			first_bitmap_request_traced = TRUE;
-			vita_log("[VITA CACHE] first original bitmap resource request: tag=%08lx path=%s bitmap=%ld pixels_offset=%ld pixels_size=%ld format=%d dimensions=%dx%dx%d mipmaps=%d destination=%p",
+			vita_log("[VITA CACHE] first original bitmap resource request: tag=%08lx path=%s bitmap=%ld type=%d format=%d dimensions=%dx%dx%d mipmaps=%d pixels_offset=%ld pixels_size=%ld logical_range=[%08lx,%08lx) destination=%p hardware_format=%p base_address=%p",
 				(unsigned long)tag_index, path ? path : "<null>", bitmap_index,
-				bitmap->pixels_offset, bitmap->pixels_size, (int)bitmap->format,
+				(int)bitmap->type, (int)bitmap->format,
 				(int)bitmap->width, (int)bitmap->height, (int)bitmap->depth,
-				(int)bitmap->mipmap_count, buffer);
+				(int)bitmap->mipmap_count, bitmap->pixels_offset, bitmap->pixels_size,
+				(unsigned long)offset, range_end, buffer, bitmap->hardware_format,
+				bitmap->base_address);
 			return TRUE;
 		}
 	}
@@ -72,21 +75,27 @@ short cache_file_read(
 			(unsigned long)tag_index, offset, size, buffer);
 		return NONE;
 	}
+	if ((unsigned long)size > 0xFFFFFFFFUL - (unsigned long)offset) {
+		vita_log("CACHE RESOURCE BLOCKED: logical range overflow tag=%08lx offset=%ld size=%ld destination=%p",
+			(unsigned long)tag_index, offset, size, buffer);
+		return NONE;
+	}
 	traced_bitmap = trace_first_bitmap_request(tag_index, offset, size, buffer);
 	if (!vita_cache_resource_read((uint32_t)offset, buffer, (size_t)size, error, sizeof(error))) {
 		vita_log("CACHE RESOURCE BLOCKED: tag=%08lx logical_offset=%ld size=%ld destination=%p: %s",
 			(unsigned long)tag_index, offset, size, buffer, error);
 		if (traced_bitmap)
-			vita_log("[VITA CACHE] first original bitmap resource read result=FAIL");
+			vita_log("[VITA CACHE] first original bitmap resource read result=FAIL bytes=0 requested=%ld", size);
 		return NONE;
 	}
 	*completion_flag_reference = TRUE;
 	if (traced_bitmap)
-		vita_log("[VITA CACHE] first original bitmap resource read result=PASS destination=%p", buffer);
+		vita_log("[VITA CACHE] first original bitmap resource read result=PASS bytes=%ld destination=%p", size, buffer);
 	if (!first_success_logged) {
 		first_success_logged = TRUE;
-		vita_log("[VITA CACHE] original cache_file_read logical resource PASS: tag=%08lx logical_offset=%ld size=%ld destination=%p blocking=%d synchronous=1",
-			(unsigned long)tag_index, offset, size, buffer, (int)blocking);
+		vita_log("[VITA CACHE] original cache_file_read logical resource PASS: tag=%08lx logical_offset=%ld logical_end=%08lx size=%ld destination=%p blocking=%d synchronous=1",
+			(unsigned long)tag_index, offset, (unsigned long)offset + (unsigned long)size,
+			size, buffer, (int)blocking);
 	}
 	return VITA_SYNC_CACHE_REQUEST;
 }
