@@ -1,0 +1,25 @@
+name: Vita Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "port/vita/**"
+      - "port/linux/src/**"
+      - "port/linux/include/**"
+      - "source/**"
+      - "tools/vita_*.py"
+      - ".github/workflows/vita-build.yml"
+  workflow_dispatch:
+
+jobs:
+  vita:
+    runs-on: ubuntu-latest
+    container:
+      image: vitasdk/vitasdk:2026.08
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure Vita target
+        run: cmake -S port/vita -B build/vita -G Ninja
+      - name: Build VPK
+        run: cmake --build build/vita --target vita_vpk -j2
