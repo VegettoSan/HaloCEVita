@@ -5,6 +5,7 @@
 #include <psp2/io/stat.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /* Xbox D3D8 backend display contract. The Vita framebuffer is 960x544. */
 int platform_screen_mode(long *width, long *height)
@@ -141,6 +142,28 @@ static void failed_shader_source(GLuint shader, const char *name)
 		vita_log("NV2A failed source %s saved=%u bytes", name, (unsigned)written);
 	} else vita_log("NV2A failed source %s could not open", name);
 	free(source);
+}
+void vita_graphics_halo_shader_begin(const char *stage, const char *source)
+{
+	char path[128]; FILE *file;
+	compiler_stage = stage;
+	shark_install_log_cb(compiler_log);
+	snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s.glsl", stage);
+	file = fopen(path, "wb");
+	if (file) { fputs(source, file); fclose(file); }
+	vita_log("[VITA SHADER] original NV2A %s compile begin source_bytes=%u saved=%s",
+		stage, (unsigned)strlen(source), file ? path : "NO");
+}
+int vita_graphics_halo_shader_result(uint32_t shader, const char *stage)
+{
+	GLint status = shader_log((GLuint)shader, stage);
+	if (!status) {
+		char path[128];
+		snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s.cg", stage);
+		failed_shader_source((GLuint)shader, path);
+	}
+	compiler_stage = "vitaGL";
+	return status;
 }
 int vita_graphics_shader_probe(const char *vertex, const char *fragment)
 {

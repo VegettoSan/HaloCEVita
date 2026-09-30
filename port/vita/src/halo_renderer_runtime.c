@@ -143,7 +143,10 @@ int halo_vita_renderer_render_menu_frame(void)
     window_parameters.camera.z_near = 0.01f;
     window_parameters.camera.z_far = 1.0f;
     window_parameters.rasterizer_target = 0;
-    window_parameters.window_index = NONE;
+    /* render_frame_pregame zero-initializes this index. NONE means an overlay
+     * on a previous scene: the Xbox rasterizer would suppress the first
+     * window's pool/dynamic-geometry begin calls. This is a standalone frame. */
+    window_parameters.window_index = 0;
 
     /* render_frame_pregame() builds both render and rasterizer frusta before
      * entering the window. Keep the same state without pulling unrelated

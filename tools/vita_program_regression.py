@@ -20,7 +20,8 @@ typedef int GLint;
 #define XGPU_VERTEX_ATTRIBUTE_COUNT 16
 #define XGPU_VERTEX_CONSTANT_COUNT 192
 static unsigned bound, queried, uploaded, mask;
-static float expected[192][4];
+static float expected[192][4], extra[8][4];
+static unsigned extra_queries;
 static unsigned long serials[192];
 static void platform_log(const char *format, ...) { (void)format; }
 static void glBindAttribLocation(GLuint program, GLuint index, const char *name) {
@@ -29,13 +30,23 @@ static void glBindAttribLocation(GLuint program, GLuint index, const char *name)
 }
 static GLint glGetUniformLocation(GLuint program, const char *name) {
     unsigned index; char tail;
-    assert(program==7 && sscanf(name,"c[%u]%c",&index,&tail)==1 && index==queried);
+    assert(program==7);
+    if (sscanf(name,"ps_c0[%u]%c",&index,&tail)==1) {
+        assert(index==extra_queries++);
+        return index==2 ? 901 : index==7 ? 11 : -1;
+    }
+    assert(sscanf(name,"c[%u]%c",&index,&tail)==1 && index==queried);
     ++queried;
     /* c[0] absent, c[5] active, c[191] active with unrelated location. */
     return index==5 ? 2007 : index==191 ? 12 : -1;
 }
 static void glUniform4fv(GLint location, int count, const float *values) {
     unsigned index=location==2007?5:191;
+    if(location==901 || location==11) {
+        index=location==901?2:7;
+        assert(count==1 && values==extra[index]);
+        ++uploaded; mask|=index==2?4:8; return;
+    }
     assert((location==2007 || location==12) && count==1 && values==expected[index]);
     assert(values[0]==(float)index && values[3]==(float)index+3);
     ++uploaded; mask|=index==5?1:2;
@@ -56,7 +67,21 @@ int main(void) {
     assert(uploaded==0);
     for(i=0;i<192;++i) locations[i]=-1;
     halo_vita_upload_vertex_constants(locations,expected,serials,0); assert(uploaded==0);
-    puts("PASS: actual D3D8 Vita helpers:16 attribute bindings,192 explicit lookups, sparse locations, fresh/dirty/inactive uploads");
+    {
+        GLint pixels[8]; float shadow[8][4];
+        memset(shadow, 0xff, sizeof(shadow));
+        for(i=0;i<8;++i) for(j=0;j<4;++j) extra[i][j]=(float)(i*4+j);
+        halo_vita_find_uniform_array(7,"ps_c0",pixels,8);
+        assert(extra_queries==8 && pixels[0]==-1 && pixels[2]==901 && pixels[7]==11);
+        uploaded=mask=0;
+        halo_vita_upload_uniform_array(pixels,shadow,extra,8);
+        assert(uploaded==2 && mask==12);
+        uploaded=mask=0;
+        halo_vita_upload_uniform_array(pixels,shadow,extra,8); assert(uploaded==0);
+        extra[7][1]=99;
+        halo_vita_upload_uniform_array(pixels,shadow,extra,8); assert(uploaded==1 && mask==8);
+    }
+    puts("PASS: actual D3D8 Vita helpers:16 attribute bindings,192 explicit lookups, sparse locations, fresh/dirty/inactive uploads plus sparse pixel arrays");
     return 0;
 }
 '''

@@ -140,3 +140,8 @@ The UI-only checkpoint initializes original player UI before root creation and c
 ## D016 — Treat Xbox map bitmap records as compiled runtime metadata
 
 Date 2026-09-30; A038/A039. The original cache loader does not run bitmap-group postprocess. The Vita typed mount must preserve already cached bitmap flags, absolute pixels_offset, pixels_size and tag_index, and validate unloaded handles/ranges before the first draw. It must not clear cached to replay texture_cache_bitmap_new. That hook adds the group's resource offset and belongs to building/processing uncached tags; replaying it changes an already absolute address. No shared game source or asset-specific replacement is needed. Raw unprocessed bitmap records are rejected for this Xbox-v5 cache path.
+
+
+## D017 — Cache complete eager NV2A shader pairs on Vita
+
+Date 2026-09-30, A041. vitaGL SHADER_PAIR alternates its varying-semantic pool per actual compile. Vita therefore caches the original generated VS+PS together, keyed by original vertex ID/packed declaration/immediate flag and complete original pixel key, and compiles both in explicit order. Reuse the existing program linker, attribute binding and original shader generators; preserve independent caches elsewhere. Avoid POSTPONED (A014 NULL-program crash), dependence on C argument order, or pair state left half-complete by independent cache misses. Uniform arrays use individually queried active element locations. This changes the graphics platform boundary, not the game's material/shader equations. Pair-cache retention until process exit matches the staged renderer's existing program lifetime; reset/teardown work remains separate.

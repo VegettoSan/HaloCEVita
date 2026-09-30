@@ -4,6 +4,27 @@
 #ifndef HALO_VITA_PROGRAM_H
 #define HALO_VITA_PROGRAM_H
 #include <stdio.h>
+#include <string.h>
+static void halo_vita_find_uniform_array(GLuint program, const char *name,
+    GLint *locations, unsigned count)
+{
+    unsigned index;
+    for (index = 0; index < count; ++index) {
+        char element[48];
+        snprintf(element, sizeof(element), "%s[%u]", name, index);
+        locations[index] = glGetUniformLocation(program, element);
+    }
+}
+static void halo_vita_upload_uniform_array(const GLint *locations,
+    float shadow[][4], const float values[][4], unsigned count)
+{
+    unsigned index;
+    for (index = 0; index < count; ++index)
+        if (locations[index] >= 0 && memcmp(shadow[index], values[index], sizeof(values[index]))) {
+            glUniform4fv(locations[index], 1, values[index]);
+            memcpy(shadow[index], values[index], sizeof(values[index]));
+        }
+}
 static void halo_vita_bind_vertex_inputs(GLuint program)
 {
     unsigned long index;

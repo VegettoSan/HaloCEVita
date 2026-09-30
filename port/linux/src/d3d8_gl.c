@@ -180,6 +180,11 @@ struct fragment_entry
 	unsigned long hash;
 	struct nv2a_pixel_shader_key key;
 	GLuint shader;
+#ifdef HALO_VITA
+	unsigned long vertex_program_id, packed_mask;
+	BOOL immediate;
+	struct program_entry *paired_program;
+#endif
 };
 
 /* the uniforms a draw sets besides the vertex constants */
@@ -211,6 +216,8 @@ struct program_entry
 	GLint constants;
 #ifdef HALO_VITA
 	GLint constant_locations[XGPU_VERTEX_CONSTANT_COUNT];
+	GLint ps_c0_locations[8], ps_c1_locations[8];
+	GLint bump_matrix_locations[4], bump_luminance_locations[4], texture_scale_locations[4];
 #endif
 	GLint viewport_scale;
 	GLint viewport_offset;
@@ -720,12 +727,24 @@ void WINAPI D3DDevice_BlockUntilVerticalBlank(void)
 
 static GLuint compile_shader(GLenum type, const char *source, const char *what)
 {
-	GLuint shader = glCreateShader(type);
+	GLuint shader;
 	GLint status = 0;
-
+	if (!source) {
+		platform_log("cannot generate the %s shader", what);
+		return 0;
+	}
+	shader = glCreateShader(type);
+	if (!shader) return 0;
+#ifdef HALO_VITA
+	vita_graphics_halo_shader_begin(what, source);
+#endif
 	glShaderSource(shader, 1, &source, NULL);
 	glCompileShader(shader);
+#ifdef HALO_VITA
+	status = vita_graphics_halo_shader_result(shader, what);
+#else
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+#endif
 	if (!status)
 	{
 		char log[4096];
@@ -1928,6 +1947,7 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 		}
 	}
 	entry = calloc(1, sizeof(*entry));
+	if (!entry) return NULL;
 	entry->vertex_shader = vertex_shader;
 	entry->fragment_shader = fragment_shader;
 	memset(&entry->uniforms, 0xff, sizeof(entry->uniforms));
@@ -1937,6 +1957,7 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 		return NULL;
 
 	entry->program = glCreateProgram();
+	if (!entry->program) return NULL;
 	glAttachShader(entry->program, vertex_shader);
 	glAttachShader(entry->program, fragment_shader);
 #ifdef HALO_VITA
@@ -1950,12 +1971,18 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 
 		glGetProgramInfoLog(entry->program, sizeof(log), NULL, log);
 		platform_log("cannot link a shader program: %s", log);
+		glDeleteProgram(entry->program);
 		entry->program = 0;
 		return NULL;
 	}
 	state_program(entry->program);
 #ifdef HALO_VITA
 	halo_vita_find_vertex_constants(entry->program, entry->constant_locations);
+	halo_vita_find_uniform_array(entry->program, "ps_c0", entry->ps_c0_locations, 8);
+	halo_vita_find_uniform_array(entry->program, "ps_c1", entry->ps_c1_locations, 8);
+	halo_vita_find_uniform_array(entry->program, "bump_matrix", entry->bump_matrix_locations, 4);
+	halo_vita_find_uniform_array(entry->program, "bump_luminance", entry->bump_luminance_locations, 4);
+	halo_vita_find_uniform_array(entry->program, "texture_scale", entry->texture_scale_locations, 4);
 #else
 	entry->constants = glGetUniformLocation(entry->program, "c");
 	entry->constant_count = XGPU_VERTEX_CONSTANT_COUNT;
@@ -2012,6 +2039,53 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 	last = entry;
 	return entry;
 }
+
+
+#ifdef HALO_VITA
+/* vitaGL's SHADER_PAIR translator alternates a shared varying-semantic pool
+ * on each actual compilation. Independent VS/PS cache misses (and C argument
+ * evaluation order) cannot honor that contract. Cache the original NV2A pair
+ * by the original vertex-program ID/declaration and complete pixel state. */
+static struct program_entry *vita_program_pair_get(struct vertex_shader_object *program,
+    BOOL immediate, const struct nv2a_pixel_shader_key *key)
+{
+    unsigned long packed = immediate ? 0 : device.vertex_shader->packed_mask;
+    unsigned long hash = hash_words(key, sizeof(*key)) ^ (program->id * 2654435761UL) ^ packed ^ immediate;
+    struct fragment_entry **bucket = &fragment_buckets[hash % FRAGMENT_BUCKETS];
+    struct fragment_entry *entry;
+    char *vertex_source, *pixel_source;
+    GLuint vertex_shader, pixel_shader;
+    for (entry = *bucket; entry; entry = entry->next)
+        if (entry->hash == hash && entry->vertex_program_id == program->id &&
+            entry->packed_mask == packed && entry->immediate == immediate &&
+            !memcmp(&entry->key, key, sizeof(*key)))
+            return entry->paired_program;
+    entry = calloc(1, sizeof(*entry));
+    if (!entry) return NULL;
+    entry->hash = hash;
+    entry->key = *key;
+    entry->vertex_program_id = program->id;
+    entry->packed_mask = packed;
+    entry->immediate = immediate;
+    entry->next = *bucket;
+    *bucket = entry;
+    vertex_source = nv2a_vertex_shader_to_glsl(program->instructions, program->instruction_count, packed);
+    pixel_source = nv2a_pixel_shader_to_glsl(key);
+    /* Always finish the compiler pair, including a vertex rejection. Never
+     * attach/link rejected stages; cache failure so it cannot recompile each
+     * frame. The caller reports the blocked draw rather than a fake success. */
+    vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_source, "vertex");
+    pixel_shader = compile_shader(GL_FRAGMENT_SHADER, pixel_source, "pixel");
+    free(vertex_source);
+    free(pixel_source);
+    if (vertex_shader && pixel_shader)
+        entry->paired_program = program_get(vertex_shader, pixel_shader);
+    /* Attached successful shaders remain alive via the program's references. */
+    if (vertex_shader) glDeleteShader(vertex_shader);
+    if (pixel_shader) glDeleteShader(pixel_shader);
+    return entry->paired_program;
+}
+#endif
 
 /* ---------- per-draw state */
 
@@ -2613,13 +2687,18 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters;
 #endif
 
+#ifdef HALO_VITA
+	entry = vita_program_pair_get(program, immediate, &key);
+#else
 	entry = program_get(vertex_shader_get(program, immediate), fragment_shader_get(&key));
+#endif
 	if (!entry)
 	{
 		stats.skipped_link++;
 #ifdef HALO_VITA
 		{ static BOOL reported; if (!reported) { reported = TRUE;
 			vita_log("[VITA DRAW] blocked before first original draw: NV2A program link failed"); } }
+		vita_fatal("original Halo NV2A pair rejected; inspect halo_vertex/pixel GLSL and Cg logs");
 #endif
 		gl_check_errors("program");
 		return NULL;
@@ -2770,16 +2849,27 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->viewport_scale, entry->uniforms.viewport_scale, draw_uniforms.viewport_scale, 1);
 	uniform_vec4(entry->viewport_offset, entry->uniforms.viewport_offset, draw_uniforms.viewport_offset, 1);
 	uniform_float(entry->point_size, &entry->uniforms.point_size, draw_uniforms.point_size);
+#ifdef HALO_VITA
+	halo_vita_upload_uniform_array(entry->ps_c0_locations, entry->uniforms.ps_c0, draw_uniforms.ps_c0, 8);
+	halo_vita_upload_uniform_array(entry->ps_c1_locations, entry->uniforms.ps_c1, draw_uniforms.ps_c1, 8);
+#else
 	uniform_vec4(entry->ps_c0, entry->uniforms.ps_c0[0], draw_uniforms.ps_c0[0], 8);
 	uniform_vec4(entry->ps_c1, entry->uniforms.ps_c1[0], draw_uniforms.ps_c1[0], 8);
+#endif
 	uniform_vec4(entry->ps_final_c0, entry->uniforms.ps_final_c0, draw_uniforms.ps_final_c0, 1);
 	uniform_vec4(entry->ps_final_c1, entry->uniforms.ps_final_c1, draw_uniforms.ps_final_c1, 1);
 	uniform_vec4(entry->fog_color, entry->uniforms.fog_color, draw_uniforms.fog_color, 1);
 	uniform_vec4(entry->fog_parameters, entry->uniforms.fog_parameters, draw_uniforms.fog_parameters, 1);
 	uniform_float(entry->alpha_reference, &entry->uniforms.alpha_reference, draw_uniforms.alpha_reference);
+#ifdef HALO_VITA
+	halo_vita_upload_uniform_array(entry->bump_matrix_locations, entry->uniforms.bump_matrix, draw_uniforms.bump_matrix, 4);
+	halo_vita_upload_uniform_array(entry->bump_luminance_locations, entry->uniforms.bump_luminance, draw_uniforms.bump_luminance, 4);
+	halo_vita_upload_uniform_array(entry->texture_scale_locations, entry->uniforms.texture_scale, draw_uniforms.texture_scale, 4);
+#else
 	uniform_vec4(entry->bump_matrix, entry->uniforms.bump_matrix[0], draw_uniforms.bump_matrix[0], 4);
 	uniform_vec4(entry->bump_luminance, entry->uniforms.bump_luminance[0], draw_uniforms.bump_luminance[0], 4);
 	uniform_vec4(entry->texture_scale, entry->uniforms.texture_scale[0], draw_uniforms.texture_scale[0], 4);
+#endif
 	uniform_float(entry->screen_offset, &entry->uniforms.screen_offset, draw_uniforms.screen_offset);
 	uniform_vec4(entry->texture_lod_bias, entry->uniforms.texture_lod_bias, draw_uniforms.texture_lod_bias, 1);
 	#ifdef HALO_VITA
