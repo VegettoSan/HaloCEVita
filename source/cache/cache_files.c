@@ -132,6 +132,11 @@ symbols in this file:
 #include "sound_cache.h"
 #include "scenario/scenario_definitions.h"
 #include "sound/sound_manager.h"
+#ifdef HALO_VITA
+#include "halo_vita_cache.h"
+#include "halo_vita_memory.h"
+#include "vita_runtime.h"
+#endif
 
 /* ---------- constants */
 
@@ -232,6 +237,10 @@ void sound_idle(
 
 struct cache_file_globals cache_file_globals = { 0 };
 extern struct cache_file_tag_instance *global_tag_instances;
+#ifdef HALO_VITA
+/* MSVC common storage normally supplied by halo_linker_common.c. */
+struct cache_file_tag_instance *global_tag_instances;
+#endif
 char const *data_00316820[] =
 {
 	"d:\\maps_de\\",
@@ -407,7 +416,11 @@ long tag_loaded(
 void cache_files_enable_writes(
 	void)
 {
+#ifdef HALO_VITA
+	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READWRITE);
+#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READWRITE);
+#endif
 
 	return;
 }
@@ -415,7 +428,11 @@ void cache_files_enable_writes(
 void cache_files_disable_writes(
 	void)
 {
+#ifdef HALO_VITA
+	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READONLY);
+#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READONLY);
+#endif
 	XPhysicalProtect(
 		cache_file_globals.tag_header->vertex_buffers,
 		cache_file_globals.tag_header->vertex_buffer_count * 12,
@@ -841,3 +858,63 @@ unsigned long tag_get_group_tag(
 {
 	return cache_get_tag_instance(tag_index)->group_tag;
 }
+
+#ifdef HALO_VITA
+/* Restricted integration checkpoint: mount only the checked directory,
+ * exercise the original tag APIs, then detach. Nested tag pointers and
+ * BSP/GPU resources remain in their Xbox form; never enter main with this
+ * temporary mount. A complete typed relocation pass is still required. */
+typedef char vita_scenario_size[sizeof(struct scenario) == 1456 ? 1 : -1];
+typedef char vita_scenario_skies[offsetof(struct scenario, sky_references) == 48 ? 1 : -1];
+typedef char vita_scenario_bsps[offsetof(struct scenario, structure_bsp_references) == 1444 ? 1 : -1];
+static void *vita_tag_span(void *tags, size_t length, const void *pointer, size_t bytes)
+{
+	uintptr_t value = (uintptr_t)pointer;
+	if (value < HALO_XBOX_TAG_BASE || value - HALO_XBOX_TAG_BASE > length ||
+		bytes > length - (value - HALO_XBOX_TAG_BASE)) return NULL;
+	return (byte *)tags + value - HALO_XBOX_TAG_BASE;
+}
+int halo_vita_cache_index_probe(void *tags, size_t length)
+{
+	struct vita_cache_info info;
+	struct tag_iterator iterator;
+	struct scenario *scenario;
+	long i, index, count = 0, bitmaps = 0;
+	char reason[128];
+	int result = 0;
+	if (cache_file_globals.tags_loaded || !vita_cache_validate_index(tags, length, &info, reason, sizeof(reason))) {
+		vita_log("cache index mount rejected (already mounted or invalid directory)"); return 0;
+	}
+	cache_file_globals.tag_header = tags;
+	global_tag_instances = vita_tag_span(tags, length, cache_file_globals.tag_header->tag_instances, info.tag_count * 32);
+	cache_file_globals.tag_header->tag_instances = global_tag_instances;
+	for (i = 0; i < (long)info.tag_count; ++i) {
+		global_tag_instances[i].name = vita_tag_span(tags, length, global_tag_instances[i].name, 1);
+		if (global_tag_instances[i].base_address)
+			global_tag_instances[i].base_address = vita_tag_span(tags, length, global_tag_instances[i].base_address, 1);
+	}
+	cache_file_globals.tags_loaded = TRUE;
+	tag_iterator_new(&iterator, NONE);
+	while ((index = tag_iterator_next(&iterator)) != NONE) {
+		++count;
+		if (tag_get_group_tag(index) == 'bitm') ++bitmaps;
+	}
+	if (count != (long)info.tag_count || !tag_index_is_group(info.scenario_index, SCENARIO_TAG)) goto detach;
+	scenario = tag_get(SCENARIO_TAG, info.scenario_index);
+	if (scenario->type < _scenario_type_solo || scenario->type > _scenario_type_main_menu ||
+		scenario->sky_references.count < 0 || scenario->structure_bsp_references.count < 0) goto detach;
+	if (scenario->sky_references.count && (scenario->sky_references.count > 32767 ||
+		!vita_tag_span(tags, length, scenario->sky_references.address, scenario->sky_references.count * 16))) goto detach;
+	if (scenario->structure_bsp_references.count && (scenario->structure_bsp_references.count > 32767 ||
+		!vita_tag_span(tags, length, scenario->structure_bsp_references.address, scenario->structure_bsp_references.count * 32))) goto detach;
+	vita_log("Halo original tag_iterator/tag_get/tag_index_is_group PASS: tags=%ld bitmaps=%ld scenario=%08lx type=%d skies=%ld BSPs=%ld name=%s",
+		count, bitmaps, (unsigned long)info.scenario_index, scenario->type, scenario->sky_references.count,
+		scenario->structure_bsp_references.count, tag_get_name(info.scenario_index));
+	result = 1;
+detach:
+	cache_file_globals.tags_loaded = FALSE;
+	cache_file_globals.tag_header = NULL; global_tag_instances = NULL;
+	if (!result) vita_log("cache scenario/index checkpoint FAILED; detached");
+	return result;
+}
+#endif

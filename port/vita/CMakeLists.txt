@@ -4,6 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
+set(VITA_APP_VERSION "00.06")
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -11,7 +12,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
-  src/halo_core.c src/halo_services.c src/xinput_vita.c
+  src/halo_core.c src/halo_services.c src/xinput_vita.c src/xbox_memory_vita.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
@@ -20,6 +21,8 @@ add_library(halo_core STATIC
   ${ROOT}/source/memory/memory_pool.c
   ${ROOT}/source/memory/crc.c
   ${ROOT}/source/cache/cache_files.c
+  ${ROOT}/source/cache/physical_memory_map.c
+  "${ROOT}/source/saved games/game_state_xbox.c"
   ${ROOT}/port/linux/src/nv2a_vsh.c
   ${ROOT}/port/linux/src/nv2a_psh.c
   ${ROOT}/port/linux/src/xgpu_text.c)
@@ -51,11 +54,13 @@ foreach(I RANGE 0 ${INCLUDE_LAST})
     target_include_directories(halo_core PRIVATE "${ROOT}/${DIR}")
   endif()
 endforeach()
-set_source_files_properties(src/halo_services.c src/xinput_vita.c
+set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memory_vita.c
   ${ROOT}/port/linux/src/nv2a_vsh.c ${ROOT}/port/linux/src/nv2a_psh.c ${ROOT}/port/linux/src/xgpu_text.c
   PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)
 
-add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_gl_compat.c)
+add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_gl_compat.c
+  src/vita_memory.c src/vita_cache_read.c src/vita_cache_probe.c)
+target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)
 target_link_options(HaloCE.elf PRIVATE -Wl,-q -Wl,--gc-sections "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")
@@ -71,7 +76,7 @@ add_custom_command(OUTPUT ${ASSETS}/icon0.png ${ASSETS}/bg.png ${ASSETS}/startup
   COMMAND ${Python3_EXECUTABLE} ${ROOT}/tools/vita_assets.py ${ASSETS}
   DEPENDS ${ROOT}/tools/vita_assets.py)
 add_custom_target(vita_assets DEPENDS ${ASSETS}/icon0.png ${ASSETS}/bg.png ${ASSETS}/startup.png)
-vita_create_vpk(HaloCE.vpk HCEV00001 eboot.bin VERSION 00.02 NAME "Halo CE Vita"
+vita_create_vpk(HaloCE.vpk HCEV00001 eboot.bin VERSION ${VITA_APP_VERSION} NAME "Halo CE Vita"
   FILE ${ASSETS}/icon0.png sce_sys/icon0.png
        ${ASSETS}/bg.png sce_sys/livearea/contents/bg.png
        ${ASSETS}/startup.png sce_sys/livearea/contents/startup.png

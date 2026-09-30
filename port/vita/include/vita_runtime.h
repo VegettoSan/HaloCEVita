@@ -25,6 +25,8 @@ int vita_graphics_copy_probe(void);
 void vita_graphics_frame(int maps_valid, int core_valid, int shader_valid);
 void vita_graphics_shutdown(void);
 int vita_maps_verify(void);
+int vita_map_path(const char *name, char *path, size_t capacity);
+void vita_graphics_cache_status(int status);
 int vita_platform_initialize(void);
 int vita_controls_poll(void);
 void vita_platform_shutdown(void);

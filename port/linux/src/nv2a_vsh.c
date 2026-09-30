@@ -176,8 +176,11 @@ static const char shader_prologue[] =
 	"out vec4 xT3;\n"
 	"out float xFog;\n"
 #endif
-	"invariant gl_Position;\n"
 #ifndef HALO_VITA
+	/* vitaGL forwards GLSL invariant unchanged into Cg; ShaccCg rejects it
+	 * (A015, vertex_probe.cg:177). Preserve it on desktop/Android. Omitting
+	 * it on Vita leaves cross-program multipass invariance unverified. */
+	"invariant gl_Position;\n"
 	"vec4 unpack_normpacked3(uint p)\n"
 	"{\n"
 	"	int x = int(p << 21) >> 21;\n"
@@ -223,6 +226,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		platform_log("HALO_VITA BLOCKED: NORMPACKED3 requires CPU attribute unpacking");
 		return NULL;
 	}
+	platform_log("HALO_VITA vertex GLSL omits unsupported invariant qualifier; multipass position invariance unverified");
 #endif
 
 #ifdef HALO_ANDROID

@@ -28,7 +28,10 @@ assert 'VFP registers' in abi
 symbols = run('nm', elf)
 required = ['cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
             'data_new', 'datum_new', 'data_iterator_next', 'memory_pool_compact', 'crc_checksum_buffer',
-            'cache_file_header_verify', 'nv2a_vertex_shader_to_glsl', 'nv2a_pixel_shader_to_glsl', 'XInputGetState']
+            'cache_file_header_verify', 'nv2a_vertex_shader_to_glsl', 'nv2a_pixel_shader_to_glsl', 'XInputGetState',
+            'physical_memory_allocate', 'physical_memory_verify', 'XPhysicalAlloc', 'XQueryMemoryProtect',
+            'game_state_allocate_buffer', 'game_state_free_buffer',
+            'tag_iterator_next', 'tag_get', 'halo_vita_cache_index_probe', 'vita_cache_read']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)
@@ -97,8 +100,10 @@ with zipfile.ZipFile(build / 'HaloCE.vpk') as package:
     assert set(package.namelist()) == expected, package.namelist()
     assert package.read('eboot.bin') == self_file.read_bytes()
     sfo = sfo_values(package.read('sce_sys/param.sfo'))
-    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == '00.02'
+    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == '00.06'
     assert sfo['TITLE'] == 'Halo CE Vita'
+    assert ('----- HaloCEVita native core bring-up ' + sfo['APP_VER'] + ' -----').encode() in elf.read_bytes(), (
+        'Runtime log banner does not match packaged APP_VER')
     image_sizes = {'sce_sys/icon0.png': (128, 128),
                    'sce_sys/livearea/contents/bg.png': (840, 500),
                    'sce_sys/livearea/contents/startup.png': (280, 158)}
@@ -111,8 +116,17 @@ with zipfile.ZipFile(build / 'HaloCE.vpk') as package:
     assert livearea.findtext('gate/startup-image') == 'startup.png'
     assert b'libshacccg' not in '\n'.join(package.namelist()).encode()
 files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
-manifest = {'state': 'LINKS', 'runtime_test': 'not executed on Vita/Vita3K', 'title_id': sfo['TITLE_ID'],
-            'installation_test': '00.01 rejected by user VitaShell with 0x8010113D; 00.02 hardware retry pending',
+# Hardware evidence belongs to the tested package, not every future rebuild
+# with the same APP_VER. A different digest remains LINKS until tested.
+tested_package = digest(build / 'HaloCE.vpk') == '0ed8fe2f3f1d855b8f64691b6a9e6e598cb244c1017bbb0d77731055f69328d4'
+manifest = {'state': 'RENDERS' if tested_package else 'LINKS',
+            'runtime_test': ('00.05 real Vita: both generated shaders compile, link1, triangle visible, Start exit at34.3s (A016)'
+                             if tested_package else 'rebuilt package untested; prior 00.05 synthetic triangle RENDERS (A016)'),
+            'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'RENDERS',
+            'rendering_scope': 'diagnostic + upstream NV2A synthetic two-MOV triangle only; full Halo renderer/gameplay unverified',
+            'prior_hardware_evidence': 'docs/runtime/2026-09-29-00.05-debug.txt',
+            'installation_test': ('current 00.05 installed and booted on user Vita (A016)' if tested_package else
+                                  'prior 00.05 installed and booted; rebuilt package hardware test pending'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip(),
             'source_has_uncommitted_changes': True, 'sdk': str(sdk), 'required_core_symbols': required,

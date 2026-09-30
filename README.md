@@ -6,9 +6,11 @@ This repository is intentionally **not a GitHub fork**. It is a separate Vita-fo
 
 ## Project goal
 
-Current milestone (2026-09-28): **LINKS**. Native ARM32 `build/vita/eboot.bin` and `HaloCE.vpk` are generated and package-verified. The executable links real Halo core/memory/cache-verification/NV2A code and includes console diagnostics; full main/menu/gameplay and Vita boot have not been verified. All 466 configured game C units compile separately. Follow [the build and console test instructions](docs/BUILD.md).
+Current project milestone (2026-09-29): **RENDERS diagnostic + synthetic NV2A triangle on real Vita**. In **00.05**, both original NV2A-generated shaders compile, link succeeds and the user sees the triangle; controls/header rechecks remain responsive and Start exits at34.3s (A016). The unsupported invariant declaration is omitted only on Vita; multipass position invariance remains unverified. Full Halo rendering/main/menu/gameplay and repeated stability are not demonstrated. All466 configured game C units compile separately. Follow [the build and console test instructions](docs/BUILD.md).
 
-Package correction **00.02**: the user reported VitaShell installation error `0x8010113D` for 00.01. LiveArea images now use opaque indexed PNG-8, and the verifier checks every image's palette, pixels and CRC. The executable is byte-identical; installation/boot of the corrected package still awaits hardware confirmation (A012).
+Current integration package **00.06** is **LINKS**, awaiting Vita testing (A017). It adds a native 96MiB Xbox-offset arena, original physical-memory/game-state allocation and read-only streaming of compressed ui/a10 tag sections. Original tag APIs exercise a checked, temporary directory mount; nested tag/BSP/GPU relocation and full renderer/main/menu remain pending. Host tests pass on the actual reader and user-owned ui/a10 maps. The hardware-tested 00.05 package/symbols are preserved separately.
+
+Package correction **00.02** (A012): 00.01 was rejected by VitaShell with `0x8010113D`. Opaque indexed PNG-8 repaired the packaging; subsequent user logs establish boot (A013). The unchanged older executable banner still said 00.01; 00.03 derives the banner and SFO from the same build version.
 
 Build a native PlayStation Vita version of Halo CE from the decompiled/source-port code, targeting VitaSDK and the Vita's native 32-bit ARM environment.
 

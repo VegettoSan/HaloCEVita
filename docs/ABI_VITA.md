@@ -1,5 +1,7 @@
 # Native Vita ABI audit
 
+A013 hardware evidence (2026-09-29): real Vita executes the selected core and its data-array/pool/CRC assertions/probes pass. Logged layouts are pointer4/long4/wchar2/data-array56/pool56/cache-header2048. This advances the selected closure to BOOTS, not a proof of every cross-unit ABI or full game behavior.
+
 Compiler: existing `/usr/local/vitasdk-hardfp/bin/arm-vita-eabi-gcc` 15.2.0. SDK detection uses compiler macros (`__ARM_PCS_VFP`, pointer-size4), not folder naming. The other `/usr/local/vitasdk` defaults to SoftFP and is rejected by tools/vita_build.py.
 
 | Contract | Handling / evidence | Remaining limit |
@@ -19,3 +21,5 @@ Compiler: existing `/usr/local/vitasdk-hardfp/bin/arm-vita-eabi-gcc` 15.2.0. SDK
 | CRT/native boundary | Actual Vita/newlib APIs compile in normal SDK units; XDK-facing services use typed declarations | GNU ld's wchar/enum attribute warnings are expected and retained, not suppressed; wide values never cross current bridge |
 
 Full-source evidence: `build/vita/audit-abi/report.json`, all 466 per-unit commands/logs and `HaloGame.audit.o`. The relocatable object has 584 unresolved game-to-CRT/platform imports; it is not a runnable full game. The core ELF passes an independent symbol/import/ABI/package verifier.
+
+A017 adds original physical_memory_allocate/verify, game_state_allocate_buffer/free_buffer and tag iterator/accessor functions to the native linked closure. The portable cache-reader boundary uses fixed uint32_t fields, explicit little-endian reads, size_t and no wide strings; final verifier checks the actual original symbols. Host memory tests keep XDK physical offsets32-bit even on the64-bit host. This is allocation/directory-policy evidence, not complete tag layout or ARM execution proof; full game imports above describe the earlier aggregate audit.

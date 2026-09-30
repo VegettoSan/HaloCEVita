@@ -102,6 +102,9 @@ symbols in this file:
 #include "saved games/game_state.h"
 #include "sound/sound_manager.h"
 #include <xtl.h>
+#ifdef HALO_VITA
+#include "halo_vita_memory.h"
+#endif
 
 /* ---------- constants */
 
@@ -159,6 +162,11 @@ void *game_state_allocate_buffer(
 	unsigned long gpu_size)
 {
 	void *result;
+#ifdef HALO_VITA
+	/* The caller still supplies the original Xbox VA. Keep the downstream
+	 * CPU/GPU split and saved-state bookkeeping on the native arena VA. */
+	address = halo_vita_memory_address(address);
+#endif
 
 	match_assert(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",

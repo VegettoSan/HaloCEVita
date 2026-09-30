@@ -100,7 +100,7 @@ int vita_platform_initialize(void)
 	fd = sceIoOpen(HALO_VITA_DATA_ROOT "debug.txt", SCE_O_WRONLY | SCE_O_CREAT | SCE_O_APPEND, 0666);
 	logging_ready = fd >= 0;
 	if (fd >= 0) sceIoClose(fd);
-	vita_log("----- HaloCEVita native core bring-up 00.01 -----");
+	vita_log("----- HaloCEVita native core bring-up " HALO_VITA_APP_VERSION " -----");
 	vita_log("[VITA 001] process start");
 	vita_log("[VITA 002] filesystem ready");
 	vita_log("[VITA 003] log opened: %s", logging_ready ? "YES" : "FAILED");
@@ -160,6 +160,21 @@ int vita_maps_verify(void)
 	vita_log("maps found=%d Xbox-v5 ui=%s a10=%s", count, ui_valid ? "valid" : "missing/invalid", a10_valid ? "valid" : "missing/invalid");
 	if (ui_valid && a10_valid) vita_log("[VITA 009] maps verified (headers only; tags not loaded)");
 	return ui_valid && a10_valid;
+}
+int vita_map_path(const char *name, char *path, size_t capacity)
+{
+	SceIoDirent entry;
+	int directory = sceIoDopen(HALO_VITA_DATA_ROOT "maps"), found = 0;
+	if (directory < 0) return 0;
+	memset(&entry, 0, sizeof(entry));
+	while (sceIoDread(directory, &entry) > 0) {
+		if (!strcasecmp(entry.d_name, name)) {
+			int length = snprintf(path, capacity, HALO_VITA_DATA_ROOT "maps/%s", entry.d_name);
+			found = length > 0 && (size_t)length < capacity; break;
+		}
+		memset(&entry, 0, sizeof(entry));
+	}
+	sceIoDclose(directory); return found;
 }
 static pthread_mutex_t probe_lock = PTHREAD_MUTEX_INITIALIZER;
 static int probe_value;
