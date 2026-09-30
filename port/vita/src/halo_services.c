@@ -75,6 +75,26 @@ BOOL WINAPI SwitchToThread(void)
  * the compiler/libm implementation instead of approximating widget motion. */
 double halo_sin(double angle) { return __builtin_sin(angle); }
 double halo_cos(double angle) { return __builtin_cos(angle); }
+
+/* Main Menu bring-up has no initialized Halo sound manager yet. The original
+ * texture/cache waits only consult these functions to decide whether audio
+ * needs servicing while a blocking read is in progress. Reporting the current
+ * clock keeps that optional service branch dormant until real audio is brought
+ * up; an explicit call still yields instead of pretending to process audio. */
+long sound_render_time(void)
+{
+	return (long)system_milliseconds();
+}
+void sound_idle(void)
+{
+	static int logged;
+	if (!logged) {
+		logged = 1;
+		vita_log("[VITA AUDIO] sound_idle requested before sound manager initialization; yielding only");
+	}
+	sched_yield();
+}
+
 DWORD WINAPI GetLastError(void) { return (DWORD)vita_xapi_last_error_get(); }
 VOID WINAPI SetLastError(DWORD error) { vita_xapi_last_error_set((uint32_t)error); }
 DWORD WINAPI GetFileAttributesA(LPCSTR path)
@@ -158,7 +178,7 @@ int halo_linux_fprintf(FILE *stream, const char *format, ...)
 FILE *halo_linux_fopen(const char *path, const char *mode)
 {
 	char translated[512]; size_t cursor = 0;
-	/* The linked guarded heap writes d:\heap_dump.txt on clean shutdown.
+	/* The linked guarded heap writes d:\\heap_dump.txt on clean shutdown.
 	 * Full Xbox case-insensitive filesystem/XAPI integration is still pending. */
 	if (path[0] && path[1] == ':') path += 2;
 	while (*path == '/' || *path == '\\') ++path;
