@@ -23,6 +23,10 @@
  * process-lifetime Xbox texture cache. */
 void texture_cache_open(void);
 
+/* halo_menu_tags.c restores the bitmap-group runtime postprocess skipped by
+ * the typed ui.map mount. It must run only after texture_cache_open(). */
+int halo_vita_menu_bitmap_resources_activate(void);
+
 /* January keeps this helper private to main.c; the pregame path uses it to
  * derive the same full-screen and title-safe rectangles used by retail. */
 void compute_window_bounds(long player_index, long num_players,
@@ -30,6 +34,7 @@ void compute_window_bounds(long player_index, long num_players,
 
 static boolean vita_renderer_ready;
 static boolean vita_texture_cache_opened;
+static boolean vita_bitmap_resources_ready;
 static boolean vita_decals_ready;
 static boolean vita_first_menu_frame = TRUE;
 
@@ -69,6 +74,20 @@ int halo_vita_renderer_initialize(void)
         texture_cache_open();
         vita_texture_cache_opened = TRUE;
         vita_log("[VITA 036T] original Xbox texture cache per-map open PASS");
+    }
+
+    /* scenario_tags_load() would normally run each bitmap group's original
+     * postprocess callback before any draw. The typed Vita mount intentionally
+     * skipped that wider loader, so restore the same bitmap_verify ->
+     * texture_cache_bitmap_new path now that the real texture cache exists.
+     * Pixel bytes are still loaded lazily by Halo via cache_file_read(). */
+    if (!vita_bitmap_resources_ready) {
+        vita_log("[VITA 039] mounted ui.map bitmap runtime activation begin");
+        if (!halo_vita_menu_bitmap_resources_activate()) {
+            vita_log("MAIN MENU BLOCKED: mounted ui.map bitmaps could not enter original texture cache");
+            return 0;
+        }
+        vita_bitmap_resources_ready = TRUE;
     }
 
     /* game_initialize() owns decals_initialize(), which in turn creates the
