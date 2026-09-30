@@ -744,8 +744,13 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	unsigned long variant_count = 0;
 	static int no_cache = -1;
 	unsigned long recent = bucket_index(data, format_word, size_word) % RECENT_TEXTURE_COUNT;
+	#ifdef HALO_VITA
+	unsigned long watch_serial = 0;
+	#else
 	unsigned long watch_serial = memory_watch_serial();
+	#endif
 
+	#ifndef HALO_VITA
 	if (!palettized && recent_textures[recent].entry && recent_textures[recent].data == data &&
 		recent_textures[recent].format_word == format_word && recent_textures[recent].size_word == size_word &&
 		recent_textures[recent].watch_serial == watch_serial &&
@@ -758,6 +763,7 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 		return entry->texture;
 	}
 
+	#endif
 	for (entry = *bucket; entry; entry = entry->next)
 	{
 		if (entry->data == data && entry->format_word == format_word && entry->size_word == size_word)
@@ -779,6 +785,9 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	if (!entry)
 	{
 		entry = calloc(1, sizeof(*entry));
+#ifdef HALO_VITA
+		if (!entry) vita_fatal("Xbox texture metadata allocation failed on Vita");
+#endif
 		entry->data = data;
 		entry->format_word = format_word;
 		entry->size_word = size_word;
@@ -790,20 +799,38 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 		entry->size = xgpu_texture_face_size(&entry->description) * (entry->description.cube_map ? 6 : 1);
 		entry->generation = 0;
 		glGenTextures(1, &entry->texture);
+#ifdef HALO_VITA
+		if (!entry->texture) vita_fatal("Xbox texture GL object allocation failed on Vita");
+#endif
 		entry->next = *bucket;
 		*bucket = entry;
 	}
 
+	#ifdef HALO_VITA
+	/* No page-write tracking on Vita: refresh the original guest resource on
+	 * every use. A stale GPU copy would break dynamic fonts and UI assets. */
+	no_cache = 1;
+	generation = 0;
+	#else
 	if (no_cache < 0)
 		no_cache = config_boolean("debug.texture_no_cache");
 	generation = memory_watch_generation(entry->address, entry->size);
+	#endif
 	if (!entry->generation || generation > entry->generation || no_cache)
 	{
 		/* protect first, so a write racing with the upload is noticed */
+		#ifndef HALO_VITA
 		memory_watch_protect(entry->address, entry->size);
 		entry->generation = memory_watch_generation(entry->address, entry->size);
+		#endif
 		if (!entry->generation)
 			entry->generation = 1;
+		#ifdef HALO_VITA
+		if (!entry->size || entry->address + entry->size < entry->address ||
+			!platform_is_contiguous((void *)entry->address) ||
+			!platform_is_contiguous((void *)(entry->address + entry->size - 1)))
+			vita_fatal("Xbox texture source outside Vita contiguous guest window");
+		#endif
 		if (platform_is_contiguous((void *)entry->address) &&
 			platform_is_contiguous((void *)(entry->address + entry->size - 1)))
 		{
