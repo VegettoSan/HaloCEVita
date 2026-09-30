@@ -17,6 +17,7 @@
 #undef vsnprintf
 #undef vsprintf
 
+unsigned long system_milliseconds(void) { return (unsigned long)(vita_time_us() / 1000u); }
 void *system_malloc(long size) { return size > 0 ? malloc((size_t)size) : NULL; }
 void *system_realloc(void *pointer, long size)
 {
