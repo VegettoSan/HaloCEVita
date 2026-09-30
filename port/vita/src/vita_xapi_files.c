@@ -299,6 +299,21 @@ void *CreateFileA(const char *file_name, unsigned long desired_access,
 	return (void *)(intptr_t)fd;
 }
 
+int CloseHandle(void *handle)
+{
+	SceUID fd = (SceUID)(intptr_t)handle;
+	if (handle == VITA_INVALID_HANDLE || fd < 0) {
+		vita_xapi_last_error_set(VITA_ERROR_INVALID_HANDLE);
+		return 0;
+	}
+	if (sceIoClose(fd) < 0) {
+		vita_xapi_last_error_set(VITA_ERROR_INVALID_HANDLE);
+		return 0;
+	}
+	vita_xapi_last_error_set(VITA_ERROR_SUCCESS);
+	return 1;
+}
+
 unsigned long SetFilePointer(void *handle, long distance_low, long *distance_high,
 	unsigned long move_method)
 {
