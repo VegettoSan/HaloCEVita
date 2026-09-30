@@ -79,6 +79,7 @@ void ui_widgets_initialize(
 #ifdef HALO_VITA
 boolean halo_vita_ui_widgets_initialized(void);
 boolean halo_vita_ui_widgets_dispose_checkpoint(void);
+boolean halo_vita_menu_root_load(void);
 #endif
 void ui_widgets_safe_to_load(
 	boolean safe);

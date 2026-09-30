@@ -63,6 +63,10 @@ int halo_vita_core_initialize(void)
 		(unsigned)sizeof(struct cache_file_header));
 	cseries_initialize();
 	vita_log("Halo cseries_initialize + debug_memory_manager_initialize + profile_initialize returned");
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("HALO_VITA_MENU_BRINGUP: previous core/XInput regression probes skipped");
+	return 1;
+#endif
 	pad = XInputOpen(XDEVICE_TYPE_GAMEPAD, 0, 0, NULL);
 	if (pad) {
 		vita_log("Halo XInputGetState native bridge result=%lu", (unsigned long)XInputGetState(pad, &input));

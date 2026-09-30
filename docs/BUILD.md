@@ -2,7 +2,7 @@
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
 
-Current deliverable is **00.10: BOOTS** (A029). An exact retained Vita log reports 024 case-insensitive `ui.map`, directory/missing-file checks and absent XDemos, with per-thread last-error isolation; prior UI recheck, pool teardown and CRC restoration pass through Start exit. Its tested package and symbols are preserved in build/vita/attempts/a027-baseline-00.10/. The known00.05 diagnostic graphics baseline remains in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending.
+Current deliverable is **00.11: LINKS** (A030), with a fast path that attempts the original Main Menu root and creation handlers. Hardware execution is pending. The preserved **00.10: BOOTS** package and symbols in build/vita/attempts/a027-baseline-00.10/ have an exact retained Vita log through 024, Cross remount, pool teardown, CRC restoration and Start exit. The known00.05 diagnostic graphics baseline remains in build/vita/attempts/a017-baseline-00.05/. Full menu render remains pending.
 
 ## Toolchain
 
@@ -133,7 +133,11 @@ No retail Halo data belongs in the build tree.
 
 The imported engine is the Xbox reconstruction: its real verifier requires **Xbox cache version 5**. PC Halo/Custom Edition caches/version7/609 and PC-style separate bitmaps.map/sounds.map are not accepted substitutes. Put Xbox `ui.map`, `a10.map` and the other map files from your own game in the target directory. ui/a10 names are found case-insensitively. The current checkpoint reads, decompresses and partially relocates `ui.map` tags; it does not activate BSP/GPU resources or the full scenario/main loop.
 
-## Current 00.10 Xbox file-reference contract checkpoint (A026)
+## Current 00.11 original Main Menu root test (A030)
+
+Install `build/vita/HaloCE.vpk` (SHA-256 `7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88`) on real Vita with the same user-owned `ux0:data/HaloCE/maps/ui.map`. Preserve the resulting `ux0:data/HaloCE/debug.txt` even if the screen stays black or the app crashes; the last completed 025/026/027/028 marker identifies the next blocker. 025 means root load began; 026 shows original XDemos child handler; 027 shows original root `main_menu_initialize`; 028 appears only after the original root returns and the active nine-widget graph is checked. Press Start to exit if still running. Cross remount is disabled while active widgets hold `ui.map` pointers. The startup skips already proven synthetic shader/FBO/triangle and a10 probes, so a blank display is expected in this package: original update/render/D3D8 drawing are not yet linked. Matching `eboot.bin`, `HaloCE.elf`, `HaloCE.elf.map`, `artifacts.json` and `SHA256SUMS` are in `build/vita/`; do not send proprietary map data.
+
+## 00.10 Xbox file-reference contract checkpoint (A026)
 
 The archived A029 00.10 Vita log records `worker=00000000->00002468 main=00001357` and `[VITA 024] original Xbox file contract: casefold_ui=1 maps_directory=1 missing_file=1 XDemos=absent`. The original `file_reference_create_from_path`, `file_exists`, and `xbox_demos_available` ran. Prior 015..023/020 checkpoints also completed twice, with Cross recheck and Start cleanup. This package does not create the root widget or issue a Halo draw; 010 stays withheld.
 

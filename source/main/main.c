@@ -2847,6 +2847,7 @@ void main_framerate_render(
 	return;
 }
 
+#ifndef HALO_VITA
 void halt_and_catch_fire(
 	void)
 {
@@ -2964,6 +2965,7 @@ void halt_and_catch_fire(
 	exit(0);
 	return;
 }
+#endif
 
 void main_loop_of_death(
 	void)

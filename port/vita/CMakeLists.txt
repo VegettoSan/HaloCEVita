@@ -4,7 +4,10 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.10")
+set(VITA_APP_VERSION "00.11")
+option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
+option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
+option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure (research only)" OFF)
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -29,6 +32,13 @@ add_library(halo_core STATIC
   ${ROOT}/source/text/text_group.c
   ${ROOT}/source/text/international_strings.c
   ${ROOT}/source/interface/ui_widget.c
+  ${ROOT}/source/interface/ui_widget_event_handler_functions.c
+  ${ROOT}/source/interface/player_ui.c
+  ${ROOT}/source/networking/network_game_globals.c
+  ${ROOT}/source/main/main.c
+  ${ROOT}/source/game/game.c
+  ${ROOT}/source/game/game_engine.c
+  "${ROOT}/source/saved games/player_profile.c"
   ${ROOT}/source/interface/marketing_and_strategic_business_development.c
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/source/cache/cache_files.c
@@ -75,6 +85,16 @@ set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
 add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_gl_compat.c
   src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
 target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
+if(HALO_VITA_MENU_BRINGUP)
+  target_compile_definitions(halo_core PRIVATE HALO_VITA_MENU_BRINGUP=1)
+  target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_BRINGUP=1)
+endif()
+if(HALO_VITA_MENU_UPDATE_PROBE)
+  target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_UPDATE_PROBE=1)
+endif()
+if(HALO_VITA_MENU_RENDER_PROBE)
+  target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_RENDER_PROBE=1)
+endif()
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)
 target_link_options(HaloCE.elf PRIVATE -Wl,-q -Wl,--gc-sections "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")

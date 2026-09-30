@@ -913,6 +913,9 @@ symbols in this file:
 #include "interface/player_ui.h"
 #include "saved games/player_profile.h"
 #include "interface/ui_widget_definitions.h"
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 
 /* ---------- constants */
 
@@ -1630,12 +1633,15 @@ struct persistent_game_data_info persistant_game_data_info = { 0 };
 
 struct ui_widget_event_handler_function_table
 {
+#ifndef HALO_VITA
 	ui_widget_event_handler_function functions[102];
+#endif
 	char const *names[102];
 };
 
 static struct ui_widget_event_handler_function_table event_handler_function_list =
 {
+#ifndef HALO_VITA
 	{
 		widget_event_function_null,
 		widget_event_function_list_widget_goto_next_item,
@@ -1740,6 +1746,7 @@ static struct ui_widget_event_handler_function_table event_handler_function_list
 		begin_music_fade_out,
 		new_campaign_if_no_custom_player_profiles_exist,
 	},
+#endif
 	{
 		"NULL",
 		"list goto next item",
@@ -2439,13 +2446,34 @@ static boolean main_menu_initialize(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] player_ui_clear_multiplayer_joins begin");
+#endif
 	player_ui_clear_multiplayer_joins();
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] player_ui_clear_multiplayer_variant begin");
+#endif
 	player_ui_clear_multiplayer_variant();
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] dispose_global_network_game_client begin");
+#endif
 	dispose_global_network_game_client();
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] dispose_global_network_game_server begin");
+#endif
 	dispose_global_network_game_server();
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] network_game_accept_remote_connections begin");
+#endif
 	network_game_accept_remote_connections(FALSE);
 	player_spawn_count = 1;
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] player_ui_end_editing_profile begin");
+#endif
 	player_ui_end_editing_profile();
+#ifdef HALO_VITA_MENU_BRINGUP
+	vita_log("[VITA 027] menu music check begin");
+#endif
 	if (!ui_main_menu_music_active())
 		ui_start_main_menu_music();
 	return TRUE;
@@ -3509,6 +3537,12 @@ static boolean multiplayer_profiles_list_initialize(
 	return TRUE;
 }
 
+#ifdef HALO_VITA
+static boolean vita_ui_event_failed;
+void halo_vita_ui_event_reset(void) { vita_ui_event_failed = FALSE; }
+boolean halo_vita_ui_event_failed(void) { return vita_ui_event_failed; }
+#endif
+
 boolean ui_widget_event_handler_function_invoke(
 	struct widget_instance *widget,
 	struct event_record *event,
@@ -3522,9 +3556,40 @@ boolean ui_widget_event_handler_function_invoke(
 		"(widget != NULL) && (widget_deleted != NULL)");
 	if ((short)function_index >= 0 && function_index < 102)
 	{
+#ifdef HALO_VITA
+		/* The reachable ui.map Main Menu graph uses 0,23,86,87,101.
+		 * Creation needs 23/86. Interactive 87/101 remain explicit
+		 * blockers until their game transitions are connected. */
+		switch (function_index)
+		{
+		case 0: result = widget_event_function_null(widget, event, widget_deleted); break;
+		case 23:
+			vita_log("[VITA 027] main_menu_initialize begin");
+			result = main_menu_initialize(widget, event, widget_deleted);
+			if (result) vita_log("[VITA 027] main_menu_initialize PASS");
+			break;
+		case 86:
+			vita_log("[VITA 026] Main Menu child created handler begin index=86");
+			result = disable_widget_if_no_xdemos(widget, event, widget_deleted);
+			if (result) vita_log("[VITA 026] handler86 returned XDemos=%s", widget->disabled ? "absent" : "present");
+			break;
+		default:
+			vita_log("MAIN MENU BLOCKED: unsupported original UI event function index=%u", function_index);
+			result = FALSE;
+			break;
+		}
+		if (!result) vita_ui_event_failed = TRUE;
+#else
 		result = event_handler_function_list.functions[(short)function_index](widget, event, widget_deleted);
+#endif
 		if (!result)
+		{
+#ifdef HALO_VITA
+			vita_log("MAIN MENU BLOCKED: event handler '%s' failed", event_handler_function_list.names[(short)function_index]);
+#else
 			console_warning("event handler '%s' failed", event_handler_function_list.names[(short)function_index]);
+#endif
+		}
 		return result;
 	}
 	error(2, "invalid event_handler_function");

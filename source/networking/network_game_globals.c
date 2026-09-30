@@ -110,6 +110,9 @@ symbols in this file:
 #include "network_messages.h"
 #include "network_game_manager.h"
 #include "network_game_globals.h"
+#ifdef HALO_VITA_MENU_BRINGUP
+#include "vita_runtime.h"
+#endif
 #include "network_server_manager_internal.h"
 
 /* ---------- constants */
@@ -483,9 +486,13 @@ void dispose_global_network_game_server(
 {
 	if (bss_004566dc.server)
 	{
+#ifdef HALO_VITA_MENU_BRINGUP
+		vita_fatal("MAIN MENU BLOCKED: active network server requires original disposal");
+#else
 		network_game_server_dispose(bss_004566dc.server);
 		bss_004566dc.server = NULL;
 		bss_004566dc.quickstart_local = FALSE;
+#endif
 	}
 
 	return;
@@ -533,8 +540,12 @@ void dispose_global_network_game_client(
 {
 	if (bss_004566dc.client)
 	{
+#ifdef HALO_VITA_MENU_BRINGUP
+		vita_fatal("MAIN MENU BLOCKED: active network client requires original disposal");
+#else
 		network_game_client_dispose(bss_004566dc.client);
 		bss_004566dc.client = NULL;
+#endif
 	}
 
 	bss_004566dc.client_started = FALSE;

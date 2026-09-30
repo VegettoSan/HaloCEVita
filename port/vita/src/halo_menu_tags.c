@@ -9,6 +9,7 @@
 #include "text/font_group.h"
 #include "text/text_group.h"
 #include "interface/ui_widget.h"
+#include "interface/player_ui.h"
 
 #define CHECK_LAYOUT(name, expression) typedef char name[(expression) ? 1 : -1]
 CHECK_LAYOUT(menu_bitmap_size, sizeof(struct bitmap_group) == 108);
@@ -125,5 +126,33 @@ int halo_vita_ui_runtime_dispose(void)
         }
         vita_log("[VITA 023] original widget pool freed; globals reset");
     }
+    return 1;
+}
+
+int halo_vita_menu_root_checkpoint(void)
+{
+    vita_log("original player_ui_initialize begin");
+    player_ui_initialize();
+    vita_log("original player_ui_initialize PASS");
+    return halo_vita_menu_root_load() ? 1 : 0;
+}
+
+int halo_vita_menu_update_checkpoint(void)
+{
+    vita_log("[VITA 029] original UI update begin");
+    process_ui_widgets();
+    vita_log("[VITA 029] original UI update PASS");
+    return 1;
+}
+
+int halo_vita_menu_render_checkpoint(void)
+{
+    /* Original render.c passes the rasterizer camera's viewport bounds.
+     * The full device/camera path is not initialized in this UI checkpoint;
+     * this only probes the original widget render closure. */
+    rectangle2d bounds = {0, 0, 480, 640};
+    vita_log("[VITA 030] original UI render begin");
+    render_ui_widgets(0, &bounds);
+    vita_log("[VITA 030] original UI render returned");
     return 1;
 }

@@ -27,14 +27,16 @@ assert 'ELF32' in abi and 'Machine:                           ARM' in abi and 'h
 assert 'VFP registers' in abi
 symbols = run('nm', elf)
 required = ['cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
-            'data_new', 'datum_new', 'data_iterator_next', 'memory_pool_compact', 'crc_checksum_buffer',
-            'cache_file_header_verify', 'nv2a_vertex_shader_to_glsl', 'nv2a_pixel_shader_to_glsl', 'XInputGetState',
+            'crc_checksum_buffer',
             'physical_memory_allocate', 'physical_memory_verify', 'XPhysicalAlloc', 'XQueryMemoryProtect',
             'game_state_allocate_buffer', 'game_state_free_buffer',
             'tag_iterator_next', 'tag_get', 'halo_vita_cache_mount_menu',
             'halo_vita_cache_validate_menu', 'halo_vita_cache_unmount_menu', 'vita_cache_read',
             'halo_vita_ui_runtime_initialize', 'halo_vita_ui_runtime_dispose',
-            'halo_vita_ui_widgets_dispose_checkpoint', 'halo_vita_file_contract_probe',
+            'halo_vita_menu_root_checkpoint', 'halo_vita_menu_root_load',
+            'ui_widget_load_by_name_or_tag', 'ui_widget_event_handler_function_invoke',
+            'player_ui_initialize',
+            'halo_vita_ui_widgets_dispose_checkpoint',
             'file_reference_create_from_path', 'file_exists', 'xbox_demos_available',
             'GetFileAttributesA', 'GetLastError', 'SetLastError',
             'halo_vita_menu_tags_probe', 'vita_cache_relocate_menu', 'bitmap_group_get_bitmap_from_sequence',
@@ -107,7 +109,7 @@ with zipfile.ZipFile(build / 'HaloCE.vpk') as package:
     assert set(package.namelist()) == expected, package.namelist()
     assert package.read('eboot.bin') == self_file.read_bytes()
     sfo = sfo_values(package.read('sce_sys/param.sfo'))
-    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == '00.10'
+    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == '00.11'
     assert sfo['TITLE'] == 'Halo CE Vita'
     assert ('----- HaloCEVita native core bring-up ' + sfo['APP_VER'] + ' -----').encode() in elf.read_bytes(), (
         'Runtime log banner does not match packaged APP_VER')
@@ -127,14 +129,14 @@ files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 # with the same APP_VER. A different digest remains LINKS until tested.
 tested_package = digest(build / 'HaloCE.vpk') == '82822ae873908bf82fee45a464d6b116481a8cb2cad8f59da8c5751c98f29686'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
-            'runtime_test': ('00.10 real Vita: Xbox file contract024 and prior UI teardown/recheck PASS (A027)'
-                             if tested_package else 'rebuilt package untested;00.10 file/UI BOOTS baseline (A027)'),
+            'runtime_test': ('00.10 real Vita: Xbox file contract024 and UI teardown/recheck PASS (A029)'
+                             if tested_package else '00.11 root creation checkpoint untested on Vita;00.10 BOOTS baseline (A029)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'DIAGNOSTIC RENDERS',
             'rendering_scope': 'diagnostic + upstream NV2A synthetic two-MOV triangle only; HALO DRAW REACHED/RENDERS unverified',
             'prior_hardware_evidence': 'docs/runtime/2026-09-29-00.10-start-exit-debug.txt (A029)',
-            'installation_test': ('00.10 installed and booted on user Vita (A027)' if tested_package else
-                                  'prior00.10 installed and booted; rebuilt package hardware test pending'),
+            'installation_test': ('00.10 installed and booted on user Vita (A029)' if tested_package else
+                                  '00.11 package installation/root execution pending; prior00.10 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip(),
             'source_has_uncommitted_changes': True, 'sdk': str(sdk), 'required_core_symbols': required,

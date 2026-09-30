@@ -362,6 +362,12 @@ void numeric_countdown_timer_update(
 
 static struct game_runtime_globals_prefix *game_globals = NULL;
 extern struct game_variant game_variant_global;
+#ifdef HALO_VITA
+/* The Xbox image pooled this tentative COMMON global; the reconstructed
+ * source only declares it. Keep the original 32-bit game variant storage. */
+struct game_variant game_variant_global;
+typedef char halo_vita_game_variant_size[(sizeof(game_variant_global) == 0x68) ? 1 : -1];
+#endif
 extern struct data_array *player_data;
 extern short player_spawn_count;
 

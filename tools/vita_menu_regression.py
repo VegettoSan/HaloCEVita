@@ -82,6 +82,51 @@ def fixture():
     return tags[:cursor], locations
 
 
+def verify_root_event_graph(tags):
+    """Check the real ui.map contract used by Vita's selective root dispatch."""
+    u32 = lambda p: struct.unpack_from('<I', tags, p)[0]
+    i16 = lambda p: struct.unpack_from('<h', tags, p)[0]
+    offset = lambda address: address - BASE
+    directory = offset(u32(0))
+    count = u32(12)
+    entries = {u32(directory + 32 * i + 12): directory + 32 * i for i in range(count)}
+    by_name = {
+        tags[offset(u32(e + 16)):].split(b'\0', 1)[0]: index
+        for index, e in entries.items()
+    }
+    root_index = by_name[b'ui\\shell\\main_menu\\main_menu']
+    visited, handlers, creation = set(), set(), []
+
+    def visit(index):
+        assert index not in visited
+        visited.add(index)
+        definition = offset(u32(entries[index] + 20))
+        assert not (u32(definition + 44) & 2), 'pause-game-time needs an unlinked contract'
+        event_count, event_address = u32(definition + 84), u32(definition + 88)
+        for j in range(event_count):
+            event = offset(event_address) + j * 72
+            kind, function, flags = i16(event + 4), i16(event + 6), u32(event)
+            handlers.add(function)
+            if kind == 24:
+                creation.append((function, flags))
+        child_count, child_address = u32(definition + 992), u32(definition + 996)
+        for j in range(child_count):
+            child = u32(offset(child_address) + j * 80 + 12)
+            if child != NONE:
+                visit(child)
+        if i16(definition) == 3:
+            description = u32(definition + 0x1A4 + 12)
+            if description != NONE:
+                visit(description)
+
+    visit(root_index)
+    assert len(visited) == 9, visited
+    assert handlers == {0, 23, 86, 87, 101}, handlers
+    assert sorted(creation) == [(23, 0x80), (86, 0x80)], creation
+    return {'reachable_widgets': len(visited), 'event_indices': sorted(handlers),
+            'creation_handlers': creation}
+
+
 def main():
     os.chdir(ROOT)
     build = ROOT / 'build/vita/tests/menu-a019'
@@ -180,10 +225,12 @@ def main():
             libc.fclose(file)
         has_menu = path.stem.casefold() == 'ui'
         _, stats = relocate(buffer.raw[:info.tag_size], expect=has_menu)
+        graph = verify_root_event_graph(buffer.raw[:info.tag_size]) if has_menu else {}
         with path.open('rb') as source:
             assert hashlib.file_digest(source, 'sha256').hexdigest() == before_hash
         print(json.dumps({'map': path.name, 'status': 'PASS' if has_menu else 'SAFE REJECTION: no Main Menu tag', 'source_unchanged': True,
                           'tag_crc': f'{info.tag_crc:08x}',
+                          **graph,
                           **{name: getattr(stats, name) for name, _ in Stats._fields_}}))
 
 

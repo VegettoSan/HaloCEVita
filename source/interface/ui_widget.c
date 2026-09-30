@@ -678,6 +678,9 @@ struct widget_instance;
 #include "text/text_group.h"
 #include "text/unicode.h"
 #include "ui_widget.h"
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 
 /* ---------- constants */
 
@@ -1240,6 +1243,9 @@ static void widget_instance_reload_recursive(
 	struct widget_instance *widget);
 static void ui_widget_reload_by_tag(
 	long tag_index);
+#ifdef HALO_VITA_MENU_BRINGUP
+static boolean vita_menu_dispatch_blocked;
+#endif
 static void event_handler_dispatch(
 	struct widget_instance *widget,
 	struct ui_widget_definition *definition,
@@ -3024,6 +3030,26 @@ static void event_handler_dispatch(
 	struct ui_widget_event_handler_reference *handler,
 	boolean *calling_widget_deleted)
 {
+#ifdef HALO_VITA_MENU_BRINGUP
+	boolean deleted = FALSE;
+	(void)definition;
+	/* The checked Main Menu graph uses creation handlers with only the
+	 * original run-function bit. Other effects remain an explicit blocker
+	 * until their original dependencies are connected. */
+	if (handler->flags != 0 && handler->flags != FLAG(_event_handler_run_function_bit))
+	{
+		vita_log("MAIN MENU BLOCKED: UI event=%d function=%d flags=%08lx requires unintegrated effects",
+			handler->event_type, handler->function, (unsigned long)handler->flags);
+		vita_menu_dispatch_blocked = TRUE;
+		*calling_widget_deleted = FALSE;
+		return;
+	}
+	if (handler->flags && !ui_widget_event_handler_function_invoke(
+		widget, event, handler->function, &deleted))
+		vita_menu_dispatch_blocked = TRUE;
+	*calling_widget_deleted = deleted;
+	return;
+#else
 	boolean widget_deleted = FALSE;
 	boolean success = TRUE;
 	boolean function_failed = FALSE;
@@ -3296,6 +3322,7 @@ static void event_handler_dispatch(
 	*calling_widget_deleted = widget_deleted;
 
 	return;
+#endif
 }
 
 static boolean ui_widget_load_children_recursive(
@@ -3493,8 +3520,20 @@ static void widget_instance_initialize(
 	}
 	if (!widget_globals.dont_load_children_recursive)
 	{
+#ifdef HALO_VITA_MENU_BRINGUP
+		if (!parent) vita_log("[VITA 025] root child recursion begin");
+#endif
 		if (!ui_widget_load_children_recursive(widget, definition))
+		{
 			error(_error_silent, "failed to load widget children");
+#ifdef HALO_VITA_MENU_BRINGUP
+			vita_menu_dispatch_blocked = TRUE;
+			vita_log("MAIN MENU BLOCKED: original child recursion failed tag=%08lx", (unsigned long)tag_index);
+#endif
+		}
+#ifdef HALO_VITA_MENU_BRINGUP
+		else if (!parent) vita_log("[VITA 025] root child recursion PASS");
+#endif
 	}
 	for (handler_index = 0;
 		handler_index < definition->event_handlers.count;
@@ -3524,6 +3563,14 @@ static void widget_instance_initialize(
 	}
 	if (widget->pause_game_time == TRUE)
 	{
+#ifdef HALO_VITA_MENU_BRINGUP
+		/* All nine validated Main Menu definitions have this bit clear.
+		 * A future tag requiring it must stop before the root is reported
+		 * active, until original game-time/sound state is connected. */
+		vita_log("MAIN MENU BLOCKED: widget %08lx requires game-time pause contract",
+			(unsigned long)widget->definition_tag_index);
+		vita_menu_dispatch_blocked = TRUE;
+#else
 		widget_globals.pause_game_time_count++;
 		if (!game_time_get_paused())
 			game_time_set_paused(TRUE);
@@ -3532,6 +3579,7 @@ static void widget_instance_initialize(
 			sound_pause(TRUE);
 			widget_globals.sound_paused = TRUE;
 		}
+#endif
 	}
 
 	return;
@@ -3567,6 +3615,9 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 	if (tag_index != NONE)
 	{
 		definition = ui_widget_definition_get(tag_index);
+#ifdef HALO_VITA_MENU_BRINGUP
+		if (!parent) vita_log("[VITA 025] root allocation begin tag=%08lx", (unsigned long)tag_index);
+#endif
 		widget = pool_new_pointer(
 			widget_memory_pool,
 			sizeof(struct widget_instance),
@@ -3574,15 +3625,23 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 			395);
 		if (widget)
 		{
+#ifdef HALO_VITA_MENU_BRINGUP
+			if (!parent) vita_log("[VITA 025] root allocation PASS pointer=%p", widget);
+#endif
 			if (!parent)
 			{
 				short previous_local_player_index;
 
 				if (widget_globals.active_widgets[widget_stack])
 				{
+#ifdef HALO_VITA_MENU_BRINGUP
+					vita_log("MAIN MENU BLOCKED: existing root requires original widget deletion");
+					return NULL;
+#else
 					previous_local_player_index =
 						widget_globals.active_widgets[widget_stack]->local_player_index;
 					ui_widget_delete(widget_globals.active_widgets[widget_stack]);
+#endif
 				}
 				else
 				{
@@ -3644,6 +3703,68 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 
 	return widget;
 }
+
+#ifdef HALO_VITA_MENU_BRINGUP
+static long halo_vita_widget_count(struct widget_instance *widget)
+{
+	long count = 0;
+	for (; widget; widget = widget->next)
+	{
+		if (++count > 32) return -1;
+		if (widget->child)
+		{
+			long children = halo_vita_widget_count(widget->child);
+			if (children < 0 || (count += children) > 32) return -1;
+		}
+		if (widget->type == _ui_widget_type_column_list &&
+			widget->parameters.list.extended_description)
+		{
+			long description = halo_vita_widget_count(
+				widget->parameters.list.extended_description);
+			if (description < 0 || (count += description) > 32) return -1;
+		}
+	}
+	return count;
+}
+
+boolean halo_vita_menu_root_load(void)
+{
+	struct widget_instance *root;
+	struct widget_instance *child;
+	long descendants, direct_children = 0;
+
+	if (!widget_globals.initialized || widget_globals.active_widgets[0])
+	{
+		vita_log("MAIN MENU BLOCKED: root precondition initialized=%d active=%p",
+			widget_globals.initialized, widget_globals.active_widgets[0]);
+		return FALSE;
+	}
+	halo_vita_ui_event_reset();
+	vita_menu_dispatch_blocked = FALSE;
+	vita_log("[VITA 025] Main Menu root load begin");
+	root = ui_widget_load_by_name_or_tag(
+		"ui\\shell\\main_menu\\main_menu", NONE, NULL, NONE, NONE, NONE, NONE);
+	if (!root || halo_vita_ui_event_failed() || vita_menu_dispatch_blocked ||
+		widget_globals.active_widgets[0] != root)
+	{
+		vita_log("MAIN MENU BLOCKED: root load result=%p event_failed=%d effects_blocked=%d active=%p",
+			root, halo_vita_ui_event_failed(), vita_menu_dispatch_blocked,
+			widget_globals.active_widgets[0]);
+		return FALSE;
+	}
+	descendants = halo_vita_widget_count(root);
+	for (child = root->child; child; child = child->next) direct_children++;
+	if (descendants != 9 || direct_children != 3)
+	{
+		vita_log("MAIN MENU BLOCKED: root graph widgets=%ld direct_children=%ld expected=9/3",
+			descendants, direct_children);
+		return FALSE;
+	}
+	vita_log("[VITA 028] Main Menu root ACTIVE pointer=%p active_roots=1 widgets=%ld type=%d children=%ld focused=%p",
+		root, descendants, root->type, direct_children, root->focused_child);
+	return TRUE;
+}
+#endif
 
 static void render_state_text(
 	rectangle2d *bounds,
@@ -3868,9 +3989,16 @@ void ui_start_main_menu_music(
 
 		if (sound_definition_index != NONE)
 		{
+#ifdef HALO_VITA_MENU_BRINGUP
+			/* The original sound manager/game-state data are not initialized
+			 * by this UI-only checkpoint. Keep music inactive and observable. */
+			vita_log("MENU AUDIO DEFERRED: title1 tag=%08lx; original game sound state not initialized",
+				(unsigned long)sound_definition_index);
+#else
 			error(_error_silent, "starting main menu music");
 			scripted_looping_sound_start(sound_definition_index, NONE, 1.0f);
 			widget_globals.main_menu_music_active = TRUE;
+#endif
 		}
 		else
 		{

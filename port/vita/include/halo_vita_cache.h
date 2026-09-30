@@ -38,5 +38,8 @@ int halo_vita_cache_validate_menu(void);
 int halo_vita_cache_unmount_menu(void);
 int halo_vita_ui_runtime_initialize(void);
 int halo_vita_ui_runtime_dispose(void);
+int halo_vita_menu_root_checkpoint(void);
+int halo_vita_menu_update_checkpoint(void);
+int halo_vita_menu_render_checkpoint(void);
 int vita_cache_probe(int graphics, int core, int shaders);
 #endif
