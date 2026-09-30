@@ -59,7 +59,10 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/rasterizer/rasterizer.c
     ${ROOT}/source/rasterizer/rasterizer_text.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_dynavobgeom.c
-    ${ROOT}/port/linux/src/d3d8_gl.c)
+    ${ROOT}/port/linux/src/d3d8_gl.c
+    ${ROOT}/port/linux/src/d3d8_resources.c
+    ${ROOT}/port/linux/src/xbox_textures.c
+    ${ROOT}/source/cache/xbox_texture_cache.c)
 endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
 file(GLOB_RECURSE SEMANTIC_INPUTS CONFIGURE_DEPENDS ${ROOT}/source/*.h ${ROOT}/source/*.c ${ROOT}/port/include/xdk/*.h)
