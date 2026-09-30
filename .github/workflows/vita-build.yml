@@ -24,7 +24,10 @@ jobs:
       - name: Link Vita ELF
         run: cmake --build build/vita --target HaloCE.elf -j2
       - name: Inspect Vita ELF LOAD layout
-        run: arm-vita-eabi-readelf -l build/vita/HaloCE.elf
+        run: |
+          arm-vita-eabi-readelf -lS build/vita/HaloCE.elf
+          echo "===== init/fini/data map placement ====="
+          grep -E '^\.(init_array|fini_array|data|bss)[[:space:]]' build/vita/HaloCE.elf.map || true
       - name: Build VPK
         run: cmake --build build/vita --target vita_vpk -j2
       - name: Upload Vita test package and symbols
