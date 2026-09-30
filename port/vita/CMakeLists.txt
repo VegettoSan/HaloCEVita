@@ -121,7 +121,7 @@ set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memor
 set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
-add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_gl_compat.c
+add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_video_backend.c src/vita_gl_compat.c
   src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
 target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
 if(HALO_VITA_MENU_BRINGUP)
@@ -133,6 +133,9 @@ if(HALO_VITA_MENU_UPDATE_PROBE)
 endif()
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_RENDER_PROBE=1)
+  # Force the original Xbox rasterizer init path into the closure probe. This
+  # does not execute in the default VPK; it only exposes its real dependencies.
+  target_link_options(HaloCE.elf PRIVATE -Wl,-u,_rasterizer_initialize)
 endif()
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)
