@@ -5,7 +5,9 @@
 #include "halo_vita_cache.h"
 #include "interface/ui_widget_tags.h"
 #include "cache/cache_files.h"
+#include "cache/texture_cache.h"
 #include "bitmaps/bitmap_group.h"
+#include "bitmaps/bitmaps.h"
 #include "text/font_group.h"
 #include "text/text_group.h"
 #include "interface/ui_widget.h"
@@ -46,7 +48,23 @@ CHECK_LAYOUT(menu_interface_refs_size, sizeof(struct vita_interface_tag_referenc
  * ui_widget.c without fabricating a parallel menu/scenario state. */
 static struct scenario *vita_ui_scenario;
 static struct game_globals *vita_ui_game_globals;
+static boolean vita_menu_bitmap_resources_activated;
 char *tag_get_name(long tag_index);
+
+/* xbox_texture_cache.c owns this runtime hook. bitmap_group.c normally calls
+ * it from its private postprocess_bitmap_group() after scenario_tags_load.
+ * The Vita UI-only mount deliberately bypasses scenario_tags_load, so the
+ * bridge below invokes that same original texture-cache hook after the
+ * rasterizer has created/opened the real texture cache. */
+void texture_cache_bitmap_new(long bitmap_tag_index, struct bitmap_data *bitmap);
+
+enum
+{
+    /* Private enum values from the original bitmap_group.c postprocess. Keep
+     * these named here rather than treating retail assets specially. */
+    _vita_bitmap_group_type_interface_bitmaps = 4,
+    _vita_bitmap_linear_bit = 4,
+};
 
 struct scenario *global_scenario_get(void)
 {
@@ -215,6 +233,68 @@ int halo_vita_ui_runtime_dispose(void)
     }
     vita_ui_scenario = NULL;
     vita_ui_game_globals = NULL;
+    vita_menu_bitmap_resources_activated = FALSE;
+    return 1;
+}
+
+int halo_vita_menu_bitmap_resources_activate(void)
+{
+    struct tag_iterator iterator;
+    long bitmap_group_index;
+    long group_count = 0;
+    long bitmap_count = 0;
+
+    if (vita_menu_bitmap_resources_activated)
+        return 1;
+    if (!vita_ui_scenario || !vita_ui_game_globals) {
+        vita_log("MAIN MENU BLOCKED: bitmap resource activation requested without mounted ui scenario/globals");
+        return 0;
+    }
+
+    tag_iterator_new(&iterator, BITMAP_GROUP_TAG);
+    while ((bitmap_group_index = tag_iterator_next(&iterator)) != NONE) {
+        struct bitmap_group *group = bitmap_group_get(bitmap_group_index);
+        long bitmap_index;
+
+        if (!group || group->bitmaps.count < 0 ||
+            (group->bitmaps.count && !group->bitmaps.address)) {
+            vita_log("MAIN MENU BLOCKED: invalid mounted bitmap group datum=%08lx count=%ld address=%p",
+                (unsigned long)bitmap_group_index,
+                group ? group->bitmaps.count : -1L,
+                group ? group->bitmaps.address : NULL);
+            return 0;
+        }
+
+        for (bitmap_index = 0; bitmap_index < group->bitmaps.count; ++bitmap_index) {
+            struct bitmap_data *bitmap = TAG_BLOCK_GET_ELEMENT(
+                &group->bitmaps, bitmap_index, struct bitmap_data);
+
+            /* This is the exact runtime preparation performed by the original
+             * private postprocess_bitmap_group(): interface bitmaps become
+             * linear, then bitmap_verify gates texture_cache_bitmap_new(). */
+            if (group->type == _vita_bitmap_group_type_interface_bitmaps)
+                SET_FLAG(bitmap->flags, _vita_bitmap_linear_bit, TRUE);
+            if (!bitmap_verify(bitmap, FALSE)) {
+                vita_log("MAIN MENU BLOCKED: original bitmap_verify failed tag=%08lx path=%s bitmap=%ld format=%d dims=%dx%dx%d flags=%04x",
+                    (unsigned long)bitmap_group_index,
+                    tag_get_name(bitmap_group_index), bitmap_index,
+                    (int)bitmap->format, (int)bitmap->width, (int)bitmap->height,
+                    (int)bitmap->depth, (unsigned)bitmap->flags);
+                return 0;
+            }
+            texture_cache_bitmap_new(bitmap_group_index, bitmap);
+            ++bitmap_count;
+        }
+        ++group_count;
+    }
+
+    if (!bitmap_count) {
+        vita_log("MAIN MENU BLOCKED: mounted ui.map exposed no bitmap resources to original texture cache");
+        return 0;
+    }
+    vita_menu_bitmap_resources_activated = TRUE;
+    vita_log("[VITA 039] original bitmap postprocess runtime path activated: groups=%ld bitmaps=%ld; texture_cache_bitmap_new ready for on-demand pixels",
+        group_count, bitmap_count);
     return 1;
 }
 
