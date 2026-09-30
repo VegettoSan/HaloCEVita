@@ -66,19 +66,18 @@ short cache_file_read(
 	static boolean first_success_logged = FALSE;
 
 	if (!completion_flag_reference) {
-		vita_log("CACHE RESOURCE BLOCKED: cache_file_read completion pointer is null");
-		return NONE;
+		vita_fatal("CACHE RESOURCE BLOCKED: cache_file_read completion pointer is null");
 	}
 	*completion_flag_reference = FALSE;
 	if (!buffer || offset < 0 || size <= 0) {
 		vita_log("CACHE RESOURCE BLOCKED: invalid request tag=%08lx offset=%ld size=%ld destination=%p",
 			(unsigned long)tag_index, offset, size, buffer);
-		return NONE;
+		vita_fatal("original texture cache cannot complete an invalid resource request");
 	}
 	if ((unsigned long)size > 0xFFFFFFFFUL - (unsigned long)offset) {
 		vita_log("CACHE RESOURCE BLOCKED: logical range overflow tag=%08lx offset=%ld size=%ld destination=%p",
 			(unsigned long)tag_index, offset, size, buffer);
-		return NONE;
+		vita_fatal("original texture cache cannot complete an overflowing resource request");
 	}
 	traced_bitmap = trace_first_bitmap_request(tag_index, offset, size, buffer);
 	if (!vita_cache_resource_read((uint32_t)offset, buffer, (size_t)size, error, sizeof(error))) {
@@ -86,7 +85,7 @@ short cache_file_read(
 			(unsigned long)tag_index, offset, size, buffer, error);
 		if (traced_bitmap)
 			vita_log("[VITA CACHE] first original bitmap resource read result=FAIL bytes=0 requested=%ld", size);
-		return NONE;
+		vita_fatal("original texture cache cannot complete a failed resource read");
 	}
 	*completion_flag_reference = TRUE;
 	if (traced_bitmap)
