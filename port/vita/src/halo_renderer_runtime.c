@@ -141,12 +141,35 @@ int halo_vita_renderer_render_menu_frame(void)
         vita_log("[VITA 037] original Main Menu frame begin");
 
     rasterizer_frame_begin(&frame_parameters);
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037F] rasterizer_frame_begin PASS");
+
     rasterizer_windows_begin();
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037W0] rasterizer_windows_begin PASS");
+
     rasterizer_window_begin(&window_parameters);
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037W1] rasterizer_window_begin PASS");
+
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037UI] render_ui_widgets begin");
     render_ui_widgets(0, &window_parameters.camera.viewport_bounds);
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037UI] render_ui_widgets PASS");
+
     rasterizer_window_end();
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037W2] rasterizer_window_end PASS");
+
     rasterizer_windows_end();
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037W3] rasterizer_windows_end PASS");
+
     rasterizer_frame_end();
+    if (vita_first_menu_frame)
+        vita_log("[VITA 037E] rasterizer_frame_end PASS");
+
     rasterizer_present(NULL, NULL);
 
     if (vita_first_menu_frame) {
