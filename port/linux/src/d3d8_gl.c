@@ -727,7 +727,7 @@ static GLuint compile_shader(GLenum type, const char *source, const char *what)
 	return shader;
 }
 
-#ifndef HALO_ANDROID
+#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
 static void GLAPIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar *message, const void *user)
 {
@@ -910,6 +910,10 @@ static void gl_initialize(void)
 			(int)major, (int)minor, xgpu_capabilities.copy_image, xgpu_capabilities.border_clamp,
 			xgpu_capabilities.anisotropy, xgpu_capabilities.s3tc, xgpu_capabilities.atomic_counters);
 	}
+#elif defined(HALO_VITA)
+	/* Vita's NV2A vertex translator applies the clip-space Y/Z conversion;
+	 * vitaGL has no glClipControl. Diagnostics use vita_log/platform_log. */
+	platform_log("vitaGL D3D8: using shader clip-space conversion and direct visibility queries");
 #else
 	if (config_boolean("debug.gl_debug"))
 	{
@@ -949,7 +953,7 @@ static void gl_initialize(void)
 #endif
 	glGenSamplers(D3DTSS_MAXSTAGES, device.samplers);
 	glGenQueries(VISIBILITY_TEST_SLOTS, device.queries);
-#ifndef HALO_ANDROID
+#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
 	glGenBuffers(1, &device.visibility_results_buffer);
 	glBindBuffer(GL_QUERY_BUFFER, device.visibility_results_buffer);
 	glBufferStorage(GL_QUERY_BUFFER, VISIBILITY_TEST_SLOTS * sizeof(GLuint), NULL,
@@ -1401,7 +1405,7 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 	device.queries[0] = device.queries[index];
 	device.queries[index] = scratch;
 	device.query_pending[index] = TRUE;
-#ifndef HALO_ANDROID
+#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
 	if (device.visibility_results)
 	{
 		/* the GPU writes the count into the slot once it is known */
@@ -1449,7 +1453,7 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 		return S_OK;
 	}
 #endif
-#ifndef HALO_ANDROID
+#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
 	if (device.visibility_results)
 	{
 		/* the latest count the GPU has written: from this test, or while
