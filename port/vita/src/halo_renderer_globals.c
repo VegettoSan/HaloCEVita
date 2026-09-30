@@ -9,3 +9,5 @@
 struct pixel_shader_definition pixel_shader;
 struct rasterizer_frame_statistics_globals rasterizer_frame_statistics;
 struct rasterizer_window_begin_parameters global_window_parameters;
+real_argb_color ui_plasma_effect_color;
+short local_player_index_for_draw_string_and_hack_in_icons;
