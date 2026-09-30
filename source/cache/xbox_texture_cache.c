@@ -93,6 +93,9 @@ symbols in this file:
 
 /* ---------- headers */
 
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 #include "cseries/cseries.h"
 #include "cseries/cseries_windows.h"
 #include "cseries/errors.h"
@@ -756,6 +759,23 @@ static boolean texture_cache_start_loading_bitmap(
 		bitmap->base_address = base_address;
 		texture->bitmap = bitmap;
 		texture_cache_initialize_hardware_format(bitmap, &texture->hardware_format);
+#ifdef HALO_VITA
+		{
+			static boolean first_bitmap_logged;
+			if (!first_bitmap_logged)
+			{
+				struct bitmap_group *group = bitmap_group_get(bitmap->tag_index);
+				long bitmap_index = group && group->bitmaps.address ?
+					bitmap - (struct bitmap_data *)group->bitmaps.address : NONE;
+				first_bitmap_logged = TRUE;
+				vita_log("[VITA BITMAP] tag=%s datum=%08lx index=%ld offset=%ld size=%ld format=%d dims=%dx%dx%d mipmaps=%d type=%d destination=%p allocation=%ld",
+					tag_get_name(bitmap->tag_index), (unsigned long)bitmap->tag_index, bitmap_index,
+					bitmap->pixels_offset, bitmap->pixels_size, bitmap->format,
+					bitmap->width, bitmap->height, bitmap->depth, bitmap->mipmap_count,
+					bitmap->type, base_address, size);
+			}
+		}
+#endif
 		texture->read_request_handle = cache_file_read(
 			bitmap->tag_index,
 			bitmap->pixels_offset,
