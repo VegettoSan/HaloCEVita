@@ -581,7 +581,7 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	struct format_information information = format_information(description->format);
 	unsigned long face_count = description->cube_map ? 6 : 1;
 	unsigned long face_size = xgpu_texture_face_size(description);
-	unsigned long largest = description->width * description->height * description->depth;
+	unsigned long largest;
 	BOOL decode_compressed = FALSE;
 	unsigned long *converted;
 	unsigned long face, level;
@@ -590,12 +590,19 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
 #endif
 	#ifdef HALO_VITA
+	if (!description->width || !description->height || !description->depth ||
+		description->width > ~0UL / description->height ||
+		description->width * description->height > ~0UL / description->depth)
+		vita_fatal("Xbox texture dimensions overflow on Vita");
+	#endif
+	largest = description->width * description->height * description->depth;
+	#ifdef HALO_VITA
 	if (target == GL_TEXTURE_3D)
 		vita_fatal("Xbox volume texture upload requires a Vita 3D texture fallback");
 	#endif
 	#ifdef HALO_VITA
 	if (!description->width || !description->height || !description->depth ||
-		!description->levels || largest / description->width / description->height != description->depth ||
+		!description->levels ||
 		largest > (64UL << 20) / sizeof(unsigned long))
 		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 64MiB bound");
 	#endif
