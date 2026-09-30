@@ -57,6 +57,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/text/draw_string.c
     ${ROOT}/source/text/unicode.c
     ${ROOT}/source/rasterizer/rasterizer.c
+    ${ROOT}/source/rasterizer/rasterizer_text.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_dynavobgeom.c)
 endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
