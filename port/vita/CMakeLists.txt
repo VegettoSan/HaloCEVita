@@ -53,6 +53,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
   target_sources(halo_core PRIVATE
     src/halo_renderer_globals.c
     src/halo_renderer_diagnostics.c
+    src/halo_renderer_runtime.c
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
@@ -63,7 +64,18 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/text/unicode.c
     ${ROOT}/source/rasterizer/rasterizer.c
     ${ROOT}/source/rasterizer/rasterizer_text.c
+    ${ROOT}/source/rasterizer/rasterizer_cinematics.c
+    ${ROOT}/source/rasterizer/rasterizer_debug.c
+    ${ROOT}/source/rasterizer/rasterizer_memory_pool.c
+    ${ROOT}/source/rasterizer/rasterizer_transparent_geometry.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_draw_primitives.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_transparent_geometry.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_dynavobgeom.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_vertex_shaders_initialize.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_detail_objects.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_profile.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_environment_fog.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_errors.c
     ${ROOT}/port/linux/src/d3d8_gl.c
     ${ROOT}/port/linux/src/d3d8_resources.c
     ${ROOT}/port/linux/src/xbox_textures.c
