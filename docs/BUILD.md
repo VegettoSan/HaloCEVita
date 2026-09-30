@@ -2,7 +2,7 @@
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
 
-Current deliverable is **00.09: LINKS** (A023), with checked teardown of the original UI pool awaiting Vita. Hardware **00.08: BOOTS** (A022) validates persistent `ui.map` mount, original UI globals/pool initialization, Cross recheck, CRC restoration and Start clean exit; its heap dump identifies the 16 KiB pool left allocated. The known00.05 diagnostic graphics baseline and matching symbols remain in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending.
+Current deliverable is **00.10: BOOTS** (A029). An exact retained Vita log reports 024 case-insensitive `ui.map`, directory/missing-file checks and absent XDemos, with per-thread last-error isolation; prior UI recheck, pool teardown and CRC restoration pass through Start exit. Its tested package and symbols are preserved in build/vita/attempts/a027-baseline-00.10/. The known00.05 diagnostic graphics baseline remains in build/vita/attempts/a017-baseline-00.05/. Full main/menu remains pending.
 
 ## Toolchain
 
@@ -71,7 +71,7 @@ Optional debug assets/log maps may also be generated under `build/vita/`.
 Keep `HaloCE.elf`, `HaloCE.elf.map`, `HaloCE.elf.velf` and artifacts.json for crash analysis. Final package SHA-256:
 
 ```text
-cd364a2c7d692971816d9b93d92fef07fe3e7f39aa2fc6f42c183785aa88ab8f  HaloCE.vpk
+82822ae873908bf82fee45a464d6b116481a8cb2cad8f59da8c5751c98f29686  HaloCE.vpk
 ```
 
 Rebuilding can change package timestamps/hash; use the verifier's fresh SHA256SUMS for the package actually installed.
@@ -133,9 +133,15 @@ No retail Halo data belongs in the build tree.
 
 The imported engine is the Xbox reconstruction: its real verifier requires **Xbox cache version 5**. PC Halo/Custom Edition caches/version7/609 and PC-style separate bitmaps.map/sounds.map are not accepted substitutes. Put Xbox `ui.map`, `a10.map` and the other map files from your own game in the target directory. ui/a10 names are found case-insensitively. The current checkpoint reads, decompresses and partially relocates `ui.map` tags; it does not activate BSP/GPU resources or the full scenario/main loop.
 
-## Current 00.09 UI pool cleanup checkpoint (A023)
+## Current 00.10 Xbox file-reference contract checkpoint (A026)
 
-Install current `build/vita/HaloCE.vpk`, verify banner00.09 and keep the matching ELF/map. Use the same Xbox-v5 `ui.map`; startup reads ui only. Existing diagnostic remains visible. Expect these completed operations:
+The archived A029 00.10 Vita log records `worker=00000000->00002468 main=00001357` and `[VITA 024] original Xbox file contract: casefold_ui=1 maps_directory=1 missing_file=1 XDemos=absent`. The original `file_reference_create_from_path`, `file_exists`, and `xbox_demos_available` ran. Prior 015..023/020 checkpoints also completed twice, with Cross recheck and Start cleanup. This package does not create the root widget or issue a Halo draw; 010 stays withheld.
+
+Host contract command: `python3 tools/vita_xapi_regression.py`. It compiles the actual native path/error implementation with mocked Vita directory/stat calls and verifies case-insensitive lookup, exact directory/file errors, traversal rejection and thread isolation. A native link or host test is not a hardware filesystem result.
+
+## Hardware 00.09 UI pool cleanup checkpoint (A023/A024)
+
+The preserved 00.09 package in `build/vita/attempts/a024-baseline-00.09/` was tested with the same Xbox-v5 `ui.map`. Startup reads ui only. Existing diagnostic remains visible. Its completed operations were:
 
 - 017: typed relocation committed,3362 pointers for exact user ui.map; rule counts1025 tag_block.address/866 tag_data.address/1471 tag_reference.name.
 - 018: original tag_loaded resolves ui\shell\main_menu\main_menu and9 reachable widgets.
@@ -144,7 +150,7 @@ Install current `build/vita/HaloCE.vpk`, verify banner00.09 and keep the matchin
 - On Cross, 023 frees the pool before 020 restores the original CRC `e22586e4`; 015..022 then repeat.
 - On Start, 023 frees the second pool before 020 restores the CRC and the arena exits cleanly.
 
-After one Cross and Start, copy both `ux0:data/HaloCE/debug.txt` and `heap_dump.txt`. The expected dump has no 16,384-byte `ui_widget.c:117` allocation. An absent dump or 023 log does not by itself prove leak repair; hardware evidence is required. This package still does not create the root widget or draw the Halo menu; 010 stays withheld. Host commands: `python3 tools/vita_menu_regression.py /path/to/ui.map /path/to/a10.map` and `python3 tools/vita_program_regression.py`. Campaign a10 remains outside the UI fast path. No retail data is packaged.
+A024 hardware confirms 023 before each 020 and the user reports no generated heap dump. The original dump writer creates the file only when guarded allocations remain; the 00.08 leak had produced it. This package still does not create the root widget or draw the Halo menu; 010 stays withheld. Host commands: `python3 tools/vita_menu_regression.py /path/to/ui.map /path/to/a10.map` and `python3 tools/vita_program_regression.py`. Campaign a10 remains outside the UI fast path. No retail data is packaged.
 
 ## Historical 00.06 integration test (A017/A018)
 

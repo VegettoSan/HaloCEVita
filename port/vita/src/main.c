@@ -7,7 +7,7 @@
 
 int main(void)
 {
-	int platform, core, maps, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
+	int platform, core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
 	char *vertex, *fragment;
 	uint32_t user, cdram, phycont;
 	platform = vita_platform_initialize();
@@ -17,7 +17,10 @@ int main(void)
 	core = halo_vita_core_initialize();
 	vita_log("Halo core result=%s", core ? "PASS" : "FAIL");
 	maps = vita_maps_verify();
-	vita_services_probe();
+	services = vita_services_probe();
+	if (!services) vita_log("MAIN MENU BLOCKED: thread/last-error service contract failed");
+	if (maps && services && !halo_vita_file_contract_probe())
+		vita_log("MAIN MENU BLOCKED: original Xbox file-reference contract failed");
 	vita_log("[VITA 005] graphics init begin");
 	graphics = vita_graphics_initialize();
 	if (graphics) {

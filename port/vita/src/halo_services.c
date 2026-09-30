@@ -4,6 +4,8 @@
 #include "cseries.h"
 #include "cseries_windows.h"
 #include "errors.h"
+#include "tag_files/files.h"
+#include "interface/marketing_and_strategic_business_development.h"
 #include "vita_runtime.h"
 #include <stdarg.h>
 
@@ -58,6 +60,36 @@ BOOL WINAPI QueryPerformanceFrequency(LARGE_INTEGER *frequency)
 	frequency->QuadPart = 1000000; return TRUE;
 }
 DWORD WINAPI GetTickCount(void) { return (DWORD)(vita_time_us() / 1000); }
+DWORD WINAPI GetLastError(void) { return (DWORD)vita_xapi_last_error_get(); }
+VOID WINAPI SetLastError(DWORD error) { vita_xapi_last_error_set((uint32_t)error); }
+DWORD WINAPI GetFileAttributesA(LPCSTR path)
+{
+	uint32_t attributes, error;
+	if (vita_xapi_file_attributes(path, &attributes, &error)) return (DWORD)attributes;
+	SetLastError((DWORD)error);
+	return (DWORD)-1;
+}
+int halo_vita_file_contract_probe(void)
+{
+	struct file_reference reference;
+	DWORD directory_attributes, missing_attributes;
+	int map_found, missing_rejected, demos_available;
+	SetLastError(0x1357);
+	file_reference_create_from_path(&reference, "d:\\MAPS\\UI.MAP", FALSE);
+	map_found = file_exists(&reference) && GetLastError() == 0x1357;
+	directory_attributes = GetFileAttributesA("d:\\MAPS");
+	file_reference_create_from_path(&reference, "d:\\maps\\__halo_vita_missing__.map", FALSE);
+	missing_rejected = !file_exists(&reference) && GetLastError() == ERROR_FILE_NOT_FOUND;
+	missing_attributes = GetFileAttributesA("d:\\maps\\__halo_vita_missing__.map");
+	missing_rejected &= missing_attributes == (DWORD)-1 && GetLastError() == ERROR_FILE_NOT_FOUND;
+	demos_available = xbox_demos_available();
+	vita_log("[VITA 024] original Xbox file contract: casefold_ui=%d maps_directory=%d missing_file=%d XDemos=%s",
+		map_found, directory_attributes != (DWORD)-1 &&
+			(directory_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0,
+		missing_rejected, demos_available ? "present" : "absent");
+	return map_found && directory_attributes != (DWORD)-1 &&
+		(directory_attributes & FILE_ATTRIBUTE_DIRECTORY) != 0 && missing_rejected;
+}
 VOID WINAPI GlobalMemoryStatus(MEMORYSTATUS *status)
 {
 	uint32_t user, cdram, phycont;

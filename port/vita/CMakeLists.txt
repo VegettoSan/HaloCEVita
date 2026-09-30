@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.09")
+set(VITA_APP_VERSION "00.10")
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -22,10 +22,14 @@ add_library(halo_core STATIC
   ${ROOT}/source/memory/stack_memory_pool.c
   ${ROOT}/source/memory/crc.c
   ${ROOT}/source/tag_files/tag_groups.c
+  ${ROOT}/source/tag_files/files.c
+  ${ROOT}/source/tag_files/files_windows.c
   ${ROOT}/source/bitmaps/bitmap_group.c
   ${ROOT}/source/text/font_group.c
   ${ROOT}/source/text/text_group.c
+  ${ROOT}/source/text/international_strings.c
   ${ROOT}/source/interface/ui_widget.c
+  ${ROOT}/source/interface/marketing_and_strategic_business_development.c
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/source/cache/cache_files.c
   ${ROOT}/source/cache/physical_memory_map.c
@@ -69,7 +73,7 @@ set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
 add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_gl_compat.c
-  src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c)
+  src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
 target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)

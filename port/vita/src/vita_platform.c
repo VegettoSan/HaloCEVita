@@ -178,9 +178,13 @@ int vita_map_path(const char *name, char *path, size_t capacity)
 }
 static pthread_mutex_t probe_lock = PTHREAD_MUTEX_INITIALIZER;
 static int probe_value;
+static uint32_t probe_worker_error_before, probe_worker_error_after;
 static void *thread_probe(void *argument)
 {
 	(void)argument;
+	probe_worker_error_before = vita_xapi_last_error_get();
+	vita_xapi_last_error_set(0x2468);
+	probe_worker_error_after = vita_xapi_last_error_get();
 	pthread_mutex_lock(&probe_lock); probe_value = 42; pthread_mutex_unlock(&probe_lock);
 	return NULL;
 }
@@ -188,9 +192,12 @@ int vita_services_probe(void)
 {
 	pthread_t thread; int result, join_result = -1;
 	probe_value = 0;
+	vita_xapi_last_error_set(0x1357);
 	result = pthread_create(&thread, NULL, thread_probe, NULL);
 	if (!result) join_result = pthread_join(thread, NULL);
 	vita_log("pthread create=%d join=%d synchronized value=%d", result, join_result, probe_value);
+	vita_log("XAPI per-thread last-error: worker=%08x->%08x main=%08x",
+		probe_worker_error_before, probe_worker_error_after, vita_xapi_last_error_get());
 	if (SDL_InitSubSystem(SDL_INIT_AUDIO)) {
 		SDL_AudioSpec spec = {SDL_AUDIO_S16, 2, 48000};
 		SDL_AudioStream *stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
@@ -199,6 +206,8 @@ int vita_services_probe(void)
 		if (stream) SDL_DestroyAudioStream(stream);
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
 	} else vita_log("SDL3 audio probe failed: %s", SDL_GetError());
-	return !result && !join_result && probe_value == 42;
+	return !result && !join_result && probe_value == 42 &&
+		probe_worker_error_before == 0 && probe_worker_error_after == 0x2468 &&
+		vita_xapi_last_error_get() == 0x1357;
 }
 void vita_platform_shutdown(void) { vita_log("clean exit"); }
