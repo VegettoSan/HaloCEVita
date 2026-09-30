@@ -123,6 +123,14 @@ static int cache_capture_range(FILE *file, const struct vita_cache_header_state 
 				if (!progress(position, context)) { fail(error, error_size, "cancelled"); goto inflate_done; }
 				next_progress = position + 1024 * 1024;
 			}
+			/* Resource reads only need the requested logical prefix. Once the
+			 * range is complete, do not decompress the rest of a potentially
+			 * hundreds-of-megabytes map. Requests that reach logical EOF still
+			 * run to Z_STREAM_END so zlib validates the stream/checksum. */
+			if (end < state->logical_size && captured == bytes && position >= end) {
+				success = 1;
+				goto inflate_done;
+			}
 		}
 		if (position != state->logical_size || captured != bytes) {
 			fail(error, error_size, "inflated length/logical range mismatch"); goto inflate_done;
