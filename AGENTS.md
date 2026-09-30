@@ -18,6 +18,7 @@ Before changing code:
 4. Read `docs/KNOWN_ISSUES.md` and `docs/DECISIONS.md`.
 5. Inspect the exact upstream code involved before proposing a replacement.
 6. Inspect the current local working tree before assuming GitHub is up to date. The local tree may contain newer, unpushed Vita work.
+7. If the task touches rendering, shaders, textures, D3D8/NV2A, vitaGL, FBOs or GPU memory, read `docs/VITAGL_RENDERER_PLAN.md` and `docs/GRAPHICS_COMPATIBILITY.md` before changing code.
 
 When local unpushed code/logs contradict the public GitHub status, treat the local working tree and fresh hardware evidence as the current implementation state. Do not overwrite, discard, or "restore" newer local work merely because the remote documentation is older. Reconcile documentation after inspecting the local changes.
 
@@ -136,6 +137,7 @@ Preferred route:
 - Prefer adapting generated GLSL to vitaGL's supported translator subset over rewriting the entire Halo shader system.
 - Use `libshacccg.suprx`/VitaShaRK when required by vitaGL runtime shader compilation.
 - Treat unsupported GL calls one by one. Add wrappers/fallbacks and document them in `docs/GRAPHICS_COMPATIBILITY.md`.
+- Treat `docs/VITAGL_RENDERER_PLAN.md` as the renderer/shader implementation roadmap; update it when hardware evidence changes a capability, fallback or implementation order.
 - Do not silently stub a rendering function if it affects correctness. A temporary stub must log itself and be recorded as a known issue.
 - In particular, do not return fake-success shader handles or ignore `SetVertexShader`, shader constants, pixel shader programs, render targets, vertex declarations, or texture state merely to reach a frame. The first real Halo draw is only meaningful if the relevant NV2A/D3D state reaches the translated shader/render path.
 - A visible triangle proves the VitaGL/shader path, not the Halo renderer. Keep this distinction explicit in status reports.
