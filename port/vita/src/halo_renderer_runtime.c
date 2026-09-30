@@ -15,6 +15,7 @@
 #include "rasterizer/rasterizer.h"
 #include "rasterizer/xbox/rasterizer_xbox.h"
 #include "vita_runtime.h"
+#include "halo_ui_pointer.h"
 
 /* cache_files.c owns the map-open sequencing and intentionally keeps this
  * per-map entry point out of texture_cache.h. Vita mounts ui.map through its
@@ -174,7 +175,12 @@ int halo_vita_renderer_render_menu_frame(void)
 
     if (vita_first_menu_frame)
         vita_log("[VITA 037UI] render_ui_widgets begin");
+    /* Native render_frame_pregame centers Halo's authored 640-column UI in
+     * the selected widescreen viewport through the backend's screen_offset.
+     * The same flag also centers scissor rectangles; do not offset tags. */
+    halo_screen_ui_offset(TRUE);
     render_ui_widgets(0, &window_parameters.camera.viewport_bounds);
+    halo_screen_ui_offset(FALSE);
     if (vita_first_menu_frame)
         vita_log("[VITA 037UI] render_ui_widgets PASS");
 
