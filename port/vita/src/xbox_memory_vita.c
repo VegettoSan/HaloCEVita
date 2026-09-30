@@ -125,11 +125,15 @@ int halo_vita_memory_initialize(void)
 	physical_memory_allocate();
 	memory_live = 1;
 	physical_memory_verify();
-	state_live = game_state_allocate_buffer(HALO_PORT_GAME_STATE_BASE_ADDRESS,
-		HALO_PORT_GAME_STATE_CPU_SIZE, HALO_PORT_GAME_STATE_GPU_SIZE) != NULL;
-	if (!state_live) return 0;
-	vita_log("Halo game_state_allocate_buffer returned: CPU=%u GPU=%u; cached CPU arena, future GPU uploads via vitaGL",
-		HALO_PORT_GAME_STATE_CPU_SIZE, HALO_PORT_GAME_STATE_GPU_SIZE);
+
+	/* Let the original game-state initializer own its allocation exactly once.
+	 * It binds the already placed physical-memory region, creates the backing
+	 * save file through the Vita XAPI bridge and allocates the real header. */
+	vita_log("[VITA 033] original game-state initialization begin");
+	game_state_initialize();
+	state_live = 1;
+	vita_log("[VITA 034] original game-state initialized on placed arena");
+
 	vita_log("Halo physical_memory_allocate/verify returned: game=%p tags=%p texture=%p sound=%p",
 		physical_memory_get_game_state_base_address(), physical_memory_get_tag_cache_base_address(),
 		physical_memory_get_texture_cache_base_address(), physical_memory_get_sound_cache_base_address());
@@ -142,7 +146,7 @@ int halo_vita_memory_initialize(void)
 }
 void halo_vita_memory_dispose(void)
 {
-	if (state_live) game_state_free_buffer();
+	if (state_live) game_state_dispose();
 	state_live = 0;
 	if (memory_live) physical_memory_free();
 	memory_live = 0;
