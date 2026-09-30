@@ -6,6 +6,7 @@
 #include <xtl.h>
 #include "cseries.h"
 #include "cache/texture_cache.h"
+#include "effects/decals.h"
 #include "math/real_math.h"
 #include "main/main.h"
 #include "render/render.h"
@@ -29,8 +30,8 @@ void compute_window_bounds(long player_index, long num_players,
 
 static boolean vita_renderer_ready;
 static boolean vita_texture_cache_opened;
+static boolean vita_decals_ready;
 static boolean vita_first_menu_frame = TRUE;
-static boolean vita_texture_idle_probe_pending = TRUE;
 
 int halo_vita_renderer_initialize(void)
 {
@@ -49,8 +50,7 @@ int halo_vita_renderer_initialize(void)
      *   scenario_tags_load()    -> texture_cache_open()
      * The special Vita ui.map mount bypasses scenario_tags_load(), but it must
      * not pre-create the texture cache because rasterizer_initialize() creates
-     * it itself. 00.15 did new+open before the rasterizer and the rasterizer
-     * immediately replaced that cache with a second texture_cache_new(). */
+     * it itself. */
     vita_log("[VITA 035] original Xbox rasterizer initialization begin");
     if (!rasterizer_initialize()) {
         vita_log("MAIN MENU BLOCKED: original Xbox rasterizer initialization failed");
@@ -69,6 +69,22 @@ int halo_vita_renderer_initialize(void)
         texture_cache_open();
         vita_texture_cache_opened = TRUE;
         vita_log("[VITA 036T] original Xbox texture cache per-map open PASS");
+    }
+
+    /* game_initialize() owns decals_initialize(), which in turn creates the
+     * rasterizer's decal vertex LRU via rasterizer_decals_initialize(). The
+     * staged Vita Main Menu path does not run full game_initialize(), so its
+     * first rasterizer_frame_begin() previously reached
+     * rasterizer_decal_vertices_begin_update() with local_vertex_cache == NULL.
+     * The matching per-map phase is also required because decals_update() runs
+     * in that same frame when environment decals are enabled. Restore both
+     * original subsystem transitions instead of fabricating an LRUV cache. */
+    if (!vita_decals_ready) {
+        vita_log("[VITA 036D] original decals initialization begin");
+        decals_initialize();
+        decals_initialize_for_new_map();
+        vita_decals_ready = TRUE;
+        vita_log("[VITA 036D] original decals initialization/new-map PASS");
     }
 
     vita_renderer_ready = TRUE;
@@ -123,17 +139,6 @@ int halo_vita_renderer_render_menu_frame(void)
 
     if (vita_first_menu_frame)
         vita_log("[VITA 037] original Main Menu frame begin");
-
-    /* One-shot diagnostic for the 00.14/00.15 lruv_cache.c:754 halt. This is
-     * still Halo's original cache idle routine; the only side effect is one
-     * extra LRU tick on the first bring-up frame. If it returns, any later
-     * lruv_cache.c:754 assertion belongs to a different cache owner. */
-    if (vita_texture_idle_probe_pending) {
-        vita_log("[VITA 037T] original texture_cache_idle probe begin");
-        texture_cache_idle();
-        vita_texture_idle_probe_pending = FALSE;
-        vita_log("[VITA 037T] original texture_cache_idle probe PASS");
-    }
 
     rasterizer_frame_begin(&frame_parameters);
     rasterizer_windows_begin();
