@@ -33,3 +33,15 @@ jobs:
             build/vita/HaloCE.elf.map
           if-no-files-found: error
           retention-days: 14
+
+  renderer-closure:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    container:
+      image: vitasdk/vitasdk:2026.08
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure original UI renderer link probe
+        run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON
+      - name: Link original UI renderer closure
+        run: cmake --build build/vita-render-probe --target HaloCE.elf -j2
