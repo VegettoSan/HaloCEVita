@@ -65,6 +65,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/text/unicode.c
     "${ROOT}/source/saved games/game_state.c"
     ${ROOT}/source/rasterizer/rasterizer.c
+    ${ROOT}/source/rasterizer/rasterizer_lights.c
     ${ROOT}/source/rasterizer/rasterizer_geometry.c
     ${ROOT}/source/rasterizer/rasterizer_text.c
     ${ROOT}/source/rasterizer/rasterizer_cinematics.c
@@ -96,6 +97,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/interface/hud_draw.c
     ${ROOT}/source/input/input_abstraction.c
     ${ROOT}/source/render/render.c
+    ${ROOT}/source/render/render_cameras.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_vertex_shaders.c
     ${ROOT}/source/interface/hud.c
     ${ROOT}/source/game/players.c
