@@ -20,6 +20,7 @@ char *halo_vita_vertex_shader(void);
 char *halo_vita_pixel_shader(void);
 void halo_vita_core_dispose(void);
 int vita_graphics_initialize(void);
+int vita_graphics_handoff_frame(void);
 int vita_graphics_shader_probe(const char *vertex, const char *fragment);
 int vita_graphics_copy_probe(void);
 void vita_graphics_frame(int maps_valid, int core_valid, int shader_valid);
