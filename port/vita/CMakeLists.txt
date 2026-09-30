@@ -52,6 +52,7 @@ add_library(halo_core STATIC
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_sources(halo_core PRIVATE
     src/halo_renderer_globals.c
+    src/halo_renderer_diagnostics.c
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
