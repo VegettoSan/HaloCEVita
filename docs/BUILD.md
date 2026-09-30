@@ -2,7 +2,7 @@
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
 
-Current deliverable is **00.11: LINKS** (A030), with a fast path that attempts the original Main Menu root and creation handlers. Hardware execution is pending. The preserved **00.10: BOOTS** package and symbols in build/vita/attempts/a027-baseline-00.10/ have an exact retained Vita log through 024, Cross remount, pool teardown, CRC restoration and Start exit. The known00.05 diagnostic graphics baseline remains in build/vita/attempts/a017-baseline-00.05/. Full menu render remains pending.
+Current deliverable is **00.11: BOOTS** (A031): the exact real-Vita log reaches 028, proving the original active nine-widget Main Menu root and both required creation handlers. The logo remains because 00.11 does not yet call original update/render or present. Matching package/symbols are in build/vita/attempts/a030-00.11-root/. The preserved **00.10: BOOTS** baseline remains in build/vita/attempts/a027-baseline-00.10/. Full menu render remains pending.
 
 ## Toolchain
 

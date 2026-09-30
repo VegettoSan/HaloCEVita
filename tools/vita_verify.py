@@ -127,16 +127,16 @@ with zipfile.ZipFile(build / 'HaloCE.vpk') as package:
 files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 # Hardware evidence belongs to the tested package, not every future rebuild
 # with the same APP_VER. A different digest remains LINKS until tested.
-tested_package = digest(build / 'HaloCE.vpk') == '82822ae873908bf82fee45a464d6b116481a8cb2cad8f59da8c5751c98f29686'
+tested_package = digest(build / 'HaloCE.vpk') == '7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
-            'runtime_test': ('00.10 real Vita: Xbox file contract024 and UI teardown/recheck PASS (A029)'
-                             if tested_package else '00.11 root creation checkpoint untested on Vita;00.10 BOOTS baseline (A029)'),
+            'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
+                             if tested_package else 'current package untested on Vita;00.11 root BOOTS baseline (A031)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'DIAGNOSTIC RENDERS',
             'rendering_scope': 'diagnostic + upstream NV2A synthetic two-MOV triangle only; HALO DRAW REACHED/RENDERS unverified',
-            'prior_hardware_evidence': 'docs/runtime/2026-09-29-00.10-start-exit-debug.txt (A029)',
-            'installation_test': ('00.10 installed and booted on user Vita (A029)' if tested_package else
-                                  '00.11 package installation/root execution pending; prior00.10 BOOTS'),
+            'prior_hardware_evidence': 'docs/runtime/2026-09-29-00.11-root-debug.txt (A031)',
+            'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
+                                  'current package installation/runtime pending; prior00.11 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip(),
             'source_has_uncommitted_changes': True, 'sdk': str(sdk), 'required_core_symbols': required,

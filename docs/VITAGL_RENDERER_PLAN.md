@@ -22,6 +22,8 @@ The goal is to preserve Halo's original rendering semantics and adapt the alread
 
 A diagnostic triangle proves only that vitaGL, runtime shader compilation and the basic GPU path work. It does not prove the Halo renderer works.
 
+A031 real Vita now proves original Main Menu root creation and both creation handlers, but the 00.11 fast loop does not call original UI render/present; the unchanged vitaGL logo is therefore expected. A032 source/map inspection identifies the first original UI bitmap as the Halo logo (`e2870111`). Its `draw_bitmap_in_rect` path uses the original plasma map from scenario interface globals, then the screen-quad D3D8 immediate Begin/End path. The next renderer work must connect that real resource and device state; a clear-only frame or synthetic menu would not establish the retail draw milestone.
+
 Graphics milestones remain:
 
 - `DIAGNOSTIC RENDERS`: authored test geometry/shader path works.
