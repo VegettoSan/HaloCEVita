@@ -71,7 +71,10 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/rasterizer/rasterizer_swizzle.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_vertex_shaders_runtime.c
-    ${ROOT}/source/rasterizer/rasterizer_frame_statistics.c)
+    ${ROOT}/source/rasterizer/rasterizer_frame_statistics.c
+    ${ROOT}/source/interface/virtual_keyboard.c
+    ${ROOT}/source/interface/hud_draw.c
+    ${ROOT}/source/input/input_abstraction.c)
 endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
 file(GLOB_RECURSE SEMANTIC_INPUTS CONFIGURE_DEPENDS ${ROOT}/source/*.h ${ROOT}/source/*.c ${ROOT}/port/include/xdk/*.h)
