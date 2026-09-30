@@ -2420,16 +2420,18 @@ static void apply_raster_state(BOOL has_depth)
 			gl_state.blend_equation = equation;
 			glBlendEquation(equation);
 		}
+		#ifdef HALO_VITA
+		/* Constant factors require glBlendColor even when its stored value
+		 * did not change on this draw. */
+		if ((gl_state.blend_source >= 0x8001 && gl_state.blend_source <= 0x8004) ||
+			(gl_state.blend_destination >= 0x8001 && gl_state.blend_destination <= 0x8004))
+			vita_fatal("D3D8 constant blend factor requires glBlendColor unavailable in vitaGL");
+		#endif
 		color_to_vec4(rs[D3DRS_BLENDCOLOR], blend_color);
 		if (memcmp(gl_state.blend_color, blend_color, sizeof(blend_color)))
 		{
 			memcpy(gl_state.blend_color, blend_color, sizeof(blend_color));
 			#ifdef HALO_VITA
-			/* GL constant blend factors are 0x8001..0x8004; the color
-			 * register has no effect for every other factor. */
-			if ((gl_state.blend_source >= 0x8001 && gl_state.blend_source <= 0x8004) ||
-				(gl_state.blend_destination >= 0x8001 && gl_state.blend_destination <= 0x8004))
-				vita_fatal("D3D8 constant blend factor requires glBlendColor unavailable in vitaGL");
 			#else
 			glBlendColor(blend_color[0], blend_color[1], blend_color[2], blend_color[3]);
 			#endif
