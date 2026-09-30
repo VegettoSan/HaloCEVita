@@ -5,6 +5,7 @@
 #include "scenario/scenario.h"
 #include "scenario/scenario_definitions.h"
 #include "tag_files/tag_groups.h"
+#include "cache/cache_files.h"
 #include "vita_runtime.h"
 #include <stdarg.h>
 #include <stdio.h>
