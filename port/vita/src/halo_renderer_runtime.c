@@ -1,6 +1,7 @@
 /* Vita entry point for the original Halo rasterizer.
  * Keep device/cache/shader setup inside the decompiled Xbox rasterizer; this
  * file only sequences that original initialization after vitaGL is ready. */
+#include <xtl.h>
 #include "cseries.h"
 #include "rasterizer/rasterizer.h"
 #include "rasterizer/xbox/rasterizer_xbox.h"
