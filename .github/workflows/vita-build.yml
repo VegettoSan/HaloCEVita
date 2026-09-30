@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Discover renderer symbol owners
         run: |
-          for symbol in halo_sin halo_cos draw_quad valid_real_argb_color sound_render_time sound_idle terminal_printf console_warning scenario_debug_to_file SwitchToThread; do
+          for symbol in rasterizer_preinitialize memory_watch_initialize rasterizer_error renderstate_table texturestagestate_table texture_table global_d3d_caps rasterizer_screen_effects_initialize rasterizer_debug_begin rasterizer_memory_pool_initialize rasterizer_dynamic_geometry_initialize rasterizer_transparent_geometry_initialize rasterizer_vertex_shaders_initialize rasterizer_debug_initialize rasterizer_detail_objects_initialize rasterizer_profile_initialize rasterizer_environment_fog_screen_initialize; do
             echo "===== ${symbol} ====="
             grep -Rsn --include='*.c' --include='*.h' "${symbol}" source port/linux/src port/linux/include port/vita/src port/vita/include | head -40 || true
           done
