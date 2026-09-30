@@ -19,6 +19,8 @@ Before changing code:
 5. Inspect the exact upstream code involved before proposing a replacement.
 6. Inspect the current local working tree before assuming GitHub is up to date. The local tree may contain newer, unpushed Vita work.
 
+When local unpushed code/logs contradict the public GitHub status, treat the local working tree and fresh hardware evidence as the current implementation state. Do not overwrite, discard, or "restore" newer local work merely because the remote documentation is older. Reconcile documentation after inspecting the local changes.
+
 After every significant experiment:
 
 1. Update `docs/ATTEMPTS.md` with the command, hypothesis, changes, result and logs/error signature.
