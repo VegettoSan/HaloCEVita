@@ -52,7 +52,6 @@ add_library(halo_core STATIC
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_sources(halo_core PRIVATE
     src/halo_renderer_globals.c
-    ${ROOT}/source/scenario/scenario.c
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
     ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
