@@ -7,7 +7,7 @@ project(HaloCEVita C)
 set(VITA_APP_VERSION "00.13")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
-option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure (research only)" OFF)
+option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -48,8 +48,8 @@ add_library(halo_core STATIC
   ${ROOT}/port/linux/src/nv2a_vsh.c
   ${ROOT}/port/linux/src/nv2a_psh.c
   ${ROOT}/port/linux/src/xgpu_text.c)
-# Link the actual original UI/render units only in the separate closure probe.
-# The default VPK does not enter this path until all device contracts link.
+# Original UI/rasterizer closure. It stays switchable for dependency diagnostics,
+# but is enabled by default now that the complete closure links on Vita.
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_sources(halo_core PRIVATE
     src/halo_renderer_globals.c
@@ -148,8 +148,6 @@ if(HALO_VITA_MENU_UPDATE_PROBE)
 endif()
 if(HALO_VITA_MENU_RENDER_PROBE)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_RENDER_PROBE=1)
-  # Force the original Xbox rasterizer init path into the closure probe. This
-  # does not execute in the default VPK; it only exposes its real dependencies.
   target_link_options(HaloCE.elf PRIVATE -Wl,-u,_rasterizer_initialize)
 endif()
 target_include_directories(HaloCE.elf PRIVATE include)
