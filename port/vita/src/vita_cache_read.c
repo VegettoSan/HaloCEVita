@@ -7,7 +7,20 @@
 #include <zlib.h>
 
 #define CHUNK 32768u
+#define CACHE_HEADER_SIZE 2048u
 #define MAX_LOGICAL_SIZE (512u * 1024u * 1024u)
+#define RESOURCE_PATH_CAPACITY 320u
+
+struct vita_cache_header_state {
+	unsigned char bytes[CACHE_HEADER_SIZE];
+	long disk_size;
+	uint32_t logical_size;
+	int compressed;
+};
+
+static char resource_map_path[RESOURCE_PATH_CAPACITY];
+static uint32_t resource_map_logical_size;
+
 static uint32_t u32(const unsigned char *p)
 {
 	return (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
@@ -21,6 +34,105 @@ static int range(uint32_t pointer, uint32_t bytes, size_t length)
 {
 	return pointer >= HALO_XBOX_TAG_BASE && pointer - HALO_XBOX_TAG_BASE <= length &&
 		bytes <= length - (pointer - HALO_XBOX_TAG_BASE);
+}
+static int cache_header_read(FILE *file, struct vita_cache_header_state *state,
+	char *error, size_t error_size)
+{
+	if (!file || !state || fseek(file, 0, SEEK_END) ||
+		(state->disk_size = ftell(file)) < (long)CACHE_HEADER_SIZE ||
+		fseek(file, 0, SEEK_SET) ||
+		fread(state->bytes, 1, sizeof(state->bytes), file) != sizeof(state->bytes))
+		return fail(error, error_size, "cache header I/O failed");
+	state->logical_size = u32(state->bytes + 8);
+	if (u32(state->bytes) != 0x68656164u || u32(state->bytes + 4) != 5 ||
+		u32(state->bytes + 2044) != 0x666f6f74u ||
+		!memchr(state->bytes + 32, 0, 32) || !memchr(state->bytes + 64, 0, 32) ||
+		state->logical_size > MAX_LOGICAL_SIZE || state->logical_size < CACHE_HEADER_SIZE)
+		return fail(error, error_size, "invalid Xbox-v5 cache header");
+	state->compressed = (uint32_t)state->disk_size < state->logical_size;
+	return 1;
+}
+static int cache_capture_range(FILE *file, const struct vita_cache_header_state *state,
+	uint32_t logical_offset, uint32_t bytes, void *destination,
+	vita_cache_progress progress, void *context, char *error, size_t error_size)
+{
+	unsigned char *target = destination;
+	uint32_t captured = 0, end, next_progress = 0;
+	if (logical_offset > state->logical_size || bytes > state->logical_size - logical_offset)
+		return fail(error, error_size, "logical range outside cache");
+	if (!bytes) return 1;
+	if (!destination) return fail(error, error_size, "logical range destination is null");
+	end = logical_offset + bytes;
+	if (!state->compressed) {
+		if (fseek(file, (long)logical_offset, SEEK_SET))
+			return fail(error, error_size, "logical range seek failed");
+		while (captured < bytes) {
+			uint32_t amount = bytes - captured;
+			if (amount > CHUNK) amount = CHUNK;
+			if (fread(target + captured, 1, amount, file) != amount)
+				return fail(error, error_size, "truncated logical range");
+			captured += amount;
+			if (progress && !progress(logical_offset + captured, context))
+				return fail(error, error_size, "cancelled");
+		}
+		return 1;
+	}
+	if (logical_offset < CACHE_HEADER_SIZE) {
+		uint32_t first_end = end < CACHE_HEADER_SIZE ? end : CACHE_HEADER_SIZE;
+		uint32_t header_bytes = first_end - logical_offset;
+		memcpy(target, state->bytes + logical_offset, header_bytes);
+		captured += header_bytes;
+	}
+	if (end <= CACHE_HEADER_SIZE) return 1;
+	{
+		unsigned char *input = NULL, *output = NULL;
+		uint32_t position = CACHE_HEADER_SIZE;
+		int status = Z_OK, success = 0;
+		z_stream stream;
+		if (fseek(file, CACHE_HEADER_SIZE, SEEK_SET))
+			return fail(error, error_size, "compressed stream seek failed");
+		input = malloc(CHUNK); output = malloc(CHUNK);
+		if (!input || !output) { fail(error, error_size, "inflate scratch allocation failed"); goto done; }
+		memset(&stream, 0, sizeof(stream));
+		if (inflateInit(&stream) != Z_OK) { fail(error, error_size, "inflateInit failed"); goto done; }
+		while (status != Z_STREAM_END) {
+			uInt before_in, produced;
+			uint32_t first, last;
+			if (!stream.avail_in) {
+				stream.avail_in = (uInt)fread(input, 1, CHUNK, file); stream.next_in = input;
+				if (!stream.avail_in) { fail(error, error_size, "truncated compressed cache"); goto inflate_done; }
+			}
+			before_in = stream.avail_in;
+			stream.next_out = output; stream.avail_out = CHUNK;
+			status = inflate(&stream, Z_NO_FLUSH); produced = CHUNK - stream.avail_out;
+			if ((status != Z_OK && status != Z_STREAM_END) || (!produced && before_in == stream.avail_in)) {
+				fail(error, error_size, "invalid zlib stream/checksum or no progress"); goto inflate_done;
+			}
+			if (produced > state->logical_size - position) {
+				fail(error, error_size, "inflated cache exceeds logical size"); goto inflate_done;
+			}
+			first = position > logical_offset ? position : logical_offset;
+			if (first < CACHE_HEADER_SIZE) first = CACHE_HEADER_SIZE;
+			last = position + produced < end ? position + produced : end;
+			if (last > first) {
+				memcpy(target + first - logical_offset, output + first - position, last - first);
+				captured += last - first;
+			}
+			position += produced;
+			if (progress && (position >= next_progress || status == Z_STREAM_END)) {
+				if (!progress(position, context)) { fail(error, error_size, "cancelled"); goto inflate_done; }
+				next_progress = position + 1024 * 1024;
+			}
+		}
+		if (position != state->logical_size || captured != bytes) {
+			fail(error, error_size, "inflated length/logical range mismatch"); goto inflate_done;
+		}
+		success = 1;
+inflate_done:
+		inflateEnd(&stream);
+done:
+		free(input); free(output); return success;
+	}
 }
 int vita_cache_validate_index(const void *buffer, size_t length, struct vita_cache_info *info,
 	char *error, size_t error_size)
@@ -60,70 +172,59 @@ int vita_cache_validate_index(const void *buffer, size_t length, struct vita_cac
 int vita_cache_read(FILE *file, void *tags, size_t capacity, struct vita_cache_info *info,
 	vita_cache_progress progress, void *context, char *error, size_t error_size)
 {
-	unsigned char header[2048], *input = NULL, *output = NULL;
-	long disk_size;
-	uint32_t position = 2048, captured = 0, next_progress = 0;
-	int status = Z_OK, success = 0;
-	z_stream stream;
+	struct vita_cache_header_state state;
+	if (!info) return fail(error, error_size, "cache info is null");
 	memset(info, 0, sizeof(*info));
-	if (fseek(file, 0, SEEK_END) || (disk_size = ftell(file)) < 2048 || fseek(file, 0, SEEK_SET) ||
-		fread(header, 1, sizeof(header), file) != sizeof(header)) return fail(error, error_size, "cache header I/O failed");
-	info->logical_size = u32(header + 8); info->tag_offset = u32(header + 16); info->tag_size = u32(header + 20);
-	if (u32(header) != 0x68656164u || u32(header + 4) != 5 || u32(header + 2044) != 0x666f6f74u ||
-		!memchr(header + 32, 0, 32) || !memchr(header + 64, 0, 32) ||
-		info->logical_size > MAX_LOGICAL_SIZE || info->logical_size < 2048 || info->tag_offset < 2048 ||
-		info->tag_offset > info->logical_size || info->tag_size < 36 || info->tag_size > capacity ||
-		info->tag_size > HALO_VITA_TAG_CAPACITY || info->tag_size > info->logical_size - info->tag_offset)
+	if (!cache_header_read(file, &state, error, error_size)) return 0;
+	info->logical_size = state.logical_size;
+	info->tag_offset = u32(state.bytes + 16); info->tag_size = u32(state.bytes + 20);
+	if (info->tag_offset < CACHE_HEADER_SIZE || info->tag_offset > info->logical_size ||
+		info->tag_size < 36 || info->tag_size > capacity || info->tag_size > HALO_VITA_TAG_CAPACITY ||
+		info->tag_size > info->logical_size - info->tag_offset)
 		return fail(error, error_size, "invalid Xbox-v5 cache bounds");
-	info->compressed = (uint32_t)disk_size < info->logical_size;
-	if (!info->compressed) {
-		if (fseek(file, info->tag_offset, SEEK_SET)) return fail(error, error_size, "tag seek failed");
-		while (captured < info->tag_size) {
-			uint32_t size = info->tag_size - captured;
-			if (size > CHUNK) size = CHUNK;
-			if (fread((unsigned char *)tags + captured, 1, size, file) != size)
-				return fail(error, error_size, "truncated tag section");
-			captured += size;
-			if (progress && !progress(info->tag_offset + captured, context)) return fail(error, error_size, "cancelled");
-		}
-		return vita_cache_validate_index(tags, info->tag_size, info, error, error_size);
-	}
-	input = malloc(CHUNK); output = malloc(CHUNK);
-	if (!input || !output) { fail(error, error_size, "inflate scratch allocation failed"); goto done; }
-	memset(&stream, 0, sizeof(stream));
-	if (inflateInit(&stream) != Z_OK) { fail(error, error_size, "inflateInit failed"); goto done; }
-	while (status != Z_STREAM_END) {
-		uInt before_in, produced;
-		uint32_t first, last;
-		if (!stream.avail_in) {
-			stream.avail_in = (uInt)fread(input, 1, CHUNK, file); stream.next_in = input;
-			if (!stream.avail_in) { fail(error, error_size, "truncated compressed cache"); goto inflate_done; }
-		}
-		before_in = stream.avail_in;
-		stream.next_out = output; stream.avail_out = CHUNK;
-		status = inflate(&stream, Z_NO_FLUSH); produced = CHUNK - stream.avail_out;
-		if ((status != Z_OK && status != Z_STREAM_END) || (!produced && before_in == stream.avail_in)) {
-			fail(error, error_size, "invalid zlib stream/checksum or no progress"); goto inflate_done;
-		}
-		if (produced > info->logical_size - position) { fail(error, error_size, "inflated cache exceeds logical size"); goto inflate_done; }
-		first = position > info->tag_offset ? position : info->tag_offset;
-		last = position + produced < info->tag_offset + info->tag_size ? position + produced : info->tag_offset + info->tag_size;
-		if (last > first) {
-			memcpy((unsigned char *)tags + first - info->tag_offset, output + first - position, last - first);
-			captured += last - first;
-		}
-		position += produced;
-		if (progress && (position >= next_progress || status == Z_STREAM_END)) {
-			if (!progress(position, context)) { fail(error, error_size, "cancelled"); goto inflate_done; }
-			next_progress = position + 1024 * 1024;
-		}
-	}
-	if (position != info->logical_size || captured != info->tag_size) {
-		fail(error, error_size, "inflated length/tag section mismatch"); goto inflate_done;
-	}
-	success = vita_cache_validate_index(tags, info->tag_size, info, error, error_size);
-inflate_done:
-	inflateEnd(&stream);
-done:
-	free(input); free(output); return success;
+	info->compressed = state.compressed;
+	if (!cache_capture_range(file, &state, info->tag_offset, info->tag_size, tags,
+		progress, context, error, error_size)) return 0;
+	return vita_cache_validate_index(tags, info->tag_size, info, error, error_size);
+}
+int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
+	uint32_t logical_offset, void *destination, size_t bytes,
+	vita_cache_progress progress, void *context, char *error, size_t error_size)
+{
+	struct vita_cache_header_state state;
+	if (bytes > UINT32_MAX) return fail(error, error_size, "logical range too large");
+	if (!cache_header_read(file, &state, error, error_size)) return 0;
+	if (expected_logical_size && state.logical_size != expected_logical_size)
+		return fail(error, error_size, "cache logical size changed");
+	return cache_capture_range(file, &state, logical_offset, (uint32_t)bytes, destination,
+		progress, context, error, error_size);
+}
+int vita_cache_resource_bind(const char *path, uint32_t logical_size)
+{
+	size_t length;
+	if (!path || !*path || logical_size < CACHE_HEADER_SIZE || logical_size > MAX_LOGICAL_SIZE) return 0;
+	length = strlen(path);
+	if (length >= sizeof(resource_map_path)) return 0;
+	memcpy(resource_map_path, path, length + 1);
+	resource_map_logical_size = logical_size;
+	return 1;
+}
+void vita_cache_resource_unbind(void)
+{
+	resource_map_path[0] = 0;
+	resource_map_logical_size = 0;
+}
+int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
+	char *error, size_t error_size)
+{
+	FILE *file;
+	int result;
+	if (!resource_map_path[0] || !resource_map_logical_size)
+		return fail(error, error_size, "no cache resource map bound");
+	file = fopen(resource_map_path, "rb");
+	if (!file) return fail(error, error_size, "cache resource map open failed");
+	result = vita_cache_read_logical_range(file, resource_map_logical_size, logical_offset,
+		destination, bytes, NULL, NULL, error, error_size);
+	fclose(file);
+	return result;
 }

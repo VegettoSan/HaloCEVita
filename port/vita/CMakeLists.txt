@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.11")
+set(VITA_APP_VERSION "00.12")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure (research only)" OFF)
@@ -15,7 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
-  src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/xinput_vita.c src/xbox_memory_vita.c
+  src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c

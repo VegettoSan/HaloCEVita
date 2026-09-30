@@ -11,10 +11,22 @@ struct vita_cache_info {
 	uint32_t tag_crc;
 	int compressed;
 };
-/* Read-only streaming: no full-map allocation, conversion or cache file. */
+/* Read-only streaming: no full-map allocation, conversion or decompressed
+ * cache file. Tag reads and resource reads share the same checked logical
+ * address-space reader. */
 int vita_cache_read(FILE *file, void *tags, size_t capacity, struct vita_cache_info *info,
 	vita_cache_progress progress, void *context, char *error, size_t error_size);
 int vita_cache_validate_index(const void *tags, size_t length, struct vita_cache_info *info,
+	char *error, size_t error_size);
+int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
+	uint32_t logical_offset, void *destination, size_t bytes,
+	vita_cache_progress progress, void *context, char *error, size_t error_size);
+/* Bind the resource reader to the same validated map whose tag image is
+ * mounted. This is the backing for the Vita cache_file_read bridge, not a
+ * manual asset registry or decoded-texture cache. */
+int vita_cache_resource_bind(const char *path, uint32_t logical_size);
+void vita_cache_resource_unbind(void);
+int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size);
 struct vita_menu_relocation;
 struct vita_menu_stats {
