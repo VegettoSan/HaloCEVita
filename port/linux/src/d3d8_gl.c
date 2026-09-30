@@ -2100,7 +2100,7 @@ struct mip_composite
 
 static struct mip_composite *mip_composites;
 
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 static GLuint framebuffer_get(GLuint color, GLuint depth);
 
 /* glCopyImageSubData for ES 3.0/3.1 contexts without the extension */
@@ -2115,6 +2115,16 @@ static void copy_level_by_blit(GLuint source, GLuint destination, GLint level, G
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, destination, level);
 	glDisable(GL_SCISSOR_TEST);
 	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+#ifdef HALO_VITA
+	{
+		GLenum error = glGetError();
+		if (error != GL_NO_ERROR)
+		{
+			vita_log("D3D8 mip FBO blit failed GL error=0x%x level=%d size=%dx%d", error, level, width, height);
+			vita_fatal("original D3D8 mip copy failed on vitaGL");
+		}
+	}
+#endif
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	/* the blit bypasses the cached state, so the next draw must re-apply it */
 	xgpu_gl_state_invalidate();
@@ -2165,6 +2175,9 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 		if (!target || target->width != width || target->height != height ||
 			target->gl_width != width || target->gl_height != height)
 			break;
+#ifdef HALO_VITA
+		copy_level_by_blit(target->texture, composite->texture, (GLint)level, (GLsizei)width, (GLsizei)height);
+#else
 #ifdef HALO_ANDROID
 		if (!xgpu_capabilities.copy_image)
 		{
@@ -2174,6 +2187,7 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 #endif
 		glCopyImageSubData(target->texture, GL_TEXTURE_2D, 0, 0, 0, 0,
 			composite->texture, GL_TEXTURE_2D, (GLint)level, 0, 0, 0, (GLsizei)width, (GLsizei)height, 1);
+#endif
 		rendered_levels++;
 	}
 	glBindTexture(GL_TEXTURE_2D, composite->texture);
