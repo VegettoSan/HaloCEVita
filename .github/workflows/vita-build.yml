@@ -23,3 +23,13 @@ jobs:
         run: cmake -S port/vita -B build/vita -G Ninja
       - name: Build VPK
         run: cmake --build build/vita --target vita_vpk -j2
+      - name: Upload Vita test package and symbols
+        uses: actions/upload-artifact@v4
+        with:
+          name: HaloCEVita-main-${{ github.sha }}
+          path: |
+            build/vita/HaloCE.vpk
+            build/vita/HaloCE.elf
+            build/vita/HaloCE.elf.map
+          if-no-files-found: error
+          retention-days: 14
