@@ -5,7 +5,6 @@
  * supplies the pregame camera that main_pregame_render normally builds. */
 #include <xtl.h>
 #include "cseries.h"
-#include "saved games/game_state.h"
 #include "math/real_math.h"
 #include "main/main.h"
 #include "render/render.h"
@@ -20,7 +19,6 @@
 void compute_window_bounds(long player_index, long num_players,
     rectangle2d *pixel_bounds, rectangle2d *safe_frame_bounds);
 
-static boolean vita_game_state_ready;
 static boolean vita_renderer_ready;
 static boolean vita_first_menu_frame = TRUE;
 
@@ -28,13 +26,12 @@ int halo_vita_renderer_initialize(void)
 {
     if (vita_renderer_ready) return 1;
 
-    if (!vita_game_state_ready) {
-        vita_log("[VITA 033] original game-state initialization begin");
-        game_state_initialize();
-        vita_game_state_ready = TRUE;
-        vita_log("[VITA 034] original game-state arena ready");
-    }
-
+    /* Physical/game-state ownership belongs to halo_vita_memory_initialize().
+     * The Vita bring-up already allocates Halo's game-state buffer before the
+     * UI cache is mounted. Calling game_state_initialize() here allocates that
+     * buffer a second time and correctly trips January's buffer_allocated
+     * assertion. Keep renderer initialization limited to the rasterizer. */
+    vita_log("[VITA 033] original game-state already owned by memory bring-up");
     vita_log("[VITA 035] original Xbox rasterizer initialization begin");
     if (!rasterizer_initialize()) {
         vita_log("MAIN MENU BLOCKED: original Xbox rasterizer initialization failed");
