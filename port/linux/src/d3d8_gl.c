@@ -794,13 +794,26 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	entry->target.gl_height = (unsigned long)(height * scale[1] + 0.5f);
 	glGenTextures(1, &entry->target.texture);
 	glBindTexture(GL_TEXTURE_2D, entry->target.texture);
+#ifndef HALO_VITA
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+#endif
 	if (depth)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)entry->target.gl_width,
 			(GLsizei)entry->target.gl_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
 	else
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height,
 			0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+#ifdef HALO_VITA
+	{
+		GLenum error = glGetError();
+		if (!entry->target.texture || error != GL_NO_ERROR)
+		{
+			vita_log("D3D8 render target allocation failed depth=%d texture=%u size=%lux%lu GL error=0x%x",
+				depth, entry->target.texture, entry->target.gl_width, entry->target.gl_height, error);
+			vita_fatal("original D3D8 render target could not be allocated on vitaGL");
+		}
+	}
+#endif
 	xgpu_gl_state_invalidate();
 	entry->next = render_targets;
 	render_targets = entry;
@@ -2133,6 +2146,10 @@ static void copy_level_by_blit(GLuint source, GLuint destination, GLint level, G
 
 static GLuint mip_composite_get(const struct xgpu_texture_description *description, unsigned long data)
 {
+#ifdef HALO_VITA
+	if (description->levels != 1)
+		vita_fatal("D3D8 multi-level render-target composition requires Vita base/max-level support");
+#endif
 	struct mip_composite *composite;
 	unsigned long level, rendered_levels = 0;
 
@@ -2153,8 +2170,10 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 		composite->levels = description->levels;
 		glGenTextures(1, &composite->texture);
 		glBindTexture(GL_TEXTURE_2D, composite->texture);
+#ifndef HALO_VITA
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)description->levels - 1);
+#endif
 		for (level = 0; level < description->levels; level++)
 		{
 			GLsizei width = (GLsizei)(description->width >> level ? description->width >> level : 1);
@@ -2194,9 +2213,11 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 	/* levels the game did not render come from the ones it did */
 	if (rendered_levels < description->levels)
 	{
+#ifndef HALO_VITA
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, rendered_levels ? (GLint)rendered_levels - 1 : 0);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+#endif
 	}
 	xgpu_gl_state_invalidate();
 	return composite->texture;
