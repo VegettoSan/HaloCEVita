@@ -603,8 +603,8 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	#ifdef HALO_VITA
 	if (!description->width || !description->height || !description->depth ||
 		!description->levels ||
-		largest > (64UL << 20) / sizeof(unsigned long))
-		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 64MiB bound");
+		largest > (16UL << 20) / sizeof(unsigned long))
+		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 16MiB temporary bound");
 	#endif
 	converted = description->compressed && !decode_compressed ? NULL : malloc(largest * sizeof(unsigned long));
 #ifdef HALO_VITA
