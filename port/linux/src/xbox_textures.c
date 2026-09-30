@@ -596,8 +596,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, converted ? GL_RED : GL_BLUE);
 #endif
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+#ifndef HALO_VITA
 	glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, (GLint)description->levels - 1);
+#endif
 	for (face = 0; face < face_count; face++)
 	{
 		GLenum image_target = description->cube_map ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face : target;
