@@ -4,6 +4,8 @@
  * this file supplies storage only, in the isolated render closure probe. */
 #include "rasterizer/xbox/rasterizer_xbox_pixel_shader.h"
 #include "rasterizer/rasterizer_frame_statistics.h"
+#include "rasterizer/rasterizer.h"
 
 struct pixel_shader_definition pixel_shader;
 struct rasterizer_frame_statistics_globals rasterizer_frame_statistics;
+struct rasterizer_window_begin_parameters global_window_parameters;
