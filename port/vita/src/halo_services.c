@@ -70,11 +70,6 @@ BOOL WINAPI SwitchToThread(void)
 	sched_yield();
 	return TRUE;
 }
-/* VitaSDK's math headers route the game's standard sin/cos calls through
- * halo_sin/halo_cos. Preserve the C double-precision contract and delegate to
- * the compiler/libm implementation instead of approximating widget motion. */
-double halo_sin(double angle) { return __builtin_sin(angle); }
-double halo_cos(double angle) { return __builtin_cos(angle); }
 
 /* Main Menu bring-up has no initialized Halo sound manager yet. The original
  * texture/cache waits only consult these functions to decide whether audio
@@ -157,6 +152,12 @@ int halo_linux_vsprintf(char *buffer, const char *format, va_list arguments)
 	char translated[1024];
 	/* cseries' legacy API has no destination size. Preserve its contract. */
 	return vsprintf(buffer, translate_format(format, translated, sizeof(translated)), arguments);
+}
+int halo_linux_sprintf(char *buffer, const char *format, ...)
+{
+	int result; va_list arguments;
+	va_start(arguments, format); result = halo_linux_vsprintf(buffer, format, arguments);
+	va_end(arguments); return result;
 }
 int halo_linux_vsnprintf(char *buffer, size_t count, const char *format, va_list arguments)
 {
