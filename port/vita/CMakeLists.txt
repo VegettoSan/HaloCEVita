@@ -76,7 +76,9 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/interface/hud_draw.c
     ${ROOT}/source/input/input_abstraction.c
     ${ROOT}/source/render/render.c
-    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_vertex_shaders.c)
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_vertex_shaders.c
+    ${ROOT}/source/interface/hud.c
+    ${ROOT}/source/game/players.c)
 endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
 file(GLOB_RECURSE SEMANTIC_INPUTS CONFIGURE_DEPENDS ${ROOT}/source/*.h ${ROOT}/source/*.c ${ROOT}/port/include/xdk/*.h)
