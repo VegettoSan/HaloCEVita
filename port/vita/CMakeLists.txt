@@ -42,6 +42,7 @@ add_library(halo_core STATIC
   "${ROOT}/source/saved games/player_profile.c"
   ${ROOT}/source/interface/marketing_and_strategic_business_development.c
   ${ROOT}/port/linux/src/msvc_wide.c
+  ${ROOT}/port/linux/src/halo_linker_common.c
   ${ROOT}/source/cache/cache_files.c
   ${ROOT}/source/cache/physical_memory_map.c
   "${ROOT}/source/saved games/game_state_xbox.c"
@@ -58,12 +59,14 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
+    ${ROOT}/source/effects/decals.c
     ${ROOT}/source/interface/ui_widget_game_data_input_functions.c
     ${ROOT}/source/interface/ui_widget_text_search_and_replace_functions.c
     ${ROOT}/source/interface/interface.c
     ${ROOT}/source/text/draw_string.c
     ${ROOT}/source/text/unicode.c
     "${ROOT}/source/saved games/game_state.c"
+    ${ROOT}/source/math/real_math.c
     ${ROOT}/source/rasterizer/rasterizer.c
     ${ROOT}/source/rasterizer/rasterizer_lights.c
     ${ROOT}/source/rasterizer/rasterizer_geometry.c
@@ -80,6 +83,10 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_profile.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_environment_fog.c
     ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_errors.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_water.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_decals.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_active_camouflage.c
+    ${ROOT}/source/rasterizer/xbox/rasterizer_xbox_widgets.c
     ${ROOT}/port/linux/src/d3d8_gl.c
     ${ROOT}/port/linux/src/d3d8_resources.c
     ${ROOT}/port/linux/src/xbox_textures.c
