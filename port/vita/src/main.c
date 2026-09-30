@@ -33,6 +33,10 @@ int main(void)
 #endif
 	vita_log("[VITA 005] graphics init begin");
 	graphics = vita_graphics_initialize();
+	if (!graphics) {
+		vita_log("MAIN MENU BLOCKED: vitaGL context did not initialize; stopping before UI activation");
+		goto cleanup;
+	}
 	if (graphics) {
 		vita_log("[VITA 006] vitaGL ready");
 #ifdef HALO_VITA_MENU_BRINGUP
@@ -40,8 +44,10 @@ int main(void)
 		 * the only SwapBuffers call. Present one neutral application frame so
 		 * vitaGL's startup image cannot masquerade as an engine hang while the
 		 * original Halo menu path is running. This is not a substitute menu. */
-		if (!vita_graphics_handoff_frame())
-			vita_log("MAIN MENU BLOCKED: failed to replace vitaGL splash with application frame");
+		if (!vita_graphics_handoff_frame()) {
+			vita_log("MAIN MENU BLOCKED: failed to present the first application frame");
+			goto cleanup;
+		}
 #else
 		/* Replace vitaGL's splash before any GPU-copy/compiler experiment.
 		 * A later failure is then localized by the next begin/result log. */
@@ -82,7 +88,7 @@ int main(void)
 		vita_log("MAIN MENU BLOCKED: original root creation did not complete");
 		goto cleanup;
 	}
-	vita_log("[VITA 032] original Main Menu root active; entering application loop");
+	vita_log("[VITA 032] original Main Menu root active; UI renderer and D3D8 present are not linked in this build");
 #ifdef HALO_VITA_MENU_UPDATE_PROBE
 	if (!halo_vita_menu_update_checkpoint()) goto cleanup;
 #endif
