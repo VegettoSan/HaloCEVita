@@ -53,6 +53,28 @@ int vita_graphics_initialize(void)
 	graphics_ready = 1;
 	return graphics_ready;
 }
+
+int vita_graphics_handoff_frame(void)
+{
+	GLenum error;
+	if (!graphics_ready) {
+		vita_log("[VITA 006A] splash handoff BLOCKED: graphics context not ready");
+		return 0;
+	}
+	/* vitaGL leaves its own startup image in the front buffer until the app
+	 * actually presents. The Main Menu bring-up intentionally removed the old
+	 * synthetic diagnostic frame, so without this neutral handoff the screen
+	 * can look frozen even while Halo has already created the real widget tree.
+	 * Clear/present only: no fake menu geometry, retail assets or substitute
+	 * renderer state is introduced here. */
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+	vglSwapBuffers(GL_FALSE);
+	error = glGetError();
+	vita_log("[VITA 006A] vitaGL splash handoff frame submitted; GL error=0x%x", error);
+	return error == GL_NO_ERROR;
+}
+
 static void compiler_log(const char *message, shark_log_level level, int line)
 {
 	/* Capture diagnostics even when the installed vitaGL has HAVE_SHARK_LOG
