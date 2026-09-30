@@ -492,3 +492,12 @@ A037 continuation: adding the original Xbox rasterizer, swizzle/bitmap helpers, 
 **Source inspection:** `scenario_tags_load()` in `source/cache/cache_files.c` calls texture_cache_open, reads/registers the compiled cache, and does not call bitmap-group postprocess. `postprocess_bitmap_group()` in source/bitmaps/bitmap_group.c belongs to tag processing; its texture_cache_bitmap_new call asserts uncached, sets cached, adds pixel_data.file_offset to pixels_offset and resets runtime handles. The 00.16 Vita mount incorrectly reapplies this to an already cached bitmap. Clearing cached merely to bypass the assertion risks double-offsetting pixels and is not a valid fix.
 
 **Result:** 00.16 BOOTS through 036T, BLOCKED at 039. HALO DRAW REACHED/RENDERS remain NO. Next: validate compiled bitmap state and resource bounds without repeating postprocess; retain the original texture-cache on-demand load/hardware-format path. Inspect the following frame/quad/shader/present sequence before delivery.
+
+
+## 2026-09-30 — A039 — 00.17 preserves compiled bitmap-cache state
+
+**Hypothesis/change:** fix A038 using the actual scenario_tags_load contract. The Vita bridge now verifies bitmap geometry through original bitmap_verify, cached flag, owner datum, cold cache handles and a bounded absolute pixel range against the bound logical map. It leaves every bitmap field unchanged and does not call texture_cache_bitmap_new, add pixel_data.file_offset, clear cached, or force interface-linear flags. The original texture cache still owns on-demand loading and D3D hardware-format construction. Runtime/SFO version 00.17.
+
+**Commands/result:** git diff --check. Running python3 tools/vita_cache_regression.py exposed a pre-existing failure: the reader's recent unconditional early prefix exit accepts a compressed tag read before validating a truncated trailer. This failure is retained for the next integrity correction; it is unrelated to compiled bitmap validation. No SDK is installed in this workspace; the mandatory Vita workflow will compile/link the native package. No new console run/draw claim.
+
+**Next hardware gates:** 039 compiled cache validation; 036D decal setup; 028/032 active root; 037 frame/window; VITA CACHE actual resource range; VITA TEXTURE upload; VITA DRAW shader/geometry; VITA PRESENT then 038. Any failed record reports its original tag/path/flags/offset/size/handles.

@@ -222,6 +222,12 @@ void vita_cache_resource_unbind(void)
 	resource_map_path[0] = 0;
 	resource_map_logical_size = 0;
 }
+int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes)
+{
+	return resource_map_path[0] && resource_map_logical_size && bytes &&
+		logical_offset >= CACHE_HEADER_SIZE && logical_offset <= resource_map_logical_size &&
+		bytes <= resource_map_logical_size - logical_offset;
+}
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size)
 {

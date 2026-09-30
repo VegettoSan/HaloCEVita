@@ -51,19 +51,10 @@ static struct game_globals *vita_ui_game_globals;
 static boolean vita_menu_bitmap_resources_activated;
 char *tag_get_name(long tag_index);
 
-/* xbox_texture_cache.c owns this runtime hook. bitmap_group.c normally calls
- * it from its private postprocess_bitmap_group() after scenario_tags_load.
- * The Vita UI-only mount deliberately bypasses scenario_tags_load, so the
- * bridge below invokes that same original texture-cache hook after the
- * rasterizer has created/opened the real texture cache. */
-void texture_cache_bitmap_new(long bitmap_tag_index, struct bitmap_data *bitmap);
-
 enum
 {
-    /* Private enum values from the original bitmap_group.c postprocess. Keep
-     * these named here rather than treating retail assets specially. */
-    _vita_bitmap_group_type_interface_bitmaps = 4,
-    _vita_bitmap_linear_bit = 4,
+    /* Private flag value shared by bitmaps.c/xbox_texture_cache.c. */
+    _vita_bitmap_cached_bit = 7,
 };
 
 struct scenario *global_scenario_get(void)
@@ -269,11 +260,11 @@ int halo_vita_menu_bitmap_resources_activate(void)
             struct bitmap_data *bitmap = TAG_BLOCK_GET_ELEMENT(
                 &group->bitmaps, bitmap_index, struct bitmap_data);
 
-            /* This is the exact runtime preparation performed by the original
-             * private postprocess_bitmap_group(): interface bitmaps become
-             * linear, then bitmap_verify gates texture_cache_bitmap_new(). */
-            if (group->type == _vita_bitmap_group_type_interface_bitmaps)
-                SET_FLAG(bitmap->flags, _vita_bitmap_linear_bit, TRUE);
+            /* scenario_tags_load reads compiled records directly. Their cached
+             * bit, absolute logical pixels_offset, size and tag_index are already
+             * prepared by cache construction. Calling bitmap_new again would
+             * assert and add pixel_data.file_offset a second time. Do not alter
+             * flags/layout or fabricate a new registration for retail caches. */
             if (!bitmap_verify(bitmap, FALSE)) {
                 vita_log("MAIN MENU BLOCKED: original bitmap_verify failed tag=%08lx path=%s bitmap=%ld format=%d dims=%dx%dx%d flags=%04x",
                     (unsigned long)bitmap_group_index,
@@ -282,7 +273,20 @@ int halo_vita_menu_bitmap_resources_activate(void)
                     (int)bitmap->depth, (unsigned)bitmap->flags);
                 return 0;
             }
-            texture_cache_bitmap_new(bitmap_group_index, bitmap);
+            if (!TEST_FLAG(bitmap->flags, _vita_bitmap_cached_bit) ||
+                bitmap->tag_index != bitmap_group_index ||
+                bitmap->cache_block_index != NONE || bitmap->base_address ||
+                bitmap->hardware_format || bitmap->pixels_offset < 0 ||
+                bitmap->pixels_size <= 0 ||
+                !vita_cache_resource_range_valid((uint32_t)bitmap->pixels_offset,
+                    (size_t)bitmap->pixels_size)) {
+                vita_log("MAIN MENU BLOCKED: invalid compiled bitmap tag=%08lx path=%s bitmap=%ld flags=%04x owner=%08lx block=%08lx base=%p hardware=%p offset=%ld size=%ld",
+                    (unsigned long)bitmap_group_index, tag_get_name(bitmap_group_index),
+                    bitmap_index, (unsigned)bitmap->flags, (unsigned long)bitmap->tag_index,
+                    (unsigned long)bitmap->cache_block_index, bitmap->base_address,
+                    bitmap->hardware_format, bitmap->pixels_offset, bitmap->pixels_size);
+                return 0;
+            }
             ++bitmap_count;
         }
         ++group_count;
@@ -293,7 +297,7 @@ int halo_vita_menu_bitmap_resources_activate(void)
         return 0;
     }
     vita_menu_bitmap_resources_activated = TRUE;
-    vita_log("[VITA 039] original bitmap postprocess runtime path activated: groups=%ld bitmaps=%ld; texture_cache_bitmap_new ready for on-demand pixels",
+    vita_log("[VITA 039] compiled bitmap cache state validated: groups=%ld bitmaps=%ld; absolute pixel offsets preserved; original on-demand texture load ready",
         group_count, bitmap_count);
     return 1;
 }

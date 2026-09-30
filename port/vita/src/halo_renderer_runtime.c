@@ -23,8 +23,8 @@
  * process-lifetime Xbox texture cache. */
 void texture_cache_open(void);
 
-/* halo_menu_tags.c restores the bitmap-group runtime postprocess skipped by
- * the typed ui.map mount. It must run only after texture_cache_open(). */
+/* Validate the already prepared compiled-cache records before the first draw.
+ * scenario_tags_load does not repeat the tag-building bitmap postprocess. */
 int halo_vita_menu_bitmap_resources_activate(void);
 
 /* January keeps this helper private to main.c; the pregame path uses it to
@@ -76,11 +76,9 @@ int halo_vita_renderer_initialize(void)
         vita_log("[VITA 036T] original Xbox texture cache per-map open PASS");
     }
 
-    /* scenario_tags_load() would normally run each bitmap group's original
-     * postprocess callback before any draw. The typed Vita mount intentionally
-     * skipped that wider loader, so restore the same bitmap_verify ->
-     * texture_cache_bitmap_new path now that the real texture cache exists.
-     * Pixel bytes are still loaded lazily by Halo via cache_file_read(). */
+    /* Keep scenario_tags_load's compiled-cache contract: no bitmap_new or
+     * offset adjustment. Pixel bytes are loaded lazily by the original Xbox
+     * texture cache through cache_file_read, using the stored absolute offsets. */
     if (!vita_bitmap_resources_ready) {
         vita_log("[VITA 039] mounted ui.map bitmap runtime activation begin");
         if (!halo_vita_menu_bitmap_resources_activate()) {

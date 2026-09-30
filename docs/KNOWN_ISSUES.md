@@ -162,3 +162,6 @@ The original Xbox texture cache also has a blocking wait for `texture->loaded`. 
 ## KI-022 — Compiled-cache bitmaps re-postprocessed in 00.16
 
 Blocking visible Main Menu. A038 real Vita reaches 036T then asserts at xbox_texture_cache.c:157 because the first mounted bitmap already has `_bitmap_cached_bit`. scenario_tags_load reads prepared cache records directly; it does not repeat bitmap_group postprocess. The Vita bridge incorrectly calls texture_cache_bitmap_new on those records. Preserve compiled absolute pixels_offset/pixels_size/tag_index and validate cold runtime handles. Do not clear the cached bit and re-run registration, add pixel_data.file_offset twice, or remove the original assertion. No real bitmap read/upload/draw has yet been observed.
+
+
+KI-022 source correction (A039/00.17): the bridge now validates prepared records without mutations; hardware confirmation pending. The assertion itself remains unchanged. A host regression also exposes a pre-existing compressed tag-read integrity regression: prefix completion can return before a damaged/truncated zlib trailer. Track the full tag validation separately from prefix resource reads.

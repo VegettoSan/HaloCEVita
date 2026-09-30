@@ -26,6 +26,8 @@ int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
  * manual asset registry or decoded-texture cache. */
 int vita_cache_resource_bind(const char *path, uint32_t logical_size);
 void vita_cache_resource_unbind(void);
+/* Validate a compiled bitmap's absolute logical range without reading pixels. */
+int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes);
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size);
 struct vita_menu_relocation;
