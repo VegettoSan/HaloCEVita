@@ -35,7 +35,14 @@ int main(void)
 	graphics = vita_graphics_initialize();
 	if (graphics) {
 		vita_log("[VITA 006] vitaGL ready");
-#ifndef HALO_VITA_MENU_BRINGUP
+#ifdef HALO_VITA_MENU_BRINGUP
+		/* 00.11/00.12 removed the synthetic diagnostic frame but also removed
+		 * the only SwapBuffers call. Present one neutral application frame so
+		 * vitaGL's startup image cannot masquerade as an engine hang while the
+		 * original Halo menu path is running. This is not a substitute menu. */
+		if (!vita_graphics_handoff_frame())
+			vita_log("MAIN MENU BLOCKED: failed to replace vitaGL splash with application frame");
+#else
 		/* Replace vitaGL's splash before any GPU-copy/compiler experiment.
 		 * A later failure is then localized by the next begin/result log. */
 		vita_log("initial diagnostic frame begin");
@@ -75,6 +82,7 @@ int main(void)
 		vita_log("MAIN MENU BLOCKED: original root creation did not complete");
 		goto cleanup;
 	}
+	vita_log("[VITA 032] original Main Menu root active; entering application loop");
 #ifdef HALO_VITA_MENU_UPDATE_PROBE
 	if (!halo_vita_menu_update_checkpoint()) goto cleanup;
 #endif
