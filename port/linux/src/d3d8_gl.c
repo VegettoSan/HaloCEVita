@@ -2782,6 +2782,11 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->texture_scale, entry->uniforms.texture_scale[0], draw_uniforms.texture_scale[0], 4);
 	uniform_float(entry->screen_offset, &entry->uniforms.screen_offset, draw_uniforms.screen_offset);
 	uniform_vec4(entry->texture_lod_bias, entry->uniforms.texture_lod_bias, draw_uniforms.texture_lod_bias, 1);
+	#ifdef HALO_VITA
+	{ static BOOL first_draw_ready; if (!first_draw_ready) { first_draw_ready = TRUE;
+		vita_log("[VITA DRAW] first original draw prepared: immediate=%d vertex_shader=%lu gl_program=%u frame=%lu",
+			immediate, program->id, entry->program, device.frame); } }
+	#endif
 	return entry;
 }
 
@@ -3551,6 +3556,15 @@ void WINAPI D3DDevice_End(void)
 	{
 		glDrawArrays(primitive_mode(type), 0, (GLsizei)count);
 	}
+	#ifdef HALO_VITA
+	{ static BOOL first_immediate_logged; GLenum error = glGetError();
+		if (!first_immediate_logged || error != GL_NO_ERROR) {
+			first_immediate_logged = TRUE;
+			vita_log("[VITA DRAW] original D3D8 immediate draw type=%d vertices=%lu gl_error=%x", type, count, error);
+		}
+		if (error != GL_NO_ERROR) vita_fatal("original UI immediate draw failed in vitaGL");
+	}
+	#endif
 	gl_check_errors("immediate draw");
 }
 
