@@ -26,6 +26,7 @@ Conventions carried over from the Xbox:
 #include "halo_ui_pointer.h"
 #include "port_config.h"
 #ifdef HALO_VITA
+#include "../../vita/include/vita_runtime.h"
 #include "../../vita/include/halo_vita_program.h"
 #endif
 
@@ -514,6 +515,10 @@ static void state_framebuffer(GLuint framebuffer)
 static void state_texture(int unit, GLenum target, GLuint texture)
 {
 	int slot = target == GL_TEXTURE_CUBE_MAP ? 1 : target == GL_TEXTURE_3D ? 2 : 0;
+#ifdef HALO_VITA
+	if (target == GL_TEXTURE_3D)
+		vita_fatal("D3D8 3D texture binding requires a vitaGL fallback");
+#endif
 
 	if (gl_state.textures[unit][slot] == texture)
 		return;
@@ -1996,7 +2001,11 @@ static GLenum address_mode(DWORD mode)
 	{
 	case D3DTADDRESS_MIRROR: return GL_MIRRORED_REPEAT;
 	case D3DTADDRESS_CLAMP: return GL_CLAMP_TO_EDGE;
-#ifdef HALO_ANDROID
+#ifdef HALO_VITA
+	case D3DTADDRESS_BORDER:
+		/* Closest available addressing; border color is not exposed. */
+		return GL_CLAMP_TO_EDGE;
+#elif defined(HALO_ANDROID)
 	case D3DTADDRESS_BORDER: return xgpu_capabilities.border_clamp ? GL_CLAMP_TO_BORDER : GL_CLAMP_TO_EDGE;
 #else
 	case D3DTADDRESS_BORDER: return GL_CLAMP_TO_BORDER;
@@ -2044,7 +2053,9 @@ static void configure_sampler(int stage, BOOL mipmapped)
 	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, state[D3DTSS_MAGFILTER] == D3DTEXF_POINT ? GL_NEAREST : GL_LINEAR);
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, (GLint)address_mode(state[D3DTSS_ADDRESSU]));
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, (GLint)address_mode(state[D3DTSS_ADDRESSV]));
+	#ifndef HALO_VITA
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, (GLint)address_mode(state[D3DTSS_ADDRESSW]));
+	#endif
 #ifdef HALO_ANDROID
 	/* ES has no sampler LOD bias; the pixel shader applies it
 	(texture_lod_bias) */
@@ -2057,6 +2068,11 @@ static void configure_sampler(int stage, BOOL mipmapped)
 		color_to_vec4(state[D3DTSS_BORDERCOLOR], border);
 		glSamplerParameterfv(sampler, GL_TEXTURE_BORDER_COLOR, border);
 	}
+#elif defined(HALO_VITA)
+	if (state[D3DTSS_MIPMAPLODBIAS] || state[D3DTSS_MAXMIPLEVEL])
+		vita_fatal("D3D8 non-default LOD bias/min level needs a Vita shader fallback");
+	if (min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1)
+		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)state[D3DTSS_MAXANISOTROPY]);
 #else
 	glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, dword_to_float(state[D3DTSS_MIPMAPLODBIAS]));
 	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)state[D3DTSS_MAXMIPLEVEL]);
