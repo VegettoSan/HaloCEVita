@@ -5,6 +5,7 @@
  * supplies the pregame camera that main_pregame_render normally builds. */
 #include <xtl.h>
 #include "cseries.h"
+#include "cache/texture_cache.h"
 #include "math/real_math.h"
 #include "main/main.h"
 #include "render/render.h"
@@ -14,12 +15,20 @@
 #include "rasterizer/xbox/rasterizer_xbox.h"
 #include "vita_runtime.h"
 
+/* cache_files.c owns the map-open sequencing and intentionally keeps this
+ * per-map entry point out of texture_cache.h. Vita mounts ui.map through its
+ * checked logical-range backend instead of scenario_tags_load(), so restore
+ * the exact original texture-cache open transition here after creating the
+ * process-lifetime Xbox texture cache. */
+void texture_cache_open(void);
+
 /* January keeps this helper private to main.c; the pregame path uses it to
  * derive the same full-screen and title-safe rectangles used by retail. */
 void compute_window_bounds(long player_index, long num_players,
     rectangle2d *pixel_bounds, rectangle2d *safe_frame_bounds);
 
 static boolean vita_renderer_ready;
+static boolean vita_texture_cache_ready;
 static boolean vita_first_menu_frame = TRUE;
 
 int halo_vita_renderer_initialize(void)
@@ -30,8 +39,26 @@ int halo_vita_renderer_initialize(void)
      * The Vita bring-up already allocates Halo's game-state buffer before the
      * UI cache is mounted. Calling game_state_initialize() here allocates that
      * buffer a second time and correctly trips January's buffer_allocated
-     * assertion. Keep renderer initialization limited to the rasterizer. */
+     * assertion. Keep renderer initialization limited to the renderer-side
+     * subsystems skipped by the special Vita ui.map mount. */
     vita_log("[VITA 033] original game-state already owned by memory bring-up");
+
+    /* Retail scenario_tags_load() performs texture_cache_open() before opening
+     * the map. The Vita metadata mount bypasses scenario_tags_load(), so the
+     * first rasterizer_frame_begin() previously reached texture_cache_idle()
+     * with xbox_texture_cache_globals.cache == NULL and asserted in
+     * lruv_cache.c:754. Create the original Xbox cache once, then perform the
+     * original per-map open transition. No pixels or menu assets are supplied
+     * here; bitmap loads still flow through Halo's texture cache and the Vita
+     * logical-range cache_file_read backend. */
+    if (!vita_texture_cache_ready) {
+        vita_log("[VITA 034T] original Xbox texture cache initialization begin");
+        texture_cache_new();
+        texture_cache_open();
+        vita_texture_cache_ready = TRUE;
+        vita_log("[VITA 034T] original Xbox texture cache initialized and opened");
+    }
+
     vita_log("[VITA 035] original Xbox rasterizer initialization begin");
     if (!rasterizer_initialize()) {
         vita_log("MAIN MENU BLOCKED: original Xbox rasterizer initialization failed");
