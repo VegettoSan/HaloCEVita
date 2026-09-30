@@ -10,6 +10,9 @@
 #include "text/text_group.h"
 #include "interface/ui_widget.h"
 #include "interface/player_ui.h"
+#include "interface/interface.h"
+#include "game/game_globals.h"
+#include "scenario/scenario.h"
 
 #define CHECK_LAYOUT(name, expression) typedef char name[(expression) ? 1 : -1]
 CHECK_LAYOUT(menu_bitmap_size, sizeof(struct bitmap_group) == 108);
@@ -26,6 +29,61 @@ CHECK_LAYOUT(menu_string_entry, sizeof(struct string_list_entry) == 20);
 CHECK_LAYOUT(menu_tag_data_address, offsetof(struct tag_data, address) == 12);
 CHECK_LAYOUT(menu_tag_reference_index, offsetof(struct tag_reference, index) == 12);
 CHECK_LAYOUT(menu_tag_block_address, offsetof(struct tag_block, address) == 4);
+CHECK_LAYOUT(menu_game_globals_size, sizeof(struct game_globals) == 0x1AC);
+CHECK_LAYOUT(menu_game_globals_interface_refs, offsetof(struct game_globals, interface_tag_references) == 0x140);
+
+struct vita_interface_tag_references_definition
+{
+    struct tag_reference tags[NUMBER_OF_INTERFACE_TAGS];
+    byte unused[48];
+};
+CHECK_LAYOUT(menu_interface_refs_size, sizeof(struct vita_interface_tag_references_definition) == 0x130);
+
+/* The complete scenario module is intentionally not pulled into the UI-only
+ * bring-up yet. This pointer is the real ui.map globals\\globals tag, not a
+ * fabricated replacement; interface.c consumes it through the original
+ * scenario_get_game_globals ABI. */
+static struct game_globals *vita_ui_game_globals;
+char *tag_get_name(long tag_index);
+
+struct game_globals *scenario_get_game_globals(void)
+{
+    return vita_ui_game_globals;
+}
+
+static int halo_vita_ui_game_globals_initialize(void)
+{
+    long index = tag_loaded(GAME_GLOBALS_TAG, "globals\\globals");
+    struct game_globals *globals;
+    struct vita_interface_tag_references_definition *references;
+    struct tag_reference *plasma;
+
+    if (index == NONE) {
+        vita_log("MAIN MENU BLOCKED: ui.map globals\\globals matg not loaded");
+        return 0;
+    }
+    globals = game_globals_definition_get(index);
+    if (!globals || globals->interface_tag_references.count != 1 ||
+        !globals->interface_tag_references.address) {
+        vita_log("MAIN MENU BLOCKED: real matg interface_tag_references invalid count=%ld address=%p",
+            globals ? globals->interface_tag_references.count : -1L,
+            globals ? globals->interface_tag_references.address : NULL);
+        return 0;
+    }
+    references = TAG_BLOCK_GET_ELEMENT(&globals->interface_tag_references, 0,
+        struct vita_interface_tag_references_definition);
+    plasma = &references->tags[_interface_bitmap_iface_map3];
+    if (plasma->index == NONE || tag_get_group_tag(plasma->index) != BITMAP_GROUP_TAG) {
+        vita_log("MAIN MENU BLOCKED: original iface_map3 plasma reference missing/invalid datum=%08lx",
+            (unsigned long)plasma->index);
+        return 0;
+    }
+    vita_ui_game_globals = globals;
+    vita_log("[VITA 031] real ui game globals mounted: matg=%08lx interface_refs=%ld iface_map3=%08lx path=%s",
+        (unsigned long)index, globals->interface_tag_references.count,
+        (unsigned long)plasma->index, tag_get_name(plasma->index));
+    return 1;
+}
 
 int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats *stats)
 {
@@ -108,9 +166,11 @@ int halo_vita_menu_tags_probe(uint32_t menu_index, const struct vita_menu_stats 
 
 int halo_vita_ui_runtime_initialize(void)
 {
+    if (!halo_vita_ui_game_globals_initialize()) return 0;
     if (!halo_vita_ui_widgets_initialized()) ui_widgets_initialize();
     if (!halo_vita_ui_widgets_initialized()) {
         vita_log("MAIN MENU BLOCKED: original ui_widgets_initialize did not establish widget globals/pool");
+        vita_ui_game_globals = NULL;
         return 0;
     }
     vita_log("[VITA 022] original ui_widgets_initialize PASS: widget globals and pool ready");
@@ -126,11 +186,16 @@ int halo_vita_ui_runtime_dispose(void)
         }
         vita_log("[VITA 023] original widget pool freed; globals reset");
     }
+    vita_ui_game_globals = NULL;
     return 1;
 }
 
 int halo_vita_menu_root_checkpoint(void)
 {
+    if (!vita_ui_game_globals) {
+        vita_log("MAIN MENU BLOCKED: ui game globals not mounted before root creation");
+        return 0;
+    }
     vita_log("original player_ui_initialize begin");
     player_ui_initialize();
     vita_log("original player_ui_initialize PASS");
