@@ -237,6 +237,8 @@ int halo_vita_renderer_render_menu_frame(void)
         return 0;
     }
 
+    halo_vita_main_render_time_update();
+    halo_vita_ui_render_clock_update();
     vita_menu_frame_count++;
     if (vita_menu_frame_count == 2)
         vita_log("[VITA 041] second original Main Menu frame begin");

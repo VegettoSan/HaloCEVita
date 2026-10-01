@@ -200,3 +200,8 @@ A065: reuse the exact original NV2A unpack arithmetic on CPU. Keep authored inte
 ## D029 — Exact bounded source snapshots replace unavailable Vita page watching
 
 A066: compare guest texture bytes at every bind; skip GPU reupload only when an existing checked GPU copy has an exact source/palette match. Bound total CPU shadows to4MiB; budget/allocation misses refresh safely. Dynamic font writes, LRU memory reuse and palette changes remain visible. Keep the original format/decoder/mip/transfer owners. No hash-only cache validity, stale frame shortcut, mprotect emulation or unmeasured FPS claim.
+
+
+## D030 — Reuse original native frame time for the staged renderer
+
+A067: expose original main_update_time_unthrottled through a Vita-only bridge; advance original UI render timestamp from the same real system clock. This restores the time inputs used by existing render equations while full process_ui_widgets is still unlinked. Keep original clamps/profiler/frame index. It supplies no event, automatic close, scenario tick, gameplay, input or audio update and must be reconciled when full main_loop owns these clocks.

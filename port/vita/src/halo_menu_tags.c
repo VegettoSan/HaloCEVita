@@ -315,6 +315,7 @@ int halo_vita_menu_root_checkpoint(void)
         vita_log("MAIN MENU BLOCKED: ui scenario/game globals not mounted before root creation");
         return 0;
     }
+    halo_vita_ui_render_clock_update();
     vita_log("original player_ui_initialize begin");
     player_ui_initialize();
     vita_log("original player_ui_initialize PASS");

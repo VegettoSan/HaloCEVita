@@ -2000,6 +2000,16 @@ void ui_widgets_initialize(
 }
 
 #ifdef HALO_VITA
+/* Share the original render clock while the complete event/update closure
+ * is still being linked. This updates no widget/event/game/audio state. The
+ * existing bitmap/plasma/text render equations consume this real timestamp. */
+void halo_vita_ui_render_clock_update(void)
+{
+	match_assert("c:\\halo\\SOURCE\\interface\\ui_widget.c", 644,
+		widget_globals.initialized);
+	widget_globals.current_system_milliseconds = system_milliseconds();
+}
+
 /* Read-only checkpoint of the original widget allocator/global state. */
 boolean halo_vita_ui_widgets_initialized(void)
 {

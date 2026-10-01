@@ -2209,6 +2209,14 @@ static void main_update_time_unthrottled(
 }
 
 #endif
+#ifdef HALO_VITA_MENU_BRINGUP
+/* The staged Vita renderer has its own paced loop. Reuse the native Halo
+ * performance-counter owner without starting the Xbox throttle/full game loop. */
+void halo_vita_main_render_time_update(void)
+{
+	main_update_time_unthrottled();
+}
+#endif
 static void main_update_time(
 	void)
 {
