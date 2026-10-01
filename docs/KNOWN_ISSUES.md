@@ -218,3 +218,6 @@ A05800.20 reaches original Halo draw with error0 at320x240, then aborts in SceLi
 
 
 KI-028 source correctionA05900.21 uses checked synchronized mapping of existing vertex/index allocations, avoiding per-draw full clones/orphans; exact-byte transfers preserve source bounds. Host actual-function lifetime/guard-page/failure contracts PASS; native map/sync symbols and hardware original font/frame/present remain required. Synchronous scene transitions retain KI-026 depth persistence risk; no STABLE/FPS/visible-menu claim.
+
+
+A060: KI-028 mapped reuse correction passes exact native workflow122/sourcefb92bbf/VPK00.21, including real glMapBufferRange/glUnmapBuffer/glFinish symbol closure and actual downloaded artifact digests. Host contracts PASS; original font/full-frame Present/visible menu and repeated stability need hardware.320x240 policy remains unchanged. Retain workflow122 ELF/map for the new dump, never use workflow121 symbols to decode00.21.
