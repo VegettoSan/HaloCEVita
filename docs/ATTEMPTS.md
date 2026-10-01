@@ -650,3 +650,19 @@ Release VPK digest equals native verifier log. [Direct00.18 VPK](https://github.
 **Cause/choice:** Vita forced prefix includes sys/time.h/newlib limits then deliberately undefines LONG_MAX/CHAR_MAX to permit original cseries enum names. Newlib ULONG_MAX expands through LONG_MAX; re-including limits.h is header-guarded and cannot restore it. Do not redefine SDK/game names globally or undo the ABI prefix. Express unsigned-long maximum as ~0UL directly in this unsigned-long size guard, preserving exact32-bit target semantics and host width. Remove unnecessary limits.h from the renderer.
 
 **Command/result:** python3 tools/vita_vertex_color_regression.py PASS for Vita/Android/desktop actual byte/format cases; git diff --check PASS. Corrected native workflow required. Runtime stays00.19 since no00.19 console test occurred. No shader/state/asset arithmetic changed.
+
+## 2026-10-01 — A053 — Verified00.19 workflow119 for console test
+
+**Evidence/commands:** fetched exact Vita Build run36799978600 (#119), native job110171895354 decoded log, all final job statuses, exact release vita-build-119 and assets. Source2d8d5ae32fde8e28499a6cec62e60fc4f1de5f79 on main contains A050 depth/renderbuffer/FBO identity, A051 supported color conversion/phase error checks and A052 native overflow guard. Renderer-closure, default native build/package verifier/upload and Publish Vita pre-release all SUCCESS. Release target_commitish equals source. Intermediate117 successfully builds depth-only00.19 (VPK digest2273a324256f541b51f894ce9163c5544082026e1fe839a19199febf0e8fdcb2);118 preserves the newlib LONG_MAX compile failure.119 is the delivered package.
+
+**Native result:** tools/vita_verify.py PASS for actual ARM32 hard-float ELF, original core/UI/quad/D3D draw/present/shell/decal/dispose/cache-close symbols, no unexpected unresolved game hooks, valid Sony SELF/VPK/SFO/runtime banner00.19, exact package members and indexed PNG LiveArea without retail data/compiler module. Actual renderbuffer API calls compile/link through this native SDK. RX LOAD ends0x810e1c88; init_array starts0x810f0000 with constructor/destructor LOAD0x20; vita-elf-create/SELF conversion succeeds. Existing wchar/enum linker warnings remain visible (KI-009), not a complete cross-unit/hardware ABI proof.
+
+| Release asset | Bytes | SHA-256 |
+|---|---:|---|
+| HaloCE.vpk | 635378 | 0e0bdf3101d1a531e9ed8bca56c21838edbb0bb9c09b07a87463a70d730bb1bf |
+| HaloCE.elf | 10169280 | eedddf489c064eebb98cb3d36c2cc6aad270fccf9018a426ed896c3bb5188197 |
+| HaloCE.elf.map | 2978436 | eb905d109556e1676504b261638c8cfa5e724f60447dfb9ded793abe6ac9fdf6 |
+
+Release VPK digest matches actual verifier CI log. [Direct00.19 VPK](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-119/HaloCE.vpk), [matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-119), [workflow119](https://github.com/VegettoSan/HaloCEVita/actions/runs/36799978600). Actions artifact11135460483 retains source-named VPK/ELF/map/artifacts.json/SHA256SUMS for14 days. No generated binary or retail asset committed. Documentation-only final commit does not alter this verified source binary.
+
+**State/limits:**00.19 LINKS. Actual-function host FBO/color contracts pass plus prior original bitmap/load/pair/shell/disposal contracts. Latest console00.18 BOOTS original root/frame begin but fails depth0x501; new real037W1/UI/resource/upload/shader/draw/present and visible menu remain unverified. FBO request/completeness is not lazy GXM physical allocation or STORE_DEPTH_STENCIL persistence. No Vita available here. Follow updated BUILD.md and preserve full debug.txt/visible result plus generated GLSL/rejected Cg on failure. Original navigation/update, scenario/BSP/ring, game audio and full active-root teardown remain pending. Inherited general Build workflows still fail the separate non-Vita baseline; native Vita workflow119 succeeds independently.

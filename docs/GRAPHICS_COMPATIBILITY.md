@@ -64,7 +64,7 @@ Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp 
 | `glEndQuery` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glFinish` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glFlush` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
-| `glFramebufferTexture2D` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
+| `glFramebufferTexture2D` | DIRECT | yes / yes | vitaGL accepts color attachment only (A049); depth uses real renderbuffer requests in A050. Retail FBO GPU execution pending. |
 | `glFrontFace` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glGenBuffers` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glGenFramebuffers` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
@@ -100,7 +100,7 @@ Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp 
 | `glStencilFunc` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glStencilMask` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glStencilOp` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
-| `glTexImage2D` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
+| `glTexImage2D` | DIRECT | yes / yes | Packed GL_DEPTH_STENCIL input rejected0x501 on00.18 hardware (A049); use renderbuffer depth. Retail color formats still require actual upload/render. |
 | `glTexImage3D` | BLOCKED | no / no | No installed 3D texture API. Campaign c10/c20 metadata contains volume bitmaps (A011); runtime use untested. |
 | `glTexParameterf` | DIRECT | yes / yes | Declaration and archive export verified; runtime semantics pending. |
 | `glTexParameterfv` | BLOCKED | no / no | Missing declaration or implementation; investigate exact upstream use. |
