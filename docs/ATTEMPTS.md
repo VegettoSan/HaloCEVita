@@ -545,3 +545,6 @@ A042 native build110 fails at halo_renderer_runtime.c:10: game/game_time.h does 
 
 
 A043 final source review adds the exact short main_get_window_count(void) prototype, matching original render.c, before the new variadic logging call. This helper is absent from main.h; do not rely on an implicit int declaration at the ARM boundary. README and BUILD now expose the current00.17 original-render procedure and distinguish historical00.11/synthetic test instructions. Final native workflow must include this declaration.
+
+
+A043 native workflow111 compiles/links and creates SELF/VPK, then passes all verifier checks up to source provenance. It fails with git rev-parse HEAD exit128 inside the SDK container; old capture_output hid Git's own stderr. Restrict read-only Git metadata queries to this exact checkout with per-command safe.directory (container ownership boundary), and expose stderr for any future metadata failure. Do not globally trust all paths, fake the commit or bypass binary/package checks. Workflow112 contains the same verifier and is superseded by this correction; final success required before publication/delivery.

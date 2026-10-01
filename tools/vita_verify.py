@@ -22,6 +22,11 @@ def run(tool, *args):
     return subprocess.run([str(sdk / 'bin' / ('arm-vita-eabi-' + tool)), *map(str, args)],
                           text=True, capture_output=True, check=True).stdout
 def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def git_metadata(*args):
+    # Container checkout and Python may run as different owners. Trust only
+    # this exact checkout for these read-only provenance queries.
+    return subprocess.run(['git', '-c', f'safe.directory={root}', *args],
+                          stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
 elf = build / 'HaloCE.elf'
 self_file = build / 'eboot.bin'
 assert self_file.read_bytes()[:4] == b'SCE\0', 'Not a Sony SELF'
@@ -147,10 +152,9 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
                                   'current package installation/runtime pending; prior00.11 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
-            'source_commit': subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip(),
-            'source_has_uncommitted_changes': bool(subprocess.run(
-                ['git', 'status', '--porcelain', '--untracked-files=no'],
-                capture_output=True, text=True, check=True).stdout.strip()),
+            'source_commit': git_metadata('rev-parse', 'HEAD'),
+            'source_has_uncommitted_changes': bool(git_metadata(
+                'status', '--porcelain', '--untracked-files=no')),
             'sdk': str(sdk), 'required_core_symbols': required,
             'optional_unresolved_sdk_hooks': undefined.splitlines(),
             'files': {name: {'sha256': digest(build / name), 'bytes': (build / name).stat().st_size} for name in files}}
