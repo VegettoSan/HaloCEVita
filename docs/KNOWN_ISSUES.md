@@ -200,3 +200,9 @@ A049 hardware: KI-024's384 compiled bitmap records now validate on Vita; origina
 KI-026 source correctionA05000.19: separate depth renderbuffer plus checked FBO attachment, one owning FBO per depth across equal-size colors. Actual-function host contract passes API selection/cache/identity/failure cases. Native linking and first-window GPU execution are pending; a GL request/FBO completeness result does not prove lazy physical depth allocation or persistent contents across GXM scenes.
 
 A053 validation: KI-026 allocation/attachment correction and A051 color/phase checks compile/link and pass native package verification in workflow119/source2d8d5ae/VPK00.19. Host actual FBO identity/error and immutable color byte/format tests PASS. New first-window/GXM/Halo draw/render remain hardware gates. KI-024's metadata rejection is confirmed resolved in00.18 (A049); KI-025 pre-root teardown and active-root lifetime still need matching hardware/heap evidence. Do not mark the visible menu or cross-scene depth persistence working from CI alone.
+
+## KI-027 — Unsupported unpack-alignment call causes first texture upload exit
+
+A05400.19 hardware loads first real shield-noise resource successfully and reaches texture upload, then GL_INVALID_ENUM0x500 triggers explicit fatal exit. upload calls glPixelStorei(GL_UNPACK_ALIGNMENT,1); vitaGL6e7fe40 implements only UNPACK_ROW_LENGTH, despite defining ALIGNMENT in the header. Preserve original DXT/BGRA layout and use the supported tightly packed row contract; add phase/level GL checks and actual-function tests. No evidence of GPU overload or corrupt resource offsets. No Halo shader/draw/present yet.
+
+A054 validates KI-026 through real960x544 request/attachment, original clear and037W1. Shared depth identity across scenes and STORE_DEPTH_STENCIL remain separate unverified contracts. Active-root fatal cleanup/heap still lacks new evidence.
