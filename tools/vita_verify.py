@@ -50,6 +50,7 @@ required = ['cseries_initialize', 'debug_memory_manager_initialize', 'debug_mall
             'halo_vita_menu_tags_probe', 'vita_cache_relocate_menu', 'bitmap_group_get_bitmap_from_sequence',
             'unicode_string_list_get_string', 'font_get_character_by_ascii_code',
             'halo_vita_renderer_initialize', 'halo_vita_renderer_render_menu_frame',
+            'halo_vita_renderer_dispose_before_root', '_rasterizer_dispose', 'texture_cache_close',
             'halo_vita_menu_bitmap_resources_activate', 'render_ui_widgets',
             '_rasterizer_psuedo_dynamic_screen_quad_draw', 'D3DDevice_End',
             'D3DDevice_Present', 'players_initialize', 'players_initialize_for_new_map',

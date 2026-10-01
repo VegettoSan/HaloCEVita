@@ -27,6 +27,9 @@
  * process-lifetime Xbox texture cache. */
 void texture_cache_open(void);
 void texture_cache_close(void);
+/* January declares these original disposal helpers privately in game.c. */
+void players_dispose_from_old_map(void);
+void players_dispose(void);
 
 /* Validate the already prepared compiled-cache records before the first draw.
  * scenario_tags_load does not repeat the tag-building bitmap postprocess. */
