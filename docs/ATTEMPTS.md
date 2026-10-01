@@ -809,3 +809,8 @@ Vita uniform arrays now reflect compiled GL_FLOAT_VEC4 base names/lengths via gl
 **Change:** a Vita-only bridge in main.c calls original main_update_time_unthrottled (native performance-counter path) from each renderer frame. Another bridge sets the exact original widget timestamp from system_milliseconds, both before root creation and every rendered frame. Keep original counter delta, clamp/local/movie policy, profiler and rasterizer frame index. Do not start the Xbox throttle, assume interpolation, fabricate elapsed30Hz time, call unlinked event processing or claim scenario/script animation. Shared desktop/Xbox behavior remains unchanged.
 
 **Validation:** python3 tools/vita_menu_clock_regression.py PASS actual original time helper and new UI bridge: first frame,33.333ms delta, large-frame/local-rate clamps, movie interval, profiler/index and clock timestamp. Native ELF links with original owner retained. vita_renderer_contract_regression.py PASS bitmap/pair/shell/cache/disposal contracts. Visual UI animation, missing glyphs, full events and HS world/camera time still require separate hardware/owner integration.
+
+
+## 2026-10-01 — A068 — Prepare00.23 native test package
+
+Bump SFO/runtime banner together to00.23; require original frame/UI clock bridge symbols in package verifier. Log the staged UI-only/world-owner limit explicitly at initialization. Contains A065 packed normals, A066 exact bounded texture cache and A067 original render clocks. Native ELF has linked after each focused code change using the same official2026.08 SDK image as CI. Package verification and final artifact digests follow below; no console result/3D/audio/full menu claim yet.

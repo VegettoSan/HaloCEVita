@@ -55,7 +55,8 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             '_rasterizer_psuedo_dynamic_screen_quad_draw', 'D3DDevice_End',
             'D3DDevice_Present', 'players_initialize', 'players_initialize_for_new_map',
             'player_control_initialize', 'cinematic_initialize',
-            'cinematic_initialize_for_new_map', 'game_time_initialize']
+            'cinematic_initialize_for_new_map', 'game_time_initialize', 'halo_vita_main_render_time_update',
+            'halo_vita_ui_render_clock_update']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)

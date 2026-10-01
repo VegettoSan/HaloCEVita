@@ -188,6 +188,7 @@ int halo_vita_renderer_initialize(void)
         vita_log("[VITA 036D] original decals initialization/new-map PASS");
     }
 
+    vita_log("[VITA WORLD] staged UI renderer only; scenario BSP/models/HS camera and game audio initialization remain pending");
     vita_renderer_ready = TRUE;
     vita_log("[VITA 036] original Xbox rasterizer ready; D3D8 device=%p", global_d3d_device);
     return 1;
