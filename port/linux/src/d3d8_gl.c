@@ -2458,6 +2458,17 @@ static void bind_textures(struct nv2a_pixel_shader_key *key, float texture_scale
 			GLenum gl_target;
 			GLuint gl_texture;
 
+#ifdef HALO_VITA
+			/* Uploads and mip composition bind on the active GL unit. Select
+			 * their destination before they can overwrite an earlier stage.
+			 * A cache hit in state_texture() alone need not select that unit. */
+			if (gl_state.active_texture != GL_TEXTURE0 + (GLenum)stage)
+			{
+				gl_state.active_texture = GL_TEXTURE0 + (GLenum)stage;
+				glActiveTexture(gl_state.active_texture);
+			}
+#endif
+
 			if (target)
 			{
 				xgpu_texture_describe(texture->Format, texture->Size, &description);

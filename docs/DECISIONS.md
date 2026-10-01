@@ -210,3 +210,8 @@ A067: expose original main_update_time_unthrottled through a Vita-only bridge; a
 ## D031 — Start the original presentation consumer at staged Vita Present
 
 Date2026-10-01; A070/KI-032. Keep the backend60Hz worker, two-flip limit, counters, callback and pthread synchronization. Vita Present must ensure this consumer exists because the staged root/render loop bypasses main_initialize_time. This is lazy platform lifecycle restoration, not a fake completion counter or an interpolation/queue bypass. Worker creation failure stops explicitly. The original complete-main callback can later reuse the same worker; desktop/Android paths remain unchanged.
+
+
+## D032 — Isolate texture mutation to its intended Vita stage
+
+A072/KI-033: original texture uploads/mip composition mutate GL binding state. Select their destination stage before mutation; shadow-cache hits cannot substitute for that selection. Preserve original resources, shaders and sampler assignments. Do not hardcode a transparent color or alpha discard to hide the symptom.

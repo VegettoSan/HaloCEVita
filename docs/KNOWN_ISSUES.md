@@ -247,3 +247,10 @@ A064/00.22: logo and rectangular backgrounds visible. Active Vita loop does not 
 A070/00.23: real visible logo/backgrounds, two returned Presents, no frame30/120 and Start unresponsive. main_initialize_time normally starts the worker through the original vblank callback; staged startup skips it. With interpolation disabled, third Present waits forever after pending_flips reaches2 because no worker consumes flips. Actual host code reproduces the historical third-call hang. Vita Present now starts the same existing60Hz worker before queueing and fails explicitly on creation failure.120-frame/callback/interpolation/error host contracts pass. Native link and real console repeated-frame/Start verification remain required; later renderer stalls are not excluded.
 
 A071/00.24 native closure correction: the now-reachable worker exposes absent clock_nanosleep; use a checked absolute CLOCK_MONOTONIC/native kernel-delay bridge instead. Native VPK links, host actual120-frame and deadline/error cases pass. Real Vita third/frame30/frame120/input/exit remain the acceptance gates. Full UI/labels/world/audio are still KI-031.
+
+
+A072 hardware00.24 resolves KI-032 for this supplied run: third/frame30/frame120 and Start/clean exit. UI remains visually incomplete with opaque rectangular backgrounds, no labels or observed motion; KI-031 remains open.
+
+## KI-033 — Texture uploads mutate the previously active stage
+
+A072 source/actual-function fixture: later cold/refreshed textures bind on the earlier active unit before destination stage selection. Vita selects the target unit before upload/composition now; historical code fails and fixed host contracts pass. Console alpha/text/effects improvement remains unverified. Do not strip backgrounds or replace authored shader/texture alpha based on this hypothesis.

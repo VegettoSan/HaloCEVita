@@ -886,3 +886,12 @@ e292160aae9a31fe4ce832492db386bc8946026d5a2c9a2e0673f84383c44e78  HaloCE.elf.map
 Official Vita workflow133/run36825483709, ordinary vita job110250109803 and prerelease job110250579102 both SUCCEEDED. CI verifier also PASS with00.24; release vita-build-133 targets7baf282. CI package has a separate identity (different build environment paths/output): VPK641187 bytes SHA-25628765b339143bb80eac6aed570922930f42589f758ff6c356d0cc61191b4eee4; ELF10203960 bytes SHA-2562913dccd3ed1702d1f71f78dad582e7b788c257be93cfaa0de348106955be9bd; map2982440 bytes SHA-256754923daa5078534734e0bfb1e4dadc9de801d638b45785abdf77b0f9d68afbb. Keep symbols from the exact installed package. The optional full widget-update closure is a separate unresolved-owner experiment; it does not enable navigation/world/audio in this release.
 
 Next hardware gate:00.24 banner, original worker-start marker, third Present returned, frame30/120, visible effects and Start input/clean exit. A passing link/CPU fixture does not establish those console results.
+
+
+## 2026-10-01 — A072 — Hardware continuous presentation and texture stage isolation
+
+**Hardware:** supplied00.24 log SHA-256 `0acd585476db2ecf30f3c9216589243585fa6d9f6f2fedbf29a2b48ff2b231e6` retained under ignored docs/runtime/. Third Present returns20.020s, frame30 at22.079s, frame120 at28.829s, Start34.765s and clean exit34.889s. User confirms Start closes but visual output remains the incomplete logo/plain rectangles without visible motion. KI-032 acceptance passes for this run; full UI/world/audio and repeated STABLE remain unproven.
+
+**Source defect:** xgpu_texture_get uploads with glBindTexture on the current active unit before bind_textures selects the destination stage. A cold/refreshed later stage can overwrite an earlier stage already assigned for the draw. On Vita select the destination unit before uploads or rendered mip composition, including when state_texture may subsequently hit its cache. Preserve original pixels, alpha, sampler identities, scale and shaders; other platforms remain unchanged. This is a real binding defect, not proof that it alone explains the white backgrounds/missing text.
+
+**Validation:** python3 tools/vita_texture_stage_regression.py PASS actual state_texture/bind_textures bodies with active-unit GL mutation: four cold stages, every refreshed stage, warm hits, linear coordinates, rendered mip composition, unused/projection modes. Historical body fails the same fixture. Native build and hardware image still required.
