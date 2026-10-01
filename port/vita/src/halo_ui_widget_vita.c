@@ -29,6 +29,38 @@ static struct widget_instance *halo_vita_menu_root(short controller_index)
     return NULL;
 }
 
+/* The normal Halo Main Menu lifecycle marks this state while entering the
+ * shell.  The staged Vita path creates the same original root directly, so it
+ * must complete that original state transition once the root has been
+ * validated.  Do not write the private flag: keep main_menu_active() as the
+ * owner of we_are_at_the_main_menu. */
+int halo_vita_ui_activate_main_menu_state(void)
+{
+    struct widget_instance *root;
+
+    if (!widget_globals.initialized)
+    {
+        vita_log("MAIN MENU BLOCKED: cannot activate UI state before widget globals");
+        return FALSE;
+    }
+
+    root = halo_vita_menu_root(0);
+    if (!root)
+    {
+        vita_log("MAIN MENU BLOCKED: cannot activate UI state without original root");
+        return FALSE;
+    }
+
+    main_menu_active(TRUE);
+    vita_log("[VITA UI STATE] original Main Menu active=%d root=%08lx focused=%08lx",
+        (int)main_menu_is_active(),
+        (unsigned long)root->definition_tag_index,
+        root->focused_child
+            ? (unsigned long)root->focused_child->definition_tag_index
+            : (unsigned long)NONE);
+    return main_menu_is_active();
+}
+
 static struct widget_instance *halo_vita_deepest_focus(struct widget_instance *root)
 {
     struct widget_instance *widget = root;
@@ -72,7 +104,11 @@ static int halo_vita_move_menu_focus(
     }
 
     if (!target)
+    {
+        vita_log("[VITA UI INPUT] focus button=%d ignored: focused chain has no vertical list",
+            (int)button_index);
         return FALSE;
+    }
 
     before = target->focused_child;
     if (button_index == _widget_event_dpad_up)
@@ -160,7 +196,12 @@ int halo_vita_ui_process_menu_action(short action)
     short button_index;
 
     if (!widget_globals.initialized || !we_are_at_the_main_menu)
+    {
+        vita_log("[VITA UI INPUT] action=%d rejected initialized=%d main_menu_active=%d",
+            (int)action, (int)widget_globals.initialized,
+            (int)we_are_at_the_main_menu);
         return FALSE;
+    }
 
     root = halo_vita_menu_root(0);
     if (!root)
