@@ -4,6 +4,33 @@
 #include "vita_runtime.h"
 #include <vitaGL.h>
 
+/* xbox_textures.c converts the Xbox formats (including the Vita-only DXT3/5
+ * CPU fallback) to 32-bit BGRA.  vitaGL has a native BGRA internal format
+ * backed by SCE_GXM_TEXTURE_FORMAT_U8U8U8U8_ARGB and can fast-store those
+ * exact bytes.  Route only that already-converted upload here: this avoids a
+ * second BGRA->RGBA CPU conversion inside vitaGL while preserving the same
+ * logical RGBA channels, especially the authored byte-3 alpha used by Halo's
+ * menu masks.  No alpha is synthesized, forced or premultiplied. */
+void halo_vita_glTexImage2D(GLenum target, GLint level, GLint internal_format,
+	GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type,
+	const GLvoid *pixels)
+{
+	static int first_bgra_log;
+
+	if (internal_format == GL_RGBA8 && format == GL_BGRA &&
+		type == GL_UNSIGNED_BYTE)
+	{
+		internal_format = GL_BGRA;
+		if (!first_bgra_log)
+		{
+			first_bgra_log = 1;
+			vita_log("[VITA TEXTURE] decoded BGRA uses vitaGL direct ARGB storage; authored alpha byte preserved");
+		}
+	}
+	glTexImage2D(target, level, internal_format, width, height, border,
+		format, type, pixels);
+}
+
 /* The Vita NV2A vertex path emulates desktop GL_UPPER_LEFT by negating
  * gl_Position.y in the generated shader. Unlike glClipControl, that explicit
  * Y flip reverses triangle winding. Android already compensates for the same
