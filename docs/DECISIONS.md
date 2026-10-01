@@ -195,3 +195,8 @@ Date2026-10-01; A062/A063/KI-030. Exact linked glUniform4fv uses a whole-uniform
 ## D028 — Expand packed normals at the Vita stream boundary
 
 A065: reuse the exact original NV2A unpack arithmetic on CPU. Keep authored interleaved data immutable; upload separate float3 attributes into the existing bounded stream buffer, reserving the complete draw first. Retain original declaration/register identities and shader instructions. Avoid GLSL integer attributes and modifications to game model data; preserve desktop/Android paths. Hardware geometry and full scenario execution are still unverified.
+
+
+## D029 — Exact bounded source snapshots replace unavailable Vita page watching
+
+A066: compare guest texture bytes at every bind; skip GPU reupload only when an existing checked GPU copy has an exact source/palette match. Bound total CPU shadows to4MiB; budget/allocation misses refresh safely. Dynamic font writes, LRU memory reuse and palette changes remain visible. Keep the original format/decoder/mip/transfer owners. No hash-only cache validity, stale frame shortcut, mprotect emulation or unmeasured FPS claim.

@@ -733,6 +733,10 @@ struct texture_entry
 	unsigned long address, size;
 	unsigned long generation;
 	unsigned long last_used_frame;
+#ifdef HALO_VITA
+	unsigned char *vita_shadow;
+	unsigned long vita_shadow_size;
+#endif
 };
 
 #define TEXTURE_BUCKET_COUNT 4096
@@ -756,6 +760,62 @@ static struct
 } recent_textures[RECENT_TEXTURE_COUNT];
 static unsigned long texture_drop_serial = 1;
 static unsigned long texture_frame = 0;
+
+#ifdef HALO_VITA
+/* Exact comparison replaces unavailable page fault tracking. Retain at most
+ * 4MiB of CPU source snapshots across all GPU entries. Budget/allocation misses
+ * safely keep the earlier refresh-on-every-use path; no hash-only validity. */
+#define VITA_TEXTURE_SHADOW_LIMIT (4UL << 20)
+static unsigned long vita_texture_shadow_bytes;
+
+static unsigned long vita_texture_shadow_size(const struct texture_entry *entry,
+    const D3DCOLOR *palette)
+{
+    unsigned long extra = palette ? 256 * sizeof(*palette) : 0;
+    if (!entry->size || entry->size > VITA_TEXTURE_SHADOW_LIMIT - extra)
+        return 0;
+    return entry->size + extra;
+}
+
+static BOOL vita_texture_shadow_matches(const struct texture_entry *entry,
+    const D3DCOLOR *palette)
+{
+    unsigned long size = vita_texture_shadow_size(entry, palette);
+    if (!size || !entry->vita_shadow || entry->vita_shadow_size != size ||
+        memcmp(entry->vita_shadow, (const void *)entry->address, entry->size))
+        return FALSE;
+    return !palette || !memcmp(entry->vita_shadow + entry->size, palette,
+        256 * sizeof(*palette));
+}
+
+static void vita_texture_shadow_release(struct texture_entry *entry)
+{
+    if (entry->vita_shadow) {
+        vita_texture_shadow_bytes -= entry->vita_shadow_size;
+        free(entry->vita_shadow);
+        entry->vita_shadow = NULL;
+        entry->vita_shadow_size = 0;
+    }
+}
+
+static void vita_texture_shadow_store(struct texture_entry *entry,
+    const D3DCOLOR *palette)
+{
+    unsigned long size = vita_texture_shadow_size(entry, palette);
+    if (entry->vita_shadow_size != size) vita_texture_shadow_release(entry);
+    if (!size) return;
+    if (!entry->vita_shadow) {
+        if (size > VITA_TEXTURE_SHADOW_LIMIT - vita_texture_shadow_bytes) return;
+        entry->vita_shadow = malloc(size);
+        if (!entry->vita_shadow) return;
+        entry->vita_shadow_size = size;
+        vita_texture_shadow_bytes += size;
+    }
+    memcpy(entry->vita_shadow, (const void *)entry->address, entry->size);
+    if (palette) memcpy(entry->vita_shadow + entry->size, palette,
+        256 * sizeof(*palette));
+}
+#endif
 
 static unsigned long bucket_index(DWORD data, DWORD format_word, DWORD size_word)
 {
@@ -852,9 +912,12 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	}
 
 	#ifdef HALO_VITA
-	/* No page-write tracking on Vita: refresh the original guest resource on
-	 * every use. A stale GPU copy would break dynamic fonts and UI assets. */
-	no_cache = 1;
+	/* Validate before any source comparison, including a GPU cache hit. */
+	if (!entry->size || entry->address + entry->size < entry->address ||
+		!platform_is_contiguous((void *)entry->address) ||
+		!platform_is_contiguous((void *)(entry->address + entry->size - 1)))
+		vita_fatal("Xbox texture source outside Vita contiguous guest window");
+	no_cache = !vita_texture_shadow_matches(entry, palettized ? palette : NULL);
 	generation = 0;
 	#else
 	if (no_cache < 0)
@@ -895,6 +958,10 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 					ones * 100 / entry->size, zeros * 100 / entry->size);
 			}
 			upload(entry->texture, entry->target, &entry->description, (const unsigned char *)entry->address, palette);
+#ifdef HALO_VITA
+			/* Commit only after checked GPU upload/transfer completion. */
+			vita_texture_shadow_store(entry, palettized ? palette : NULL);
+#endif
 		}
 	}
 	entry->last_used_frame = texture_frame;
@@ -934,6 +1001,9 @@ void xgpu_texture_cache_begin_frame(void)
 				glDeleteTextures(1, &entry->texture);
 				xgpu_gl_state_invalidate();
 				texture_drop_serial++;
+#ifdef HALO_VITA
+				vita_texture_shadow_release(entry);
+#endif
 				free(entry);
 			}
 			else

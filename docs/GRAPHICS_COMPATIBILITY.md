@@ -179,3 +179,6 @@ Exact122 ELF glUniform4fv negates a whole-uniform handle and writes offset0 (NON
 
 
 A065: Vita NORMPACKED3 now uses bounded CPU expansion into float3 streams with w1 supplied by ordinary GL attribute defaults, retaining original NV2A/register/11-11-10 semantics. Actual conversion/setup host tests and native ELF link PASS. Integer GL attribute requests remain unsupported; model/BSP activation and hardware rendering remain separate gates.
+
+
+A066: Vita guest texture validity uses exact bounded CPU source/palette snapshots checked on every lookup, with safe refresh fallback when the4MiB budget or allocation is unavailable. Dynamic glyph/source edits trigger the same checked uploads. Native link and actual cache/upload host contracts PASS; console throughput/visible labels remain unverified.

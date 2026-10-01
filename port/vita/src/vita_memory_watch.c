@@ -1,6 +1,7 @@
 /* Vita does not use Linux's SIGSEGV/mprotect guest-page write tracker.
- * xbox_textures.c deliberately refreshes guest-backed textures on every use
- * under HALO_VITA, so these hooks preserve the platform contract without
+ * xbox_textures.c compares bounded exact source snapshots on every use under
+ * HALO_VITA (and refreshes when it cannot retain one). These hooks preserve
+ * the platform contract without
  * pretending Vita has page-generation tracking. */
 #include "platform.h"
 
