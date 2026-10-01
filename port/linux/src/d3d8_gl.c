@@ -31,6 +31,7 @@ Conventions carried over from the Xbox:
 #endif
 
 #include <math.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2686,6 +2687,16 @@ static void gl_check_errors(const char *where)
 			platform_log("GL error %04x at %s (frame %lu)", (unsigned)error, where, device.frame);
 	}
 }
+#elif defined(HALO_VITA)
+static void gl_check_errors(const char *where)
+{
+	GLenum error = glGetError();
+	if (error != GL_NO_ERROR)
+	{
+		vita_log("D3D8 GL error=0x%x at %s frame=%lu", error, where, device.frame);
+		vita_fatal("original D3D8 state/draw was rejected by vitaGL");
+	}
+}
 #else
 #define gl_check_errors(where) ((void)0)
 #endif
@@ -3363,9 +3374,9 @@ static unsigned long stream_upload(const void *data, unsigned long size)
 	return offset;
 }
 
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 /* stream_upload, with the D3DCOLOR elements of the stream turned from BGRA
-into the RGBA byte order ES reads */
+into the RGBA byte order ES/vitaGL reads */
 static unsigned long stream_upload_swizzled(const struct vertex_shader_object *declaration, unsigned long stream,
 	const unsigned char *data, unsigned long size, unsigned long stride)
 {
@@ -3379,15 +3390,33 @@ static unsigned long stream_upload_swizzled(const struct vertex_shader_object *d
 		const struct vertex_element *element = &declaration->elements[index];
 
 		if (element->stream == stream && element->type == D3DVSDT_D3DCOLOR)
+		{
+#ifdef HALO_VITA
+			if (count >= XGPU_VERTEX_ATTRIBUTE_COUNT)
+				vita_fatal("D3D8 color stream has too many declaration elements");
+			if (!stride || element->offset > stride || stride - element->offset < 4)
+				vita_fatal("D3D8 color element exceeds its stream stride");
+#endif
 			offsets[count++] = element->offset;
+		}
 	}
 	if (!count || !stride)
 		return stream_upload(data, size);
 	if (scratch_size < size)
 	{
+#ifdef HALO_VITA
+		if (size > ULONG_MAX - 65536)
+			vita_fatal("D3D8 color conversion size overflow");
+		unsigned char *replacement = malloc(size + 65536);
+		if (!replacement) vita_fatal("D3D8 color conversion allocation failed");
+		free(scratch);
+		scratch = replacement;
+		scratch_size = size + 65536;
+#else
 		free(scratch);
 		scratch_size = size + 65536;
 		scratch = malloc(scratch_size);
+#endif
 	}
 	memcpy(scratch, data, size);
 	for (vertex = 0; vertex + stride <= size; vertex += stride)
@@ -3435,8 +3464,8 @@ static void attribute_format(const struct vertex_element *element, GLint *size, 
 	case D3DVSDT_FLOAT2: *size = 2; *type = GL_FLOAT; break;
 	case D3DVSDT_FLOAT3: case D3DVSDT_FLOAT2H: *size = 3; *type = GL_FLOAT; break;
 	case D3DVSDT_FLOAT4: *size = 4; *type = GL_FLOAT; break;
-#ifdef HALO_ANDROID
-	/* ES has no BGRA attributes: stream_upload_swizzled swaps the bytes */
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
+	/* ES/vitaGL have no BGRA-size attributes: stream upload swaps bytes. */
 	case D3DVSDT_D3DCOLOR: *size = 4; *type = GL_UNSIGNED_BYTE; *normalized = GL_TRUE; break;
 #else
 	case D3DVSDT_D3DCOLOR: *size = GL_BGRA; *type = GL_UNSIGNED_BYTE; *normalized = GL_TRUE; break;
@@ -3524,7 +3553,7 @@ static void setup_streams(unsigned long first, unsigned long count)
 			const unsigned char *base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[stream].data);
 			unsigned long bytes = stride ? stride * count : 64;
 
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 			stream_offsets[stream] = stream_upload_swizzled(declaration, stream, base + first * stride, bytes, stride);
 #else
 			stream_offsets[stream] = stream_upload(base + first * stride, bytes);
@@ -3613,6 +3642,7 @@ void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_v
 		return;
 	trace_draw("draw", primitive_type, vertex_count, NULL);
 	setup_streams(start_vertex, vertex_count);
+	gl_check_errors("vertex streams");
 	if (primitive_type == D3DPT_QUADLIST)
 	{
 		unsigned long count;
@@ -3648,6 +3678,7 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 	index_extent(index_data, vertex_count, generation, mirrored, &minimum, &maximum);
 	trace_draw("indexed", primitive_type, vertex_count, NULL);
 	setup_streams(minimum, maximum - minimum + 1);
+	gl_check_errors("vertex streams");
 	if (mirrored)
 	{
 		/* the attributes start at vertex minimum */
@@ -3849,6 +3880,7 @@ void WINAPI D3DDevice_Clear(DWORD count, CONST D3DRECT *rectangles, DWORD flags,
 			target_pixel((float)(device.viewport.Y + device.viewport.Height), 1) - y0);
 		glClear(mask);
 		glDisable(GL_SCISSOR_TEST);
+		gl_check_errors("clear");
 		xgpu_gl_state_invalidate();
 		return;
 	}
@@ -3872,6 +3904,7 @@ void WINAPI D3DDevice_Clear(DWORD count, CONST D3DRECT *rectangles, DWORD flags,
 		glClear(mask);
 	}
 	glDisable(GL_SCISSOR_TEST);
+	gl_check_errors("clear rectangles");
 	xgpu_gl_state_invalidate();
 }
 

@@ -164,3 +164,7 @@ Date2026-10-01; A047. Menu readiness can fail after original rasterizer allocati
 ## D021 — Vita depth objects retain one owning FBO
 
 Date2026-10-01; A049/A050. Adapt the original D3D8 Z/stencil surface to vitaGL's exposed renderbuffer request API, retaining a separate handle from sampleable color textures. vitaGL6e7fe40 implements physical depth/stencil per framebuffer, not per renderbuffer; attaching one RB to multiple color-keyed FBOs would silently lose shared depth identity. Therefore cache the Vita depth FBO by depth handle and update only an equal-size color attachment. Never reattach the RB on a cache hit. Color-only read/copy FBOs remain keyed by color. Preserve original Z/stencil clears/tests; unsupported depth-only, size mismatch and depth sampling are not fake-success paths. Lazy physical allocation and STORE_DEPTH_STENCIL persistence remain hardware/build capability gates. Non-Vita backend behavior remains unchanged.
+
+## D022 — Reuse original streamed color conversion on Vita
+
+Date2026-10-01; A051 and renderer plan6.5. vitaGL rejects desktop's GL_BGRA attribute-size convention. Share the existing Android CPU B/R byte swap for declared D3DCOLOR elements, then use4 normalized unsigned bytes. Keep authored source data immutable and existing strides/registers/shader equations intact. Add bounded Vita allocation/declaration checks; do not assume color values are all white or remove color attributes. Immediate float-color path remains original. Host byte/format tests are not a hardware draw test.
