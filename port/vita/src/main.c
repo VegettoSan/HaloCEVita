@@ -4,14 +4,17 @@
 #include <psp2/kernel/threadmgr.h>
 #include <psp2/kernel/processmgr.h>
 #include <stdlib.h>
+#include <string.h>
 
 int main(void)
 {
 	int platform, core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
 	int root_active = 0, ui_disposed, renderer = 0;
+	int menu_input_sample_valid = 0;
 	char *vertex, *fragment;
 	char menu_map_path[320];
 	uint32_t user, cdram, phycont;
+	struct vita_gamepad_sample previous_menu_pad = {0};
 	platform = vita_platform_initialize();
 	vita_free_memory(&user, &cdram, &phycont);
 	vita_log("free memory user=%u cdram=%u phycont=%u; newlib heap cap=64MiB", user, cdram, phycont);
@@ -105,6 +108,26 @@ int main(void)
 		uint64_t begin = vita_time_us(), elapsed;
 		command = vita_controls_poll();
 		if (command < 0) break;
+#ifdef HALO_VITA_MENU_BRINGUP
+		if (root_active) {
+			struct vita_gamepad_sample menu_pad;
+			if (vita_read_gamepad(&menu_pad)) {
+				if (menu_input_sample_valid) {
+					uint16_t pressed = menu_pad.buttons & (uint16_t)~previous_menu_pad.buttons;
+					if (pressed & 0x0001) halo_vita_ui_process_menu_action(3);
+					if (pressed & 0x0002) halo_vita_ui_process_menu_action(4);
+					if (pressed & 0x0004) halo_vita_ui_process_menu_action(5);
+					if (pressed & 0x0008) halo_vita_ui_process_menu_action(6);
+					if (menu_pad.analog[0] && !previous_menu_pad.analog[0])
+						halo_vita_ui_process_menu_action(1);
+					if (menu_pad.analog[1] && !previous_menu_pad.analog[1])
+						halo_vita_ui_process_menu_action(7);
+				}
+				previous_menu_pad = menu_pad;
+				menu_input_sample_valid = 1;
+			}
+		}
+#endif
 #ifdef HALO_VITA_MENU_AUDIO
 		if (command == 2 && root_active) halo_vita_menu_audio_feedback_probe();
 #endif
@@ -112,8 +135,6 @@ int main(void)
 #ifndef HALO_VITA_MENU_BRINGUP
 			maps = vita_maps_verify();
 			if (memory && maps && vita_cache_probe(graphics, core, shaders) < 0) break;
-#else
-			vita_log("Cross remount disabled while original widgets are active");
 #endif
 		}
 #ifdef HALO_VITA_MENU_BRINGUP
