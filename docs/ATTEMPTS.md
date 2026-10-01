@@ -828,3 +828,21 @@ c6dc430b16964833cd27aa8e4f8c82ef6ace33ecdf30fc8b4aeb6eeffeee143d  eboot.bin
 ```
 
 Deliver the local00.23 VPK for a distinct hardware run. Preserve exact matching ELF/map for crashes. Expected logs include the00.23 banner, VITA WORLD staged-owner limit, first/second Present and ideally frame30/120; compare visible logo/labels/animated effects and responsiveness. No promise that labels or full world/audio are fixed. Remote remains0efb6e4 because automatic review rejected push; local focused commits91aa9bd/44e51bb/e47704e/58afabf/42c41f5 are preserved for approved publication.
+
+
+## 2026-10-01 — A069 — Publish preserved00.23 progress after renewed authorization
+
+**Authorization:** the user explicitly requested another push and required the progress to remain in VegettoSan/HaloCEVita. This is fresh authorization after the rejected attempts recorded in A064/A068; those historical failures remain above.
+
+**Command/result:** git push origin main failed with `fatal: could not read Username for https://github.com: No such device or address`. The terminal has no GitHub credential helper. Published the same six focused changes using the authenticated GitHub connector: create each tree from the prior tree, verify its SHA against the local tree, create the sequential commit, then update main with force=false. No published history was rewritten. GitHub assigns new commit metadata, so commit identifiers differ while every corresponding source tree is identical:
+
+| Local commit | Published commit |
+| --- | --- |
+| 91aa9bd | 61dfa7e |
+| 44e51bb | 5b33749 |
+| e47704e | 00fbc1e |
+| 58afabf | c528b42 |
+| 42c41f5 | 3995ae5 |
+| 4cb7922 | 362943e |
+
+**Verification:** GitHub main and git fetch both report362943ee662a9aa4ee7391fd8756a8e3fcb14958. git diff between preserved local HEAD and origin/main is empty; both final trees are94de4fabd690e3b6ae46b77345d6726d981dc3ef. Preserve the original local history on progress-00.23-local-4cb7922 and track the published history with main. Vita Build workflow132/run36823114339 was triggered by the publication and is still running at this checkpoint. The locally verified A068 package digests remain valid; its source tree is the same as published3995ae5. No new hardware/menu/world/audio result is claimed.
