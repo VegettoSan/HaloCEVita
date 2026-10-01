@@ -8,9 +8,58 @@
  * a narrow subset of the original event effects, without guessing runtime
  * layouts or creating a parallel Vita menu.
  */
+
+/*
+ * ui_widget_delete() resumes the world when the final pause-owning widget is
+ * destroyed.  That is correct once a gameplay world exists, but during the
+ * staged ui.map shell bring-up it reaches main_menu_ensure_player_queues_exist
+ * and game_time_start, which in turn pull the update server/client runtime into
+ * the otherwise UI-only Vita closure.  Keep January's delete/list/history code
+ * intact and redirect only those four world-resume calls in this translation
+ * unit.  The real functions remain untouched for the future gameplay closure.
+ */
+void halo_vita_menu_deferred_main_menu_ensure_player_queues_exist(void);
+void halo_vita_menu_deferred_game_time_dispose_from_old_map(void);
+void halo_vita_menu_deferred_game_time_initialize_for_new_map(void);
+void halo_vita_menu_deferred_game_time_start(void);
+
+#define main_menu_ensure_player_queues_exist halo_vita_menu_deferred_main_menu_ensure_player_queues_exist
+#define game_time_dispose_from_old_map halo_vita_menu_deferred_game_time_dispose_from_old_map
+#define game_time_initialize_for_new_map halo_vita_menu_deferred_game_time_initialize_for_new_map
+#define game_time_start halo_vita_menu_deferred_game_time_start
 #include "../../../source/interface/ui_widget.c"
+#undef game_time_start
+#undef game_time_initialize_for_new_map
+#undef game_time_dispose_from_old_map
+#undef main_menu_ensure_player_queues_exist
 
 #ifdef HALO_VITA
+static void halo_vita_log_deferred_world_resume(char const *operation)
+{
+    vita_log("[VITA UI TRANSITION] defer world resume operation=%s (ui.map shell has no gameplay world yet)",
+        operation ? operation : "<unknown>");
+}
+
+void halo_vita_menu_deferred_main_menu_ensure_player_queues_exist(void)
+{
+    halo_vita_log_deferred_world_resume("main_menu_ensure_player_queues_exist");
+}
+
+void halo_vita_menu_deferred_game_time_dispose_from_old_map(void)
+{
+    halo_vita_log_deferred_world_resume("game_time_dispose_from_old_map");
+}
+
+void halo_vita_menu_deferred_game_time_initialize_for_new_map(void)
+{
+    halo_vita_log_deferred_world_resume("game_time_initialize_for_new_map");
+}
+
+void halo_vita_menu_deferred_game_time_start(void)
+{
+    halo_vita_log_deferred_world_resume("game_time_start");
+}
+
 static struct widget_instance *halo_vita_menu_root(short controller_index)
 {
     long widget_index;
