@@ -289,3 +289,5 @@ A084 corrects KI-031's label interpretation using the exact user map: the option
 
 
 A085 source00.27 uses the original DXT3 decode fallback to isolate native compressed-mask sampling. Host actual decoder/uploader and raw9 menu frames pass; Vita visuals/performance/memory need a new test. DXT3 decoded GPU residency increases4x before alignment. DXT5 logo transparency and alpha1 build-number text remain distinct; a successful DXT3 experiment alone does not prove a complete UI or justify opacity changes.
+
+A086:00.27 required native build/host contracts/package verification/publication PASS (workflow145); matching symbols retained. Hardware visuals/performance/memory remain pending. Optional full UI/update link research still fails; native partial-menu package success does not close those owners.
