@@ -208,3 +208,5 @@ A05400.19 hardware loads first real shield-noise resource successfully and reach
 A054 validates KI-026 through real960x544 request/attachment, original clear and037W1. Shared depth identity across scenes and STORE_DEPTH_STENCIL remain separate unverified contracts. Active-root fatal cleanup/heap still lacks new evidence.
 
 KI-027 source correctionA05500.20: supported ROW_LENGTH0 for tight BGRA/DXT input, plus phase/level GL checks. Actual-function mock regression reproduces old alignment0x500 and passes corrected mip/row/failure contracts. Native texture GPU acceptance and visible image remain pending.
+
+A057 validation: KI-027 supported-row/mip correction and A056 low-resolution mode are included in native verified workflow121/source9405665/VPK00.20. Actual-function mocked upload/screen/FBO/Present contracts PASS. New320x240 mode, real texture GPU acceptance and visible Halo menu remain hardware gates; native context960x544 is intentional presentation. No GPU-overload diagnosis or measured FPS claim is inferred from00.19's unsupported-state exit.
