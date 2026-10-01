@@ -170,3 +170,6 @@ KI-022 source correction (A039/00.17): the bridge now validates prepared records
 ## KI-023 — Staged shell omitted state read by window end
 
 A042 source review finds original _rasterizer_window_end always calls main_get_window_count, which reads cinematic/player game-state pointers. The partial Vita game initialization left both NULL. Restore their original initialization/new-map owners plus original player-control storage and game-time state before first frame; do not replace the query with one. Host owner/query regression passes; native compile and real Vita confirmation remain necessary. Original scenario/BSP, input and audio/gameplay closure are still separate pending work.
+
+
+A044 validation: KI-022 and KI-023 source corrections compile/link and are included in verified workflow113/VPK00.17. Host metadata/state contract tests pass. Both issues remain awaiting the real Vita first-frame log; a CI pass does not demonstrate runtime resolution or visible Halo rendering.

@@ -39,3 +39,6 @@ The renderer closure is now enabled by default and the application loop invokes 
 
 
 A042 extends the staged owners before the first frame: original game_time_initialize/new-map, players_initialize/new-map (including real player_control_initialize), and cinematic_initialize/new-map. The original window-end path always calls main_get_window_count and its cinematic/player queries; these state pointers must be allocated even with no gameplay/local players. This preserves the original zero-player clamp to one window rather than overriding the query. 036S reports the actual count after initialization. A041 workflow109 LINKS; final A042 package/hardware evidence follows separately.
+
+
+Final A044 deliverable: workflow113/source b1b6f52 succeeds for original renderer closure, normal native package verification and publication. VPK00.17 SHA-256 e77c91cfee289e0d2b29d41e10990a0a0458d29ee786dbfb376563d786c9f5f9. Original root/frame/draw/present route is enabled; hardware HALO DRAW REACHED/RENDERS remains unverified. BUILD.md documents actual036S/037/038 and resource/shader/draw gates.

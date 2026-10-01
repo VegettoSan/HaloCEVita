@@ -6,6 +6,8 @@ Historical root deliverable is **00.11: BOOTS** (A031): the exact real-Vita log 
 
 ## 00.17 original menu render test
 
+**Latest test package:** [HaloCE.vpk00.17, workflow113](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-113/HaloCE.vpk), source b1b6f52, SHA-256 `e77c91cfee289e0d2b29d41e10990a0a0458d29ee786dbfb376563d786c9f5f9` (A044). Native verification/publication SUCCESS; real Vita display pending. Matching ELF/map: [release113](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-113).
+
 The default native CMake target now enables the real UI/rasterizer path (A038–A043), using user maps at `ux0:data/HaloCE/maps/`. GitHub Actions builds with `vitasdk/vitasdk:2026.08`, verifies the original draw/present/state-owner symbols, hard-float ABI/imports, SELF/SFO version/banner, package members and LiveArea assets, then uploads the VPK/ELF/map plus `artifacts.json`/`SHA256SUMS` and publishes the corresponding `vita-build-N` pre-release. Use the exact run/commit and digest recorded in the newest attempt; the older hash below belongs to the historical00.10 package.
 
 1. Install that workflow's `HaloCE.vpk` through VitaShell, replacing the existing HCEV00001 application. Keep the current maps and compiler installation used by the prior successful GPU test.

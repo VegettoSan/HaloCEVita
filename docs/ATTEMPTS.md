@@ -548,3 +548,22 @@ A043 final source review adds the exact short main_get_window_count(void) protot
 
 
 A043 native workflow111 compiles/links and creates SELF/VPK, then passes all verifier checks up to source provenance. It fails with git rev-parse HEAD exit128 inside the SDK container; old capture_output hid Git's own stderr. Restrict read-only Git metadata queries to this exact checkout with per-command safe.directory (container ownership boundary), and expose stderr for any future metadata failure. Do not globally trust all paths, fake the commit or bypass binary/package checks. Workflow112 contains the same verifier and is superseded by this correction; final success required before publication/delivery.
+
+
+## 2026-10-01 — A044 — Verified workflow113 package for real Vita test
+
+**Command/evidence:** GitHub Vita Build run36795140638 (#113), source main b1b6f52d8331a41035d20e71ccea95e154e79e06. Fetched the final job statuses, native job110156756578 log, workflow artifact metadata, and exact release vita-build-113. Renderer-closure, normal Vita build/verification/upload, and Publish Vita pre-release all complete SUCCESS. Release target_commitish matches that source commit. A042's original state owners and the A043 exact query prototype/package gate are included. Workflow112 retains the same exit128 provenance failure as111; neither is delivered.
+
+**Native results:** tools/vita_verify.py reports PASS: ELF32 ARM hard-float, required real core/UI/quad/D3D draw/present/state-owner symbols, no unexpected unresolved game hooks, valid Sony SELF/VPK/SFO/banner00.17, exact package contents, indexed LiveArea PNG assets and no retail data/compiler module. RX LOAD ends at0x810e0b08; init_array starts0x810f0000, length0x1c, constructor/destructor LOAD length0x20; actual vita-elf-create and SELF/VPK generation succeed. Existing wchar/enum linker warnings remain visible (KI-009); this is not a complete cross-unit ABI/hardware audit.
+
+**Published artifacts:**
+
+| Asset | Bytes | SHA-256 |
+|---|---:|---|
+| HaloCE.vpk | 631376 | e77c91cfee289e0d2b29d41e10990a0a0458d29ee786dbfb376563d786c9f5f9 |
+| HaloCE.elf | 10150548 | 39a3dfa2b22e1b28ff698a5d62a354bac96e8f262e1dc0835141199f1edeca55 |
+| HaloCE.elf.map | 2974633 | 9e0f931abaa8cca76232308919fca253457ed8212af4830276cd821bf63ff464 |
+
+The release VPK digest equals the verifier's actual CI log digest. Actions artifact11133740877 retains the same source-named VPK/ELF/map and new artifacts.json/SHA256SUMS (14 days). Release assets are independently available at [vita-build-113](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-113); [direct VPK](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-113/HaloCE.vpk), [workflow](https://github.com/VegettoSan/HaloCEVita/actions/runs/36795140638). No generated binary or retail data committed.
+
+**Result/limits:** final00.17 is LINKS, ready for the user console test in BUILD.md. Host cache58, relocation18, shader diagnostic9, sparse uniforms and actual bitmap/pair/shell owner contract cases pass as recorded in A040–A043. No new real-map files or Vita available here. HALO DRAW REACHED/RENDERS, visible menu, GPU acceptance of retail shaders, navigation, BSP/ring and game sound remain unverified/pending. Obtain the new00.17 debug log and visible result; on shader failure retain halo_vertex/pixel GLSL/Cg. Do not label the new package BOOTS or RENDERS based on CI.
