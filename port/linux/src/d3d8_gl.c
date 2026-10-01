@@ -658,7 +658,12 @@ static void *vertical_blank_thread(void *unused)
 	struct timespec next;
 
 	(void)unused;
+#ifdef HALO_VITA
+	if (clock_gettime(CLOCK_MONOTONIC, &next) != 0)
+		vita_fatal("Cannot read the original presentation clock");
+#else
 	clock_gettime(CLOCK_MONOTONIC, &next);
+#endif
 	for (;;)
 	{
 		D3DCALLBACK callback;
@@ -669,7 +674,13 @@ static void *vertical_blank_thread(void *unused)
 			next.tv_nsec -= 1000000000L;
 			next.tv_sec++;
 		}
+#ifdef HALO_VITA
+		if (!halo_vita_wait_monotonic_deadline(
+			(uint64_t)next.tv_sec * 1000000000ULL + (uint64_t)next.tv_nsec))
+			vita_fatal("Original presentation deadline wait failed");
+#else
 		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
+#endif
 
 		pthread_mutex_lock(&vertical_blank_lock);
 		vertical_blank_count++;
@@ -700,10 +711,16 @@ static void vertical_blank_start(void)
 		{
 			pthread_detach(thread);
 			vertical_blank_thread_started = TRUE;
+#ifdef HALO_VITA
+			vita_log("[VITA VBLANK] original 60Hz presentation worker started");
+#endif
 		}
 		else
 		{
 			platform_log("cannot start the vertical blank thread");
+#ifdef HALO_VITA
+			vita_fatal("Cannot start the original presentation worker; refusing an unserviceable flip queue");
+#endif
 		}
 	}
 	pthread_mutex_unlock(&vertical_blank_lock);
@@ -4202,6 +4219,12 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	}
 	platform_pump_events();
 
+#ifdef HALO_VITA
+	/* The staged menu skips main_initialize_time(), which normally installs
+	 * the vblank callback and starts this worker. Present still queues flips:
+	 * without their original consumer the third frame waits forever. */
+	vertical_blank_start();
+#endif
 	pthread_mutex_lock(&vertical_blank_lock);
 	/* the Xbox keeps at most two frames queued behind its 60 Hz display;
 	with interpolation, frames come at the real display's rate instead,

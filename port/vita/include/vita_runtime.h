@@ -13,6 +13,7 @@ int vita_read_gamepad(struct vita_gamepad_sample *sample);
 void vita_log(const char *format, ...) __attribute__((format(printf, 1, 2)));
 void vita_fatal(const char *reason) __attribute__((noreturn));
 uint64_t vita_time_us(void);
+int halo_vita_wait_monotonic_deadline(uint64_t deadline_ns);
 void vita_free_memory(uint32_t *user, uint32_t *cdram, uint32_t *phycont);
 int halo_vita_core_initialize(void);
 int halo_vita_verify_map(const void *header, size_t length, const char *name);

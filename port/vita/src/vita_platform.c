@@ -12,6 +12,7 @@
 #include <string.h>
 #include <strings.h>
 #include <pthread.h>
+#include <time.h>
 #include <SDL3/SDL.h>
 
 unsigned int _newlib_heap_size_user = 64 * 1024 * 1024;
@@ -54,6 +55,25 @@ int vita_read_gamepad(struct vita_gamepad_sample *sample)
 }
 
 uint64_t vita_time_us(void) { return sceKernelGetProcessTimeWide(); }
+/* VitaSDK lacks POSIX clock_nanosleep. Keep the absolute CLOCK_MONOTONIC
+ * deadline used by the original presentation worker, rechecking after every
+ * native relative delay so early wakeups cannot advance its vblank counters. */
+int halo_vita_wait_monotonic_deadline(uint64_t deadline_ns)
+{
+	struct timespec now;
+	for (;;) {
+		uint64_t current_ns, delay_us, remaining_ns;
+		if (clock_gettime(CLOCK_MONOTONIC, &now) != 0 || now.tv_sec < 0 ||
+			now.tv_nsec < 0 || now.tv_nsec >= 1000000000L) return 0;
+		current_ns = (uint64_t)now.tv_sec * 1000000000ULL + (uint64_t)now.tv_nsec;
+		if (current_ns >= deadline_ns) return 1;
+		remaining_ns = deadline_ns - current_ns;
+		delay_us = remaining_ns / 1000 + (remaining_ns % 1000 != 0);
+		/* Bound the SDK's 32-bit delay argument even for a distant deadline. */
+		if (delay_us > 1000000) delay_us = 1000000;
+		if (sceKernelDelayThread((unsigned int)delay_us) < 0) return 0;
+	}
+}
 void vita_log(const char *format, ...)
 {
 	char message[2304], line[2400]; va_list arguments;

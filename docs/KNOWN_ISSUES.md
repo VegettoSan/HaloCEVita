@@ -240,3 +240,10 @@ A06300.22 corrects KI-029's transfer/reallocation lifetime hazard with checked n
 ## KI-031 — Partial visible UI without scenario/update/audio
 
 A064/00.22: logo and rectangular backgrounds visible. Active Vita loop does not invoke original widget update, world render or HS camera/scenario update; music is explicitly deferred. Ordinary workflow131 passes; optional process_ui_widgets closure does not link (desktop pointer and full game/load/network/sound dependencies). Do not claim full ui.map execution from tag mount or UI-only Present. Missing labels require font/alpha and original widget timing investigation.
+
+
+## KI-032 — Staged menu Present queues flips without its vblank worker
+
+A070/00.23: real visible logo/backgrounds, two returned Presents, no frame30/120 and Start unresponsive. main_initialize_time normally starts the worker through the original vblank callback; staged startup skips it. With interpolation disabled, third Present waits forever after pending_flips reaches2 because no worker consumes flips. Actual host code reproduces the historical third-call hang. Vita Present now starts the same existing60Hz worker before queueing and fails explicitly on creation failure.120-frame/callback/interpolation/error host contracts pass. Native link and real console repeated-frame/Start verification remain required; later renderer stalls are not excluded.
+
+A071/00.24 native closure correction: the now-reachable worker exposes absent clock_nanosleep; use a checked absolute CLOCK_MONOTONIC/native kernel-delay bridge instead. Native VPK links, host actual120-frame and deadline/error cases pass. Real Vita third/frame30/frame120/input/exit remain the acceptance gates. Full UI/labels/world/audio are still KI-031.

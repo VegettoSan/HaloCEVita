@@ -243,6 +243,8 @@ int halo_vita_renderer_render_menu_frame(void)
     vita_menu_frame_count++;
     if (vita_menu_frame_count == 2)
         vita_log("[VITA 041] second original Main Menu frame begin");
+    else if (vita_menu_frame_count == 3)
+        vita_log("[VITA 041] third original Main Menu frame begin");
 
     csmemset(&frame_parameters, 0, sizeof(frame_parameters));
     csmemset(&window_parameters, 0, sizeof(window_parameters));
@@ -328,6 +330,8 @@ int halo_vita_renderer_render_menu_frame(void)
         vita_first_menu_frame = FALSE;
     } else if (vita_menu_frame_count == 2) {
         vita_log("[VITA 041] second original Main Menu frame presented");
+    } else if (vita_menu_frame_count == 3) {
+        vita_log("[VITA 041] third original Main Menu frame presented");
     } else if (vita_menu_frame_count == 30 || vita_menu_frame_count == 120) {
         vita_log("[VITA 041] original Main Menu loop alive frame=%lu", vita_menu_frame_count);
     }

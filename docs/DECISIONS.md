@@ -205,3 +205,8 @@ A066: compare guest texture bytes at every bind; skip GPU reupload only when an 
 ## D030 — Reuse original native frame time for the staged renderer
 
 A067: expose original main_update_time_unthrottled through a Vita-only bridge; advance original UI render timestamp from the same real system clock. This restores the time inputs used by existing render equations while full process_ui_widgets is still unlinked. Keep original clamps/profiler/frame index. It supplies no event, automatic close, scenario tick, gameplay, input or audio update and must be reconciled when full main_loop owns these clocks.
+
+
+## D031 — Start the original presentation consumer at staged Vita Present
+
+Date2026-10-01; A070/KI-032. Keep the backend60Hz worker, two-flip limit, counters, callback and pthread synchronization. Vita Present must ensure this consumer exists because the staged root/render loop bypasses main_initialize_time. This is lazy platform lifecycle restoration, not a fake completion counter or an interpolation/queue bypass. Worker creation failure stops explicitly. The original complete-main callback can later reuse the same worker; desktop/Android paths remain unchanged.
