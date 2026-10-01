@@ -28,6 +28,7 @@ Conventions carried over from the Xbox:
 #ifdef HALO_VITA
 #include "../../vita/include/vita_runtime.h"
 #include "../../vita/include/halo_vita_program.h"
+#include "../../vita/include/halo_vita_graphics.h"
 #endif
 
 #include <math.h>
@@ -102,6 +103,13 @@ static void screen_mode_choose(long *width, float scale[2])
 		*width = 1600;
 	*width &= ~1L;
 	scale[0] = scale[1] = 1.0f;
+#elif defined(HALO_VITA)
+	/* Halo's authored UI and original rasterizer use 640x480. Reuse the
+	 * backend's target/viewport/clear scaling instead of shrinking the
+	 * game's coordinate system or rendering at panel resolution. */
+	*width = HALO_VITA_GAME_WIDTH;
+	scale[0] = (float)HALO_VITA_RENDER_WIDTH / (float)HALO_VITA_GAME_WIDTH;
+	scale[1] = (float)HALO_VITA_RENDER_HEIGHT / (float)SCREEN_HEIGHT;
 #else
 	long display_width, display_height;
 
@@ -287,7 +295,6 @@ static struct framebuffer_entry *framebuffers;
 /* ---------- the device */
 
 #if defined(HALO_VITA)
-#include "../../vita/include/halo_vita_graphics.h"
 #define STREAM_BUFFER_SIZE HALO_VITA_STREAM_SIZE
 #define INDEX_BUFFER_SIZE HALO_VITA_INDEX_SIZE
 #define STREAM_BUFFER_RING HALO_VITA_STREAM_RING

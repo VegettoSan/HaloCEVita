@@ -14,6 +14,8 @@ s = (root / 'port/linux/src/d3d8_gl.c').read_text()
 structs = s[s.index('struct render_target_entry\n'):s.index('/* ---------- the device */')]
 targets = s[s.index('static struct render_target_entry *render_target_get('):s.index('/* the pixels per unit')]
 bind = s[s.index('static BOOL bind_targets('):s.index('/* ---------- device creation */')]
+screen = s[s.index('#define SCREEN_HEIGHT'):s.index('/* ---------- state the XDK')]
+header = (root / 'port/vita/include/halo_vita_graphics.h').read_text()
 prefix = r'''
 #include <assert.h>
 #include <stdarg.h>
@@ -35,22 +37,22 @@ prefix = r'''
 #define GL_COLOR_ATTACHMENT0 8
 #define GL_DEPTH_STENCIL_ATTACHMENT 9
 #define GL_FRAMEBUFFER_COMPLETE 10
-typedef int BOOL, GLsizei;
+typedef int BOOL, GLsizei, GLint;
 typedef unsigned GLuint, GLenum;
 typedef struct { unsigned long Data, width, height; int depth; } D3DSurface;
 struct xgpu_render_target { unsigned long data, width, height, gl_width, gl_height;
     int depth; float scale[2]; GLuint texture; };
-static float screen_scale[2] = {960.0f/846.0f, 544.0f/480.0f};
 static float target_scale[2];
 static struct { D3DSurface *render_target, *depth_stencil; unsigned long frame; } device;
 static GLuint nt = 1, nr = 100, nf = 200, bound_rb, bound_fb, selected_fb;
 static int textures, renderbuffers, fbo_count, texture_attaches, depth_attaches, deleted_rb, deleted_fb;
+static int rb_width,rb_height,tex_width,tex_height;
 static GLenum error, status = GL_FRAMEBUFFER_COMPLETE;
 static int fail_storage, fail_attach, zero_rb, zero_fb, invalidations;
 static jmp_buf fatal;
 static void vita_log(const char *f, ...) { (void)f; }
 _Noreturn static void vita_fatal(const char *f, ...) { (void)f; longjmp(fatal, 1); }
-static unsigned long halo_screen_width(void) { return 846; }
+static void platform_log(const char *f, ...) { (void)f; }
 static void surface_dimensions(const D3DSurface *s, unsigned long *w, unsigned long *h, BOOL *d)
 { *w=s->width; *h=s->height; *d=s->depth; }
 static void xgpu_gl_state_invalidate(void) { invalidations++; }
@@ -58,12 +60,12 @@ static void state_framebuffer(GLuint f) { selected_fb = f; }
 static void glGenTextures(GLsizei n, GLuint *v) { assert(n==1); *v=nt++; textures++; }
 static void glBindTexture(GLenum t, GLuint v) { assert(t==GL_TEXTURE_2D && v<100); }
 static void glTexImage2D(GLenum t, int l, int i, GLsizei w, GLsizei h, int b, GLenum f, GLenum y, const void *p)
-{ assert(t==GL_TEXTURE_2D && !l && i==GL_RGBA8 && w>0 && h>0 && !b && f==GL_BGRA && y==GL_UNSIGNED_BYTE && !p); }
+{ assert(t==GL_TEXTURE_2D && !l && i==GL_RGBA8 && w>0 && h>0 && !b && f==GL_BGRA && y==GL_UNSIGNED_BYTE && !p); tex_width=w;tex_height=h; }
 static void glDeleteTextures(GLsizei n, const GLuint *v) { assert(n==1 && *v<100); }
 static void glGenRenderbuffers(GLsizei n, GLuint *v) { assert(n==1); *v=zero_rb?0:nr++; renderbuffers++; }
 static void glBindRenderbuffer(GLenum t, GLuint v) { assert(t==GL_RENDERBUFFER && (!v || (v>=100 && v<200))); bound_rb=v; }
 static void glRenderbufferStorage(GLenum t, GLenum f, GLsizei w, GLsizei h)
-{ assert(t==GL_RENDERBUFFER && f==GL_DEPTH24_STENCIL8 && bound_rb && w>0 && h>0); if(fail_storage)error=0x501; }
+{ assert(t==GL_RENDERBUFFER && f==GL_DEPTH24_STENCIL8 && bound_rb && w>0 && h>0); rb_width=w;rb_height=h; if(fail_storage)error=0x501; }
 static void glDeleteRenderbuffers(GLsizei n, const GLuint *v) { assert(n==1 && *v>=100 && *v<200); deleted_rb++; }
 static void glGenFramebuffers(GLsizei n, GLuint *v) { assert(n==1); *v=zero_fb?0:nf++; fbo_count++; }
 static void glBindFramebuffer(GLenum t, GLuint v) { assert(t==GL_FRAMEBUFFER && v>=200); bound_fb=v; }
@@ -78,12 +80,14 @@ static void glDeleteFramebuffers(GLsizei n, const GLuint *v) { assert(n==1 && *v
 suffix = r'''
 #define FAIL(call) do { if (!setjmp(fatal)) { call; assert(!"expected fatal"); } } while(0)
 int main(void) {
-    D3DSurface c={0x1000,846,480,0}, d={0x2000,846,480,1}, c2={0x3000,846,480,0};
+    assert(halo_screen_width()==640); halo_screen_ui_offset(TRUE); assert(UI_OFFSET==0);
+    D3DSurface c={0x1000,640,480,0}, d={0x2000,640,480,1}, c2={0x3000,640,480,0};
     BOOL has_depth=0;
     assert(!render_target_get(NULL));
     D3DSurface empty={0}; assert(!render_target_get(&empty));
     struct render_target_entry *ce=render_target_get(&c), *de=render_target_get(&d);
-    assert(ce->target.gl_width==960 && ce->target.gl_height==544);
+    assert(ce->target.gl_width==320 && ce->target.gl_height==240);
+    assert(rb_width==320 && rb_height==240 && tex_width==320 && tex_height==240);
     assert(ce->target.texture==1 && !ce->depth_buffer);
     assert(de->depth_buffer==100 && !de->target.texture);
     assert(render_target_get(&c)==ce && render_target_get(&d)==de && textures==1 && renderbuffers==1);
@@ -121,6 +125,6 @@ int main(void) {
 }
 '''
 source = out / 'targets.c'
-source.write_text(prefix + structs + targets + bind + suffix)
+source.write_text(prefix + header + screen + structs + targets + bind + suffix)
 subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(source), '-o', str(out/'targets')], check=True)
 subprocess.run([str(out/'targets')], check=True)

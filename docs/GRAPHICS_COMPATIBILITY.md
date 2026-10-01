@@ -158,3 +158,7 @@ A05100.19: glVertexAttribPointer in primary vitaGL6e7fe40/source/custom_shaders.
 ## A054/A055 pixel-store upload boundary
 
 00.19 hardware returns0x500 after the first real shield-noise bitmap read, with no draw/present. Primary vitaGL6e7fe40/source/textures.c glPixelStorei accepts only UNPACK_ROW_LENGTH; UNPACK_ALIGNMENT is declared but rejected.00.20 preserves original DXT blocks and tightly packed decoded32-bit BGRA, setting supported ROW_LENGTH0 under Vita. Desktop/Android retain alignment1. Check bind/incoming state, row setup and each mip separately; failure logs phase/level rather than attributing stale state errors to a compressed format. Actual-function host tests cover DXT1/3/5, observed DXT3 mip metadata and odd-width BGRA with mocked GPU/decode. Actual texture acceptance/sampling/render remains hardware pending.
+
+## A056 low-resolution screen policy
+
+Vita keeps original640x480 coordinates and scales screen targets to320x240 with the existing original backend scale mechanism; non-screen assets/targets stay intact. Native context/display remains960x544 for final original aspect-preserving upscale/letterbox.320x240 is85.3% fewer screen-target pixels vs previous960x544, not measured overall GPU cost. Actual screen/Present/FBO host bodies pass640/.5, odd-edge rounding, separate color/depth320x240 requests and centered4:3 blit; Android/desktop chooser behavior preserved. Hardware/native acceptance remains required.00.19 closure was unsupported pixel-store state, not observed GPU saturation.

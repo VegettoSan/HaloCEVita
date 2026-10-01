@@ -7,19 +7,19 @@
 #include <stdlib.h>
 #include <string.h>
 
-/* Xbox D3D8 backend display contract. The Vita framebuffer is 960x544. */
+/* Native panel/presentation size, independent of the internal Halo targets. */
 int platform_screen_mode(long *width, long *height)
 {
 	if (!width || !height) return 0;
-	*width = 960;
-	*height = 544;
+	*width = HALO_VITA_DISPLAY_WIDTH;
+	*height = HALO_VITA_DISPLAY_HEIGHT;
 	return 1;
 }
 
 void platform_video_drawable_size(int *width, int *height)
 {
-	if (width) *width = 960;
-	if (height) *height = 544;
+	if (width) *width = HALO_VITA_DISPLAY_WIDTH;
+	if (height) *height = HALO_VITA_DISPLAY_HEIGHT;
 }
 
 void platform_video_swap(void)
@@ -64,7 +64,8 @@ int vita_graphics_initialize(void)
 	 * normal return at 960x544. Treating it as failure left its splash on
 	 * screen while our input loop continued without submitting any frames.
 	 * Source: vitaGL/source/vgl.c sets vgl_inited then returns res_fallback. */
-	resolution_fallback = vglInitWithCustomSizes(HALO_VITA_LEGACY_SIZE, 960, 544,
+	resolution_fallback = vglInitWithCustomSizes(HALO_VITA_LEGACY_SIZE,
+		HALO_VITA_DISPLAY_WIDTH, HALO_VITA_DISPLAY_HEIGHT,
 		HALO_VITA_GL_RAM_SIZE, HALO_VITA_GL_CDRAM_SIZE, 0, 0, SCE_GXM_MULTISAMPLE_NONE);
 	glGetIntegerv(GL_VIEWPORT, viewport);
 	version = glGetString(GL_VERSION);
@@ -77,6 +78,10 @@ int vita_graphics_initialize(void)
 	}
 	vita_log("GL vendor=%s renderer=%s version=%s GLSL=%s", glGetString(GL_VENDOR),
 		glGetString(GL_RENDERER), version, glGetString(GL_SHADING_LANGUAGE_VERSION));
+	vita_log("Vita render policy: game=%dx%d internal=%dx%d display=%dx%d; original aspect/letterbox",
+		HALO_VITA_GAME_WIDTH, HALO_VITA_GAME_HEIGHT,
+		HALO_VITA_RENDER_WIDTH, HALO_VITA_RENDER_HEIGHT,
+		HALO_VITA_DISPLAY_WIDTH, HALO_VITA_DISPLAY_HEIGHT);
 	glViewport(0, 0, viewport[2], viewport[3]);
 	vita_free_memory(&user, &cdram, &phycont);
 	vita_log("free memory after vitaGL user=%u cdram=%u phycont=%u", user, cdram, phycont);

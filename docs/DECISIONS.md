@@ -172,3 +172,7 @@ Date2026-10-01; A051 and renderer plan6.5. vitaGL rejects desktop's GL_BGRA attr
 ## D023 — Express tight upload rows through supported vitaGL pixel state
 
 Date2026-10-01; A054/A055. Preserve original Xbox decoding and direct DXT uploads; replace only the Vita unsupported UNPACK_ALIGNMENT request with supported UNPACK_ROW_LENGTH0. Decoded output is tightly packed32-bit BGRA, and compressed blocks do not consume byte-row alignment. Reset row stride explicitly without altering authored texture dimensions, compression, mip offsets or cache data. Check every upload phase/level. Do not call a declared-but-rejected token, suppress0x500, discard mip levels or replace the real bitmap with a placeholder.
+
+## D024 — Scale screen targets while retaining original Xbox coordinate space
+
+Date2026-10-01; A056, explicit user request. Choose original640x480 game/UI coordinates and320x240 internal screen color/depth through existing screen_scale0.5. Preserve original viewport/clear/scissor/texture-target and aspect-preserving Present behavior; keep native960x544 context as the final display surface. This avoids unsupported sub640 game coordinates and an untested new scanout mode.4:3 presentation is intentional, with side bars. Named platform dimensions make policy and logs explicit. Native display memory/non-screen resources/CPU arena remain; pixel-count reduction is not an FPS or GPU-overload-resolution claim. Hardware must verify the new mode before RENDERS.
