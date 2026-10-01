@@ -1113,3 +1113,8 @@ Commands: python3 tools/vita_ui_effects_regression.py PASS actual original dispa
 Source00.32 adds original saved_game_files/player_profile/playlist_profile/thread_win32 owners and the native port's real pthread kernel services. XAPI file layer adds counted read/write, size, create/rename/remove/permissions, real ux0 free-space query and directory iteration; XDK FindFirst/Next produces directory records through an SDK-layout-isolated boundary. Original save containers/signatures from xbox_xapi retain content-dependent validation; no fixed fake profile or success-only file stub. Initialize saved-game owners before original player UI/root. Enable original profile creation/list/edit/color/controller/variant settings and nonnetwork descriptions. Remaining network/world handlers still report unsupported; keyboard initialization/queue integration is next. Native SDK build is the dependency gate, not evidence of full console UI.
 
 A095 native Vita Build169/run36937344982 required build/contracts/publication PASS. New profile closure/native filesystem changes require their own SDK and contract validation; do not deliver or claim every screen until those gates pass.
+
+
+## 2026-10-01 — A097 — Resume interrupted shell integration, fix native declarations
+
+Remote main f6debea contains A094–A096; local pending keyboard/frame changes were preserved while synchronizing the local branch. Vita Build170/run36938017740 failed with static declaration follows non-static declaration for game_options_menu_update_text_desc/pic_desc, introduced by their earlier selective calls. Add exact static forward declarations. No SDK available locally; required native CI will validate the next closure. No all-window/hardware claim.

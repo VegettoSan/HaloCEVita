@@ -641,6 +641,9 @@ struct cached_variant_profile_entry
 
 /* ---------- prototypes */
 
+static void game_options_menu_update_text_desc(struct widget_instance *widget);
+static void game_options_menu_update_pic_desc(struct widget_instance *widget);
+
 static int list_indices_sort_proc(
 	void const *index1,
 	void const *index2);
