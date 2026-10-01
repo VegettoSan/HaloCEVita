@@ -602,10 +602,12 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 #ifdef HALO_ANDROID
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
 #elif defined(HALO_VITA)
-	/* A084: the UI labels are DXT3 alpha masks. Reuse the original decoder
-	 * to isolate direct UBC2 sampling while preserving pixels/equations.
-	 * DXT1 and DXT5 retain native compression. Hardware result is pending. */
-	decode_compressed = description->compressed && information.kind == _texel_dxt3;
+	/* A087: decoded DXT3 restores option lettering on hardware. The logo
+	 * still has a gray rectangle although its DXT5 source is mostly alpha0.
+	 * Use the same original decoder for alpha-bearing DXT3/DXT5 so both
+	 * preserve authored coverage at the checked BGRA upload boundary. */
+	decode_compressed = description->compressed &&
+		(information.kind == _texel_dxt3 || information.kind == _texel_dxt5);
 #endif
 	#ifdef HALO_VITA
 	if (!description->width || !description->height || !description->depth ||
@@ -628,8 +630,8 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	if (decode_compressed) {
 		static unsigned decoded_masks_logged;
 		if (decoded_masks_logged++ < 8)
-			vita_log("[VITA DXT3] original CPU decoder selected: dims=%lux%lux%lu levels=%lu source_bytes_per_face=%lu staging_bytes=%lu",
-				description->width, description->height, description->depth, description->levels,
+			vita_log("[VITA DXT ALPHA] original CPU decoder selected: kind=%u dims=%lux%lux%lu levels=%lu source_bytes_per_face=%lu staging_bytes=%lu",
+				(unsigned)information.kind, description->width, description->height, description->depth, description->levels,
 				face_size, largest * sizeof(unsigned long));
 	}
 #endif
