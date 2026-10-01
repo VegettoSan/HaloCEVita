@@ -94,6 +94,10 @@ int main(void)
 		vita_log("MAIN MENU BLOCKED: original root creation did not complete");
 		goto cleanup;
 	}
+	if (!halo_vita_ui_activate_main_menu_state()) {
+		vita_log("MAIN MENU BLOCKED: original Main Menu state transition did not complete");
+		goto cleanup;
+	}
 	vita_log("[VITA 032] original Main Menu root active; original renderer=%s",
 		renderer ? "READY" : "DISABLED");
 #ifdef HALO_VITA_MENU_UPDATE_PROBE
