@@ -21,6 +21,12 @@
 #undef CHAR_MIN
 #undef CHAR_BIT
 #define HALO_VITA 1
+/* Vita's generated NV2A vertex shader negates gl_Position.y to emulate
+ * Direct3D's upper-left window convention. That explicit clip-space flip
+ * reverses polygon winding, so route the original backend front-face calls
+ * through the Vita platform shim. The shim swaps CW/CCW exactly as the
+ * existing Android path does, while preserving Halo's D3DRS values. */
+#define glFrontFace halo_vita_glFrontFace
 #undef __fastcall
 #undef FD_SETSIZE
 #define __cdecl
