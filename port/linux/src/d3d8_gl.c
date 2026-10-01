@@ -31,7 +31,6 @@ Conventions carried over from the Xbox:
 #endif
 
 #include <math.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -3405,7 +3404,7 @@ static unsigned long stream_upload_swizzled(const struct vertex_shader_object *d
 	if (scratch_size < size)
 	{
 #ifdef HALO_VITA
-		if (size > ULONG_MAX - 65536)
+		if (size > ~0UL - 65536UL)
 			vita_fatal("D3D8 color conversion size overflow");
 		unsigned char *replacement = malloc(size + 65536);
 		if (!replacement) vita_fatal("D3D8 color conversion allocation failed");
