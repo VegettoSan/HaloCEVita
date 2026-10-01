@@ -248,6 +248,11 @@ static int halo_vita_move_menu_focus(
     long before_tag;
     boolean deleted = FALSE;
     boolean moved = FALSE;
+    boolean vertical = button_index == _widget_event_dpad_up ||
+        button_index == _widget_event_dpad_down;
+    boolean previous = button_index == _widget_event_dpad_up ||
+        button_index == _widget_event_dpad_left;
+    boolean tab_children = FALSE;
 
     /* January's Main Menu select list is a column list with the
      * _widget_dpad_updown_tabs_thru_list_items_bit.  Search the active focus
@@ -258,20 +263,23 @@ static int halo_vita_move_menu_focus(
         struct ui_widget_definition *definition =
             ui_widget_definition_get(widget->definition_tag_index);
 
-        if ((widget->type == _ui_widget_type_spinner_list ||
-             widget->type == _ui_widget_type_column_list) &&
-            ((button_index == _widget_event_dpad_up ||
-              button_index == _widget_event_dpad_down) &&
-             TEST_FLAG(definition->flags,
-                 _widget_dpad_updown_tabs_thru_list_items_bit)))
+        boolean children = widget->focused_child && TEST_FLAG(definition->flags,
+            vertical ? _widget_dpad_updown_tabs_thru_children_bit :
+                       _widget_dpad_leftright_tabs_thru_children_bit);
+        boolean items = (widget->type == _ui_widget_type_spinner_list ||
+            widget->type == _ui_widget_type_column_list) && TEST_FLAG(definition->flags,
+            vertical ? _widget_dpad_updown_tabs_thru_list_items_bit :
+                       _widget_dpad_leftright_tabs_thru_list_items_bit);
+        if (children || items)
         {
             target = widget;
+            tab_children = children;
         }
     }
 
     if (!target)
     {
-        vita_log("[VITA UI INPUT] focus button=%d ignored: focused chain has no vertical list",
+        vita_log("[VITA UI INPUT] focus button=%d ignored: focused chain has no matching tab/list policy",
             (int)button_index);
         return FALSE;
     }
@@ -279,10 +287,18 @@ static int halo_vita_move_menu_focus(
     before = target->focused_child;
     list_tag = target->definition_tag_index;
     before_tag = before ? before->definition_tag_index : NONE;
-    if (button_index == _widget_event_dpad_up)
+    if (tab_children)
+    {
+        if (previous)
+            widget_instance_tab_to_previous_valid_widget(target);
+        else
+            widget_instance_tab_to_next_valid_widget(target);
+        moved = before != target->focused_child;
+    }
+    else if (previous)
         moved = widget_event_function_list_widget_goto_previous_item(
             target, event, &deleted);
-    else if (button_index == _widget_event_dpad_down)
+    else
         moved = widget_event_function_list_widget_goto_next_item(
             target, event, &deleted);
 
@@ -291,7 +307,7 @@ static int halo_vita_move_menu_focus(
      * resetting the others to frame 0.  Keep that exact owner rather than a
      * Vita-side highlight or hard-coded Main Menu bitmap choice. */
     if (!deleted)
-        halo_vita_sync_list_visual_state(target);
+        halo_vita_sync_focus_chain_visuals(root);
 
     /* Original list callbacks may delete the calling list. */
     after = deleted ? NULL : target->focused_child;
@@ -573,15 +589,9 @@ int halo_vita_ui_process_menu_action(short action)
     event.data.button.index = (byte)button_index;
     event.data.button.value = 1;
 
-    if (button_index == _widget_event_dpad_up ||
-        button_index == _widget_event_dpad_down)
+    if (button_index >= _widget_event_dpad_up &&
+        button_index <= _widget_event_dpad_right)
         return halo_vita_move_menu_focus(root, button_index, &event);
-
-    /* Left/right are intentionally not remapped to up/down.  Menus that own
-     * horizontal lists will get their original list contract when staged. */
-    if (button_index == _widget_event_dpad_left ||
-        button_index == _widget_event_dpad_right)
-        return FALSE;
 
     return halo_vita_dispatch_focused_button(root, button_index, &event);
 }
