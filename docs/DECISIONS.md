@@ -145,3 +145,8 @@ Date 2026-09-30; A038/A039. The original cache loader does not run bitmap-group 
 ## D017 — Cache complete eager NV2A shader pairs on Vita
 
 Date 2026-09-30, A041. vitaGL SHADER_PAIR alternates its varying-semantic pool per actual compile. Vita therefore caches the original generated VS+PS together, keyed by original vertex ID/packed declaration/immediate flag and complete original pixel key, and compiles both in explicit order. Reuse the existing program linker, attribute binding and original shader generators; preserve independent caches elsewhere. Avoid POSTPONED (A014 NULL-program crash), dependence on C argument order, or pair state left half-complete by independent cache misses. Uniform arrays use individually queried active element locations. This changes the graphics platform boundary, not the game's material/shader equations. Pair-cache retention until process exit matches the staged renderer's existing program lifetime; reset/teardown work remains separate.
+
+
+## D018 — Restore original shell-state owners used by rasterizer queries
+
+Date2026-10-01; A042. The UI-only frame still invokes original window-count and cinematic/player queries. Add the original clock/player/control/cinematic allocations and per-map resets under the Vita renderer owner instead of returning hardcoded query values or allocating imitation globals. Original gameplay/input updates remain disabled. State is allocated once from the existing process-lifetime game-state buffer, as for the staged decal owner; full game_initialize integration must later reconcile these owners to avoid double allocations.

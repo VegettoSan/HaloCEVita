@@ -165,3 +165,8 @@ Blocking visible Main Menu. A038 real Vita reaches 036T then asserts at xbox_tex
 
 
 KI-022 source correction (A039/00.17): the bridge now validates prepared records without mutations; hardware confirmation pending. The assertion itself remains unchanged. A host regression also exposes a pre-existing compressed tag-read integrity regression: prefix completion can return before a damaged/truncated zlib trailer. Track the full tag validation separately from prefix resource reads.
+
+
+## KI-023 — Staged shell omitted state read by window end
+
+A042 source review finds original _rasterizer_window_end always calls main_get_window_count, which reads cinematic/player game-state pointers. The partial Vita game initialization left both NULL. Restore their original initialization/new-map owners plus original player-control storage and game-time state before first frame; do not replace the query with one. Host owner/query regression passes; native compile and real Vita confirmation remain necessary. Original scenario/BSP, input and audio/gameplay closure are still separate pending work.

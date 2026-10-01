@@ -1,10 +1,10 @@
 # Project status
 
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 Latest hardware evidence **00.16: BOOTS / render BLOCKED** (A038): native game state, typed UI mount, original Xbox rasterizer/device initialization and texture-cache per-map open return on real Vita. Bitmap activation then halts at `xbox_texture_cache.c:157 !TEST_FLAG(bitmap->flags, _bitmap_cached_bit)`. The staged bridge repeats tag postprocess on a compiled-cache bitmap. No original draw/present has been observed. Older 00.13 source/link descriptions below are historical and superseded by the 00.16 source and this exact log.
 
-Current source package **00.17** (A039–A041): compiled bitmap offsets preserved, full startup zlib validation restored, standalone pregame window lifecycle corrected, original NV2A pairs cached/compiled eagerly in explicit order, and sparse pixel uniforms uploaded by actual locations. The two earlier 00.17 source commits compile/link successfully in Vita CI; the final A041 commit requires its own workflow result. Real Main Menu draw/render and input remain unverified. The pipeline is enabled in the delivered build; it no longer stops deliberately at a link-only renderer probe.
+Current source package **00.17** (A039–A042): compiled bitmap offsets preserved, full startup zlib validation restored, standalone pregame window lifecycle corrected, original NV2A pairs cached/compiled eagerly in explicit order, and sparse pixel uniforms uploaded by actual locations. A041 source555c9fb compiled/linked and packaged successfully in Vita workflow109. A042 additionally restores original clock/player/cinematic state required by window end and requires a new native workflow before delivery. Real Main Menu draw/render and input remain unverified. The pipeline is enabled in the delivered build; it no longer stops deliberately at a link-only renderer probe.
 
 Maximum demonstrated project state: **DIAGNOSTIC RENDERS** (diagnostic + synthetic NV2A triangle on real Vita) (A016). Tested baseline **00.05** compiles both generated shaders, links successfully and draws the triangle per user observation. It remains responsive through header/input tests and Start clean exit at34.3s. Full Halo rendering/menu/gameplay, multipass position invariance and repeated stability remain unverified.
 

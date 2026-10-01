@@ -179,3 +179,96 @@ int main(void) {
     puts("PASS: actual NV2A pair cache orders both stages, distinguishes VS/PS/declaration/immediate and caches safe failures");
 }
 ''')
+
+# Execute the original game-state owners and the exact window-count queries.
+# Only allocation/data handles are mocked; no query returns a constant.
+def original(path, signature):
+    source = (ROOT / path).read_text()
+    start = source.index(signature)
+    brace = source.index('{', start)
+    level = 1
+    end = brace + 1
+    while level:
+        level += (source[end] == '{') - (source[end] == '}')
+        end += 1
+    return source[start:end] + '\n'
+
+owners = [
+    ('source/game/player_control.c', 'void player_control_initialize('),
+    ('source/game/player_control.c', 'void player_control_dispose('),
+    ('source/game/players.c', 'void players_initialize('),
+    ('source/game/players.c', 'void players_initialize_for_new_map('),
+    ('source/cutscene/cinematics.c', 'void cinematic_initialize('),
+    ('source/cutscene/cinematics.c', 'void cinematic_initialize_for_new_map('),
+    ('source/game/game_time.c', 'void game_time_initialize('),
+    ('source/game/game_time.c', 'void game_time_initialize_for_new_map('),
+    ('source/game/game_time.c', 'boolean game_time_initialized('),
+    ('source/game/game_time.c', 'long game_time_get('),
+    ('source/game/players.c', 'short local_player_count('),
+    ('source/cutscene/cinematics.c', 'boolean cinematic_in_progress('),
+    ('source/game/game_engine.c', 'boolean game_engine_force_single_screen('),
+    ('source/main/main.c', 'short main_get_window_count('),
+]
+run('shell-state', COMMON.replace('static void vita_log(const char *format, ...) { (void)format; }', '') + '''
+#define csmemset memset
+#define match_assert(file, line, expression) assert(expression)
+#define PIN(x, lo, hi) ((x) < (lo) ? (lo) : (x) > (hi) ? (hi) : (x))
+#define MAXIMUM_WINDOWS 4
+struct player_datum { char unused[16]; };
+struct data_array { int valid; };
+struct players_globals {
+    long local_players[4], dead_units[4], unknown0;
+    int local_player_count, input_disabled, double_speed_ticks, all_dead;
+    long pending_teleport_starting_location_index, respawn_failure;
+};
+struct cinematic_global_data {
+    int in_progress; struct { long title_index, time; } queued_titles[4];
+};
+struct game_time_globals_struct { int initialized, active; long local_time; };
+struct control_state { char unused[64]; };
+static struct control_state *player_control_globals;
+static struct players_globals *players_globals;
+static struct cinematic_global_data *cinematic_globals;
+static struct game_time_globals_struct *game_time_globals;
+static struct data_array *player_data, *team_data;
+static long machine_to_player_table[16];
+static void *game_engine;
+static struct { int postgame_state; } game_engine_globals;
+static void *allocations[8]; static int allocation_count;
+static void *game_state_malloc(const char *name, const char *kind, size_t bytes) {
+    void *p = malloc(bytes); (void)name; (void)kind;
+    assert(p && allocation_count < 8); memset(p, 0xa5, bytes);
+    allocations[allocation_count++] = p; return p;
+}
+static struct data_array *game_state_data_new(const char *name, int count, size_t size) {
+    assert(count == 16 && size > 0);
+    return game_state_malloc(name, "data", sizeof(struct data_array));
+}
+static void data_make_valid(struct data_array *p) { p->valid = 1; }
+''', ''.join(original(path, sig) for path, sig in owners), '''
+int main(void) {
+    int i;
+    game_time_initialize(); game_time_initialize_for_new_map();
+    players_initialize(); players_initialize_for_new_map();
+    cinematic_initialize(); cinematic_initialize_for_new_map();
+    assert(game_time_initialized() && game_time_get() == 0 && !game_time_globals->active);
+    assert(player_data->valid && team_data->valid && local_player_count() == 0);
+    assert(player_control_globals && !cinematic_in_progress());
+    assert(main_get_window_count() == 1); /* exact first window_end query */
+    for (i = 0; i < 4; ++i) {
+        assert(players_globals->local_players[i] == NONE);
+        assert(cinematic_globals->queued_titles[i].title_index == NONE);
+    }
+    players_globals->local_player_count = 2;
+    assert(main_get_window_count() == 2);
+    cinematic_globals->in_progress = TRUE;
+    assert(main_get_window_count() == 1);
+    cinematic_initialize_for_new_map();
+    assert(main_get_window_count() == 2);
+    players_initialize_for_new_map();
+    assert(main_get_window_count() == 1);
+    for (i = 0; i < allocation_count; ++i) free(allocations[i]);
+    puts("PASS: original shell state owns valid inactive clock/player/cinematic globals; exact window queries and resets");
+    return 0;
+}
+''')

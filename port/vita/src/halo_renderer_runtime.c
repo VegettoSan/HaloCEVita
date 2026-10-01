@@ -7,6 +7,9 @@
 #include "cseries.h"
 #include "cache/texture_cache.h"
 #include "effects/decals.h"
+#include "game/game_time.h"
+#include "game/players.h"
+#include "cutscene/cinematics.h"
 #include "math/real_math.h"
 #include "main/main.h"
 #include "render/render.h"
@@ -37,6 +40,7 @@ static boolean vita_renderer_ready;
 static boolean vita_texture_cache_opened;
 static boolean vita_bitmap_resources_ready;
 static boolean vita_decals_ready;
+static boolean vita_shell_state_ready;
 static boolean vita_first_menu_frame = TRUE;
 
 int halo_vita_renderer_initialize(void)
@@ -87,6 +91,23 @@ int halo_vita_renderer_initialize(void)
             return 0;
         }
         vita_bitmap_resources_ready = TRUE;
+    }
+
+    /* window_end -> main_get_window_count queries both cinematic and player
+     * globals even for one pregame window. Preserve game_initialize's owners
+     * and each subsystem's new-map reset, rather than replacing those queries
+     * with a constant or allowing a NULL game-state pointer at first present.
+     * The clock remains inactive and no local players/input are created. */
+    if (!vita_shell_state_ready) {
+        vita_log("[VITA 036S] original pregame clock/player/cinematic state begin");
+        game_time_initialize();
+        game_time_initialize_for_new_map();
+        players_initialize();
+        players_initialize_for_new_map();
+        cinematic_initialize();
+        cinematic_initialize_for_new_map();
+        vita_shell_state_ready = TRUE;
+        vita_log("[VITA 036S] original pregame state PASS; windows=%d", main_get_window_count());
     }
 
     /* game_initialize() owns decals_initialize(), which in turn creates the
