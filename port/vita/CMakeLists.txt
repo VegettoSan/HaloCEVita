@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.28")
+set(VITA_APP_VERSION "00.29")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
@@ -21,7 +21,7 @@ file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
   src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
-  src/vita_memory_watch.c
+  src/vita_memory_watch.c src/halo_ui_widget_vita.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
@@ -38,7 +38,6 @@ add_library(halo_core STATIC
   ${ROOT}/source/text/font_group.c
   ${ROOT}/source/text/text_group.c
   ${ROOT}/source/text/international_strings.c
-  ${ROOT}/source/interface/ui_widget.c
   ${ROOT}/source/interface/ui_widget_event_handler_functions.c
   ${ROOT}/source/interface/player_ui.c
   ${ROOT}/source/networking/network_game_globals.c
