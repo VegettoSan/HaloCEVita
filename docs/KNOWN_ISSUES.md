@@ -274,3 +274,12 @@ A078 source correction for KI-036:00.26 disk-backed logical resources eliminate 
 
 
 A080 follow-up to KI-031:00.25 decoded font pages contain transparent/opaque glyph coverage, while observed glyph vertex alpha is0. Tag/cumulative/output/packed color and retained first background shader sources are now bounded observations; no confirmed upstream alpha cause or opacity workaround. The staged renderer still emits UI-only draws. Missing scenario/model bitmaps require original world/camera/material draw integration, not a loop that displays every bitmap tag.00.26 needs new hardware debug/shader/photo evidence; the resumed local workspace has no retail ui.map for offline pixel/color inspection.
+
+
+A083 hardware00.26 follow-up: KI-035 Start's invalid LRU free no longer occurs in the supplied run; original manager/cache disposal and clean exit complete. KI-036 periodic audio cuts are absent by user report, Square effects are correct and29–30FPS are reported. One run does not establish repeated stability, fully asynchronous reads or full widget teardown.
+
+A083 refines KI-031: three observed text widget definitions already supply alpha0, retained through packed/glyph colors with cumulative alpha1; a fourth supplies alpha1. Original font shader multiplies texture/vertex alpha and atlas has0..255 coverage. Missing labels cannot all be attributed to upload or alpha without checking the remaining path. DXT image uploads bypass the decoded coverage trace, so background sampling/transparency remains unverified. Do not force alpha1, remove authored backgrounds or assume navigation/world update is complete.
+
+## KI-037 — Slow00.26 startup before resource activation
+
+User reports nearly one minute before logo. A083 log first menu Present72.56s, tag load7.28s and typed-relocation marker61.97s. Between tag load and relocation the source prepares a33582080-byte seekable map on disk; this gap is54.68s including relocation, without separate timing. Cold shaders/bounded tracing add first-frame latency. No audio/FPS regression during the prepared runtime is reported. Future optimization must preserve complete zlib/length validation, exact offsets, source identity and storage failure cleanup; a persistent copy accepted merely by name/version violates D036. Instrument individual preparation/relocation phases before claiming their separate timing or a startup improvement.
