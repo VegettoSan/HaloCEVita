@@ -5,7 +5,8 @@
  * does not link process_ui_widgets(): that routine also owns pause/attract/
  * filesystem/world update work which is outside the verified Main Menu
  * closure.  This wrapper reaches only the original focus/list primitives and
- * the already-staged event dispatcher, without guessing runtime layouts.
+ * a narrow subset of the original event effects, without guessing runtime
+ * layouts or creating a parallel Vita menu.
  */
 #include "../../../source/interface/ui_widget.c"
 
@@ -97,6 +98,94 @@ static struct widget_instance *halo_vita_deepest_focus(struct widget_instance *r
     return widget;
 }
 
+/* ui_widget_launch_widget() normally asks ui_widget_load_by_name_or_tag() to
+ * replace an existing root.  The bring-up guard inside the shared loader still
+ * rejects that broad lifecycle.  Perform only the already-original pieces in
+ * their normal order: remember the invoking/focus tags, delete the original
+ * root with ui_widget_delete(), then let the original loader push history and
+ * construct the requested ui.map root. */
+static struct widget_instance *halo_vita_open_original_root(
+    struct widget_instance *calling_widget,
+    long target_tag_index)
+{
+    struct widget_instance *top;
+    struct widget_instance *opened;
+    long invoking_widget_tag;
+    long focused_child_parent_widget_tag;
+    short focused_child_index;
+    short local_player_index;
+
+    if (!calling_widget || target_tag_index == NONE)
+        return NULL;
+
+    top = widget_instance_get_topmost_parent(calling_widget);
+    invoking_widget_tag = top->definition_tag_index;
+    focused_child_parent_widget_tag = calling_widget->parent
+        ? calling_widget->parent->definition_tag_index
+        : NONE;
+    focused_child_index = (short)widget_instance_get_child_index_from_parent(calling_widget);
+    local_player_index = calling_widget->local_player_index;
+
+    vita_log("[VITA UI TRANSITION] open begin from=%08lx target=%08lx focus_parent=%08lx focus_index=%d",
+        (unsigned long)invoking_widget_tag,
+        (unsigned long)target_tag_index,
+        (unsigned long)focused_child_parent_widget_tag,
+        (int)focused_child_index);
+
+    ui_widget_delete(top);
+    opened = ui_widget_load_by_name_or_tag(
+        NULL,
+        target_tag_index,
+        NULL,
+        local_player_index,
+        invoking_widget_tag,
+        focused_child_parent_widget_tag,
+        focused_child_index);
+
+    if (opened)
+    {
+        halo_vita_sync_focus_chain_visuals(opened);
+        vita_log("[VITA UI TRANSITION] open PASS root=%08lx focused=%08lx",
+            (unsigned long)opened->definition_tag_index,
+            opened->focused_child
+                ? (unsigned long)opened->focused_child->definition_tag_index
+                : (unsigned long)NONE);
+    }
+    else
+    {
+        vita_log("MAIN MENU BLOCKED: original target root %08lx failed to load",
+            (unsigned long)target_tag_index);
+    }
+
+    return opened;
+}
+
+static int halo_vita_go_back_original(struct widget_instance *root)
+{
+    struct widget_instance *restored;
+
+    if (!root || !widget_globals.widget_stack[0])
+        return FALSE;
+
+    vita_log("[VITA UI TRANSITION] back begin root=%08lx",
+        (unsigned long)root->definition_tag_index);
+    widget_instance_go_back_to_previous(root);
+    restored = halo_vita_menu_root(0);
+    if (!restored)
+    {
+        vita_log("MAIN MENU BLOCKED: original history pop produced no root");
+        return FALSE;
+    }
+
+    halo_vita_sync_focus_chain_visuals(restored);
+    vita_log("[VITA UI TRANSITION] back PASS root=%08lx focused=%08lx",
+        (unsigned long)restored->definition_tag_index,
+        restored->focused_child
+            ? (unsigned long)restored->focused_child->definition_tag_index
+            : (unsigned long)NONE);
+    return TRUE;
+}
+
 static int halo_vita_move_menu_focus(
     struct widget_instance *root,
     short button_index,
@@ -167,6 +256,154 @@ static int halo_vita_move_menu_focus(
     return moved && !deleted;
 }
 
+/* Execute only the generic original effects needed to traverse ui.map roots.
+ * Function handlers remain owned by ui_widget_event_handler_function_invoke()
+ * and therefore keep its explicit Vita allow-list.  Scenario scripts stay
+ * blocked: the staged shell has not initialized the HS/world closure. */
+static int halo_vita_dispatch_original_menu_handler(
+    struct widget_instance *widget,
+    struct ui_widget_definition *definition,
+    struct event_record *event,
+    struct ui_widget_event_handler_reference *handler)
+{
+    boolean widget_deleted = FALSE;
+    boolean function_failed = FALSE;
+    long audio_feedback = _ui_audio_feedback_none;
+
+    if (TEST_FLAG(handler->flags, _event_handler_run_scenario_script_bit) &&
+        handler->script[0])
+    {
+        vita_log("MAIN MENU BLOCKED: UI script '%s' needs original HS/world runtime",
+            handler->script);
+        return FALSE;
+    }
+
+    if (TEST_FLAG(handler->flags, _event_handler_run_function_bit))
+    {
+        halo_vita_ui_event_reset();
+        if (!ui_widget_event_handler_function_invoke(
+            widget, event, handler->function, &widget_deleted))
+            function_failed = TRUE;
+        if (widget_deleted)
+            return TRUE;
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_give_focus_to_widget_bit))
+    {
+        if (handler->widget_tag.index == NONE)
+            return FALSE;
+        widget_instance_give_focus_by_tag(
+            widget, handler->widget_tag.index, widget->local_player_index);
+        audio_feedback = _ui_audio_feedback_cursor;
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_reload_self_bit))
+        widget_instance_reload_recursive(widget);
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_reload_widget_bit))
+    {
+        if (handler->widget_tag.index == NONE)
+            return FALSE;
+        ui_widget_reload_by_tag(handler->widget_tag.index);
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_open_widget_bit))
+    {
+        if (!halo_vita_open_original_root(widget, handler->widget_tag.index))
+            return FALSE;
+        ui_play_audio_feedback_sound(
+            audio_feedback == _ui_audio_feedback_none
+                ? _ui_audio_feedback_forward
+                : audio_feedback);
+        return TRUE;
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_go_back_to_previous_widget_bit))
+    {
+        if (!halo_vita_go_back_original(widget_instance_get_topmost_parent(widget)))
+            return FALSE;
+        ui_play_audio_feedback_sound(_ui_audio_feedback_back);
+        return TRUE;
+    }
+
+    /* These deletion-only effects are safe after function/focus work because
+     * they use the original widget allocator and deletion recursion. */
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_close_other_widget_bit) &&
+        handler->widget_tag.index != NONE)
+    {
+        struct widget_instance *other =
+            widget_instance_find_by_tag_index(handler->widget_tag.index);
+        if (other && other != widget)
+            ui_widget_delete(other);
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_close_current_widget_bit))
+    {
+        ui_widget_delete(widget_instance_get_topmost_parent(widget));
+        ui_play_audio_feedback_sound(_ui_audio_feedback_back);
+        return TRUE;
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_close_all_widgets_bit))
+    {
+        ui_widgets_close_all();
+        return TRUE;
+    }
+
+    if (!function_failed &&
+        TEST_FLAG(handler->flags, _event_handler_replace_with_other_widget_bit))
+    {
+        /* Replacement is rarer than root open and has sibling relinking
+         * semantics. Keep it explicit until a reachable retail handler asks
+         * for it; never approximate it as a root transition. */
+        vita_log("MAIN MENU BLOCKED: replace-with-widget effect not staged target=%08lx",
+            (unsigned long)handler->widget_tag.index);
+        return FALSE;
+    }
+
+    if (function_failed &&
+        TEST_FLAG(handler->flags,
+            _event_handler_look_for_conditional_widget_on_failure_bit))
+    {
+        long conditional_index;
+
+        for (conditional_index = 0;
+            conditional_index < definition->conditional_widgets.count;
+            conditional_index++)
+        {
+            struct ui_widget_conditional_reference *conditional =
+                (struct ui_widget_conditional_reference *)
+                    definition->conditional_widgets.address + conditional_index;
+
+            if (TEST_FLAG(conditional->flags,
+                _conditional_widget_load_if_event_handler_function_fails_bit) &&
+                conditional->widget_tag.index != NONE)
+            {
+                if (!halo_vita_open_original_root(
+                    widget, conditional->widget_tag.index))
+                    return FALSE;
+                ui_play_audio_feedback_sound(_ui_audio_feedback_forward);
+                return TRUE;
+            }
+        }
+    }
+
+    if (function_failed || halo_vita_ui_event_failed())
+        return FALSE;
+
+    if (audio_feedback != _ui_audio_feedback_none)
+        ui_play_audio_feedback_sound((short)audio_feedback);
+    return TRUE;
+}
+
 static int halo_vita_dispatch_focused_button(
     struct widget_instance *root,
     short button_index,
@@ -177,7 +414,7 @@ static int halo_vita_dispatch_focused_button(
     /* Match January's focused-child propagation direction, but only dispatch
      * an explicitly matching handler.  This avoids the unrelated
      * input_has_gamepad/pause/update-server branches in the full recursive
-     * processor while preserving the original handler implementation. */
+     * processor while preserving the original handler data/effects. */
     while (widget)
     {
         struct ui_widget_definition *definition =
@@ -194,27 +431,28 @@ static int halo_vita_dispatch_focused_button(
 
             if (handler->event_type == button_index)
             {
-                boolean deleted = FALSE;
-
-                event_handler_dispatch(
-                    widget,
-                    definition,
-                    event,
-                    handler,
-                    &deleted);
-                vita_log("[VITA UI INPUT] dispatch button=%d widget=%08lx function=%d flags=%08lx deleted=%d blocked=%d",
+                int handled = halo_vita_dispatch_original_menu_handler(
+                    widget, definition, event, handler);
+                vita_log("[VITA UI INPUT] dispatch button=%d widget=%08lx function=%d flags=%08lx handled=%d failed=%d",
                     (int)button_index,
                     (unsigned long)widget->definition_tag_index,
                     (int)handler->function,
                     (unsigned long)handler->flags,
-                    (int)deleted,
-                    (int)vita_menu_dispatch_blocked);
-                return deleted ? FALSE : TRUE;
+                    handled,
+                    (int)halo_vita_ui_event_failed());
+                return handled;
             }
         }
 
         widget = widget->parent;
     }
+
+    /* Halo's root history is the natural B-button fallback when a screen has
+     * no explicit B handler. Keep that stack behavior rather than inventing
+     * per-screen Vita mappings. */
+    if (button_index == _widget_event_b_button &&
+        widget_globals.widget_stack[0])
+        return halo_vita_go_back_original(root);
 
     vita_log("[VITA UI INPUT] button=%d ignored: focused chain has no matching handler",
         (int)button_index);
