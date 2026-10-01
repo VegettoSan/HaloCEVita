@@ -61,6 +61,7 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     src/halo_renderer_globals.c
     src/halo_renderer_diagnostics.c
     src/halo_renderer_runtime.c
+    src/vita_texture_state.c
     ${ROOT}/source/bink/bink_playback.c
     ${ROOT}/source/cutscene/cinematics.c
     ${ROOT}/source/effects/particles.c
@@ -173,11 +174,14 @@ set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memor
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/port/linux/src/nv2a_vsh.c ${ROOT}/port/linux/src/nv2a_psh.c ${ROOT}/port/linux/src/xgpu_text.c
   PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)
-# vitaGL can natively store xbox_textures.c's converted BGRA bytes. Rename only
-# this source's upload entry point so the Vita wrapper selects that direct
-# internal format without changing the shared Linux/Android backend.
-set_source_files_properties(${ROOT}/port/linux/src/xbox_textures.c
-  PROPERTIES COMPILE_DEFINITIONS "glTexImage2D=halo_vita_glTexImage2D")
+# A texture-cache miss can invalidate d3d8_gl.c's GL shadow after the original
+# raster state was applied. Route only this backend's lookup calls through the
+# Vita bridge, which restores the same D3D blend state before the draw.
+set_source_files_properties(${ROOT}/port/linux/src/d3d8_gl.c
+  PROPERTIES COMPILE_DEFINITIONS "xgpu_texture_get=halo_vita_xgpu_texture_get")
+# Keep the shared decoded BGRA upload path. The 00.30 direct-internal-format
+# experiment did not change the hardware rectangles, so do not retain it as a
+# purported transparency fix.
 set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
