@@ -42,3 +42,6 @@ A042 extends the staged owners before the first frame: original game_time_initia
 
 
 Final A044 deliverable: workflow113/source b1b6f52 succeeds for original renderer closure, normal native package verification and publication. VPK00.17 SHA-256 e77c91cfee289e0d2b29d41e10990a0a0458d29ee786dbfb376563d786c9f5f9. Original root/frame/draw/present route is enabled; hardware HALO DRAW REACHED/RENDERS remains unverified. BUILD.md documents actual036S/037/038 and resource/shader/draw gates.
+
+
+A045–A048: latest00.17 hardware exits cleanly at039 on a serialized nonzero bitmap base pointer before root/draw.00.18 accepts opaque base/hardware fields in cached+NONE records; original cached loader replaces base before Register/read and returns cache-entry hardware. Original ownership flags now close/dispose initialized pre-root renderer/game/decal state before widget/tag/arena/core/context teardown. Workflow116/source4ee1d99 verifies this native render/dispose closure and publishes00.18 (SHA-2565187529504ca3222bf360b571207c318b96d09ed685616ef6a5a9756d3179558). New hardware gate039/036S/036D/root/draw/present remains pending.

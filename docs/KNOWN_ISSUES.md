@@ -187,3 +187,6 @@ A04500.17 heap_dump lists1,925,688 bytes owned by original rasterizer subsystems
 KI-024 source correctionA04600.18: opaque pointer words accepted only in cold cached records; eight invalid metadata/range cases remain rejected. Actual original load/query regression proves replacement before registration/read. Native/hardware pending.
 
 KI-025 source correctionA04700.18: pre-root cleanup now closes/disposes completed original renderer owners before tags/arena/core/context. Actual Vita owner-order regression passes; new native dispose closure/hardware still pending. Upstream disposer leaves some default texture/surface headers and native GL programs for process exit; no empty-heap/stability claim. Active-root teardown/full restart remain pending.
+
+
+A048 validation: KI-024/KI-025 corrections, actual original loader/state/disposal contracts and exact ABI declarations are included in verified00.18/source4ee1d99/workflow116. Required render/dispose/cache-close symbols, native package ABI/assets and publication PASS. Both hardware runtime corrections still require the new00.18 log; original draw/render and an empty heap report are not inferred from CI.

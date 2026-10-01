@@ -599,3 +599,20 @@ The release VPK digest equals the verifier's actual CI log digest. Actions artif
 
 
 A047 source-boundary review: players.h omits the original players_dispose/dispose_from_old_map prototypes (game.c declares them privately). Add matching void(void) declarations in the Vita owner rather than relying on implicit int calls. Extend the native package verifier to require halo_vita_renderer_dispose_before_root, _rasterizer_dispose and texture_cache_close, so final publication also proves retention of the disposal closure. python3 -m py_compile tools/vita_verify.py and git diff --check PASS. A046 source883521f independently passes native workflow114; deliver the later build including A047, not that intermediate package.
+
+
+## 2026-10-01 — A048 — Verified00.18 workflow116 for next console run
+
+**Evidence/commands:** fetched exact Vita Build run36797581378 (#116), native job110164449050 log, all job statuses, Actions artifact and release vita-build-116. Source4ee1d99f944e820190f55c5b916f5cbc78670e83 on main includes A046 opaque-pointer validation, A047 pre-root original disposal/prototypes and required cleanup symbols. Renderer-closure, native build/package verifier/upload, and Publish Vita pre-release all complete SUCCESS. Release target_commitish equals this source. Intermediate workflows114/115 also succeed;116 is the delivered package.
+
+**Native verification:** actual tools/vita_verify.py PASS for ARM32 hard-float ABI, original core/UI/quad/D3D draw/present/state owners, new original disposal/texture-cache-close closure, no unexpected unresolved game hooks, Sony SELF/VPK/SFO/banner00.18, exact members, indexed PNG LiveArea and absence of retail data/compiler module. RX LOAD end0x810e16c8, init_array0x810f0000 length0x1c, constructor/destructor LOAD length0x20; SELF conversion succeeds. Existing wchar/enum warnings stay visible (KI-009), not a full runtime ABI proof.
+
+| Published asset | Bytes | SHA-256 |
+|---|---:|---|
+| HaloCE.vpk | 634418 | 5187529504ca3222bf360b571207c318b96d09ed685616ef6a5a9756d3179558 |
+| HaloCE.elf | 10160900 | d15bdc7855d8ce280320dd0b30d79e0c0cd0fab3c146deb30f32f6bed62ea1f7 |
+| HaloCE.elf.map | 2977966 | 1b258040ff57f1198c1e4a2a0342cd26e2c8e6dcca9808a529d54f81d7d1616c |
+
+Release VPK digest equals native verifier log. [Direct00.18 VPK](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-116/HaloCE.vpk), [matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-116), [workflow116](https://github.com/VegettoSan/HaloCEVita/actions/runs/36797581378). Actions artifact11134371597 retains source-named VPK/ELF/map/artifacts.json/SHA256SUMS for14 days. No binary/retail data committed.
+
+**Result/next:**00.18 LINKS, ready for new Vita run. Actual cached metadata, original query/load pointer replacement and pre-root shutdown order pass host mocks; no GPU acceptance or visible menu proven here. Latest hardware remains00.17 BLOCKED039 with controlled exit (A045). Expect039 validated with serialized_pointer_records count, then036S/036D, root028/032, resource/texture/shader/draw and037/038. On a pre-root error,040 disposal must precede023/020/arena release; actual remaining heap must be checked, not assumed empty. Original input/update, BSP/ring/audio/full active-root teardown remain pending.
