@@ -4,6 +4,24 @@
 #include "vita_runtime.h"
 #include <vitaGL.h>
 
+/* The Vita NV2A vertex path emulates desktop GL_UPPER_LEFT by negating
+ * gl_Position.y in the generated shader. Unlike glClipControl, that explicit
+ * Y flip reverses triangle winding. Android already compensates for the same
+ * shader-side flip inside d3d8_gl.c; Vita routes the backend's glFrontFace
+ * calls here so the original Xbox/D3D render-state values stay untouched. */
+void halo_vita_glFrontFace(GLenum mode)
+{
+	GLenum corrected = mode;
+	static int first_log;
+	if (mode == GL_CW) corrected = GL_CCW;
+	else if (mode == GL_CCW) corrected = GL_CW;
+	if (!first_log) {
+		first_log = 1;
+		vita_log("[VITA CULL] shader Y-flip winding compensation front=%x -> %x", mode, corrected);
+	}
+	glFrontFace(corrected);
+}
+
 static int copy_texture_level(GLuint source, GLuint destination, GLint level, GLsizei width, GLsizei height)
 {
 	GLuint framebuffers[2]; GLint previous_read, previous_draw;
