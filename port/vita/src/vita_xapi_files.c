@@ -3,6 +3,9 @@
 #include <psp2/io/dirent.h>
 #include <psp2/io/fcntl.h>
 #include <psp2/io/stat.h>
+#include <psp2/io/devctl.h>
+#include <stdlib.h>
+#include <time.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -299,8 +302,12 @@ void *CreateFileA(const char *file_name, unsigned long desired_access,
 	return (void *)(intptr_t)fd;
 }
 
+int halo_vita_kernel_CloseHandle(void *handle);
+
 int CloseHandle(void *handle)
 {
+	if (handle != VITA_INVALID_HANDLE && (uintptr_t)handle >= 0x80000000u)
+		return halo_vita_kernel_CloseHandle(handle);
 	SceUID fd = (SceUID)(intptr_t)handle;
 	if (handle == VITA_INVALID_HANDLE || fd < 0) {
 		vita_xapi_last_error_set(VITA_ERROR_INVALID_HANDLE);
@@ -369,3 +376,116 @@ int SetEndOfFile(void *handle)
 	vita_xapi_last_error_set(VITA_ERROR_SUCCESS);
 	return 1;
 }
+
+/* Counted synchronous I/O: report the actual byte count (EOF is not an error).
+ * Original saved-game owners reject short records themselves. */
+int ReadFile(void *handle, void *buffer, unsigned long count,
+    unsigned long *read_count, void *overlapped)
+{
+    int n;
+    if (read_count) *read_count = 0;
+    if (overlapped || !read_count || (!buffer && count) || count > 0x7fffffffUL) {
+        vita_xapi_last_error_set(VITA_ERROR_INVALID_PARAMETER); return 0;
+    }
+    n = sceIoRead((SceUID)(intptr_t)handle, buffer, count);
+    if (n < 0) { vita_xapi_last_error_set(VITA_ERROR_INVALID_HANDLE); return 0; }
+    *read_count = (unsigned long)n; vita_xapi_last_error_set(0); return 1;
+}
+int WriteFile(void *handle, const void *buffer, unsigned long count,
+    unsigned long *write_count, void *overlapped)
+{
+    int n;
+    if (write_count) *write_count = 0;
+    if (overlapped || !write_count || (!buffer && count) || count > 0x7fffffffUL) {
+        vita_xapi_last_error_set(VITA_ERROR_INVALID_PARAMETER); return 0;
+    }
+    n = sceIoWrite((SceUID)(intptr_t)handle, buffer, count);
+    if (n < 0) { vita_xapi_last_error_set(VITA_ERROR_ACCESS_DENIED); return 0; }
+    *write_count = (unsigned long)n; vita_xapi_last_error_set(0); return 1;
+}
+unsigned long GetFileSize(void *handle, unsigned long *high)
+{
+    SceIoStat stat;
+    if (sceIoGetstatByFd((SceUID)(intptr_t)handle, &stat) < 0) {
+        vita_xapi_last_error_set(VITA_ERROR_INVALID_HANDLE); return 0xffffffffUL;
+    }
+    if (high) *high = (unsigned long)((uint64_t)stat.st_size >> 32);
+    vita_xapi_last_error_set(0); return (unsigned long)((uint64_t)stat.st_size & 0xffffffffu);
+}
+int CreateDirectoryA(const char *name, void *security)
+{
+    char path[512]; uint32_t error; int exists;
+    (void)security;
+    /* Ignore a trailing separator when validating a missing leaf. */
+    char clean[512]; size_t len;
+    if (!name || strlen(name) >= sizeof(clean)) { vita_xapi_last_error_set(87); return 0; }
+    strcpy(clean,name); len=strlen(clean);
+    while (len > 3 && (clean[len-1]=='/' || clean[len-1]=='\\')) clean[--len]=0;
+    if (!resolve_xbox_path(clean,path,sizeof(path),1,1,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (exists) { vita_xapi_last_error_set(183); return 0; }
+    if (sceIoMkdir(path,0777)<0) { vita_xapi_last_error_set(5); return 0; }
+    vita_xapi_last_error_set(0); return 1;
+}
+int DeleteFileA(const char *name)
+{
+    char path[512]; uint32_t error; int exists;
+    if (!resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (sceIoRemove(path)<0) { vita_xapi_last_error_set(5); return 0; }
+    vita_xapi_last_error_set(0); return 1;
+}
+int RemoveDirectoryA(const char *name)
+{
+    char path[512]; uint32_t error; int exists;
+    if (!resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (sceIoRmdir(path)<0) { vita_xapi_last_error_set(5); return 0; }
+    vita_xapi_last_error_set(0); return 1;
+}
+int MoveFileA(const char *from, const char *to)
+{
+    char a[512],b[512]; uint32_t error; int exists;
+    if (!resolve_xbox_path(from,a,sizeof(a),0,0,&exists,&error) ||
+        !resolve_xbox_path(to,b,sizeof(b),1,1,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (exists) { vita_xapi_last_error_set(183); return 0; }
+    if (sceIoRename(a,b)<0) { vita_xapi_last_error_set(5); return 0; }
+    vita_xapi_last_error_set(0); return 1;
+}
+int SetFileAttributesA(const char *name,unsigned long attributes)
+{
+    char path[512]; uint32_t error; int exists; SceIoStat stat;
+    if (attributes & ~(1UL|128UL)) { vita_xapi_last_error_set(87); return 0; }
+    if (!resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (sceIoGetstat(path,&stat)<0) { vita_xapi_last_error_set(2); return 0; }
+    if (attributes&1) stat.st_mode &= ~(SCE_S_IWUSR|SCE_S_IWGRP|SCE_S_IWOTH);
+    else stat.st_mode |= SCE_S_IWUSR;
+    if (sceIoChstat(path,&stat,SCE_CST_MODE)<0) { vita_xapi_last_error_set(5); return 0; }
+    vita_xapi_last_error_set(0); return 1;
+}
+int GetDiskFreeSpaceExA(const char *name, void *available, void *total, void *free_bytes)
+{
+    char path[512]; uint32_t error; int exists; SceIoDevInfo info;
+    if (!resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) { vita_xapi_last_error_set(error); return 0; }
+    if (sceIoDevctl("ux0:",0x3001,NULL,0,&info,sizeof(info))<0) { vita_xapi_last_error_set(5); return 0; }
+    if (available) memcpy(available,&info.free_size,8);
+    if (total) memcpy(total,&info.max_size,8);
+    if (free_bytes) memcpy(free_bytes,&info.free_size,8);
+    vita_xapi_last_error_set(0); return 1;
+}
+
+int vita_xapi_directory_open(const char *name)
+{
+    char path[512]; uint32_t error; int exists,fd;
+    if (!resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) { vita_xapi_last_error_set(error); return -1; }
+    fd=sceIoDopen(path); if(fd<0) vita_xapi_last_error_set(3); return fd;
+}
+int vita_xapi_directory_next(int fd, char *name, uint32_t *attributes, uint64_t *size)
+{
+    SceIoDirent e; int n;
+    do { memset(&e,0,sizeof(e)); n=sceIoDread(fd,&e); }
+    while(n>0 && (!strcmp(e.d_name,".") || !strcmp(e.d_name,"..")));
+    if(n<=0) { vita_xapi_last_error_set(n<0?3:18); return 0; }
+    strcpy(name,e.d_name); *size=(uint64_t)e.d_stat.st_size;
+    *attributes=SCE_S_ISDIR(e.d_stat.st_mode)?16:128;
+    if(!(e.d_stat.st_mode&SCE_S_IWUSR)) *attributes|=1;
+    return 1;
+}
+void vita_xapi_directory_close(int fd) { sceIoDclose(fd); }

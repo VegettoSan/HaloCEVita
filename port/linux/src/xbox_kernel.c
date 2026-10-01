@@ -14,7 +14,9 @@ threads, asynchronous procedure calls, time, memory and debug output.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef HALO_VITA
 #include <sys/mman.h>
+#endif
 #include <time.h>
 #include <unistd.h>
 
@@ -22,6 +24,7 @@ threads, asynchronous procedure calls, time, memory and debug output.
 
 /* ---------- logging */
 
+#ifndef HALO_VITA
 void platform_log(const char *format, ...)
 {
 	va_list arguments;
@@ -33,6 +36,7 @@ void platform_log(const char *format, ...)
 	fputc('\n', stderr);
 }
 
+#endif
 void platform_unimplemented(const char *name)
 {
 	static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
@@ -56,6 +60,7 @@ void platform_unimplemented(const char *name)
 
 /* ---------- last error */
 
+#ifndef HALO_VITA
 static __thread DWORD platform_last_error;
 
 DWORD WINAPI GetLastError(void)
@@ -68,6 +73,7 @@ void WINAPI SetLastError(DWORD error)
 	platform_last_error = error;
 }
 
+#endif
 DWORD platform_set_last_error_from_errno(int error_number)
 {
 	DWORD error;
@@ -88,7 +94,7 @@ DWORD platform_set_last_error_from_errno(int error_number)
 	case EBUSY: error = ERROR_BUSY; break;
 	default: error = ERROR_GEN_FAILURE; break;
 	}
-	platform_last_error = error;
+	SetLastError(error);
 	return error;
 }
 
@@ -603,11 +609,14 @@ BOOL WINAPI GetExitCodeThread(HANDLE object, LPDWORD exit_code)
 	return TRUE;
 }
 
+#ifndef HALO_VITA
 BOOL WINAPI SwitchToThread(void)
 {
 	sched_yield();
 	return TRUE;
 }
+#endif
+
 
 DWORD WINAPI SleepEx(DWORD milliseconds, BOOL alertable)
 {
@@ -641,6 +650,7 @@ VOID WINAPI Sleep(DWORD milliseconds)
 
 /* ---------- time */
 
+#ifndef HALO_VITA
 DWORD WINAPI GetTickCount(void)
 {
 	struct timespec now;
@@ -648,12 +658,15 @@ DWORD WINAPI GetTickCount(void)
 	clock_gettime(CLOCK_MONOTONIC, &now);
 	return (DWORD)((unsigned long long)now.tv_sec * 1000ULL + (unsigned long long)now.tv_nsec / 1000000ULL);
 }
+#endif
+
 
 /* The Xbox performance counter runs at the 733 MHz CPU clock. Report a
 microsecond counter instead: coarse enough that 32-bit intermediate
 arithmetic in the game stays in range, fine enough for frame timing. */
 #define PLATFORM_PERFORMANCE_FREQUENCY 1000000ULL
 
+#ifndef HALO_VITA
 BOOL WINAPI QueryPerformanceCounter(LARGE_INTEGER *count)
 {
 	struct timespec now;
@@ -663,12 +676,17 @@ BOOL WINAPI QueryPerformanceCounter(LARGE_INTEGER *count)
 		(unsigned long long)now.tv_nsec / (1000000000ULL / PLATFORM_PERFORMANCE_FREQUENCY));
 	return TRUE;
 }
+#endif
 
+
+#ifndef HALO_VITA
 BOOL WINAPI QueryPerformanceFrequency(LARGE_INTEGER *frequency)
 {
 	frequency->QuadPart = (LONGLONG)PLATFORM_PERFORMANCE_FREQUENCY;
 	return TRUE;
 }
+#endif
+
 
 /* seconds between 1601-01-01 and 1970-01-01 */
 #define FILETIME_UNIX_EPOCH_SECONDS 11644473600ULL
@@ -829,6 +847,7 @@ SIZE_T WINAPI LocalSize(HLOCAL memory)
 	return memory ? global_block_from_pointer(memory)->size : 0;
 }
 
+#ifndef HALO_VITA
 VOID WINAPI GlobalMemoryStatus(LPMEMORYSTATUS status)
 {
 	long pages = sysconf(_SC_PHYS_PAGES);
@@ -852,6 +871,8 @@ VOID WINAPI GlobalMemoryStatus(LPMEMORYSTATUS status)
 	status->dwAvailVirtual = 0x7ffe0000;
 	status->dwMemoryLoad = (DWORD)(100 - (unsigned long long)free_bytes * 100 / total);
 }
+#endif
+
 
 /* ---------- debug output */
 

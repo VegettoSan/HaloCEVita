@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.31")
+set(VITA_APP_VERSION "00.32")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
@@ -21,7 +21,7 @@ file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
   src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
-  src/vita_memory_watch.c src/halo_ui_widget_vita.c
+  src/vita_memory_watch.c src/halo_ui_widget_vita.c src/halo_ui_kernel.c src/halo_ui_file_search.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
@@ -45,6 +45,10 @@ add_library(halo_core STATIC
   ${ROOT}/source/game/game.c
   ${ROOT}/source/game/game_engine.c
   "${ROOT}/source/saved games/player_profile.c"
+  "${ROOT}/source/saved games/playlist_profile.c"
+  "${ROOT}/source/saved games/saved_game_files.c"
+  ${ROOT}/source/bungie_net/common/thread_win32.c
+  ${ROOT}/port/linux/src/xbox_xapi.c
   ${ROOT}/source/interface/marketing_and_strategic_business_development.c
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/port/linux/src/halo_linker_common.c
@@ -171,6 +175,7 @@ foreach(I RANGE 0 ${INCLUDE_LAST})
   endif()
 endforeach()
 set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memory_vita.c
+  src/halo_ui_kernel.c src/halo_ui_file_search.c ${ROOT}/port/linux/src/xbox_xapi.c
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/port/linux/src/nv2a_vsh.c ${ROOT}/port/linux/src/nv2a_psh.c ${ROOT}/port/linux/src/xgpu_text.c
   PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)

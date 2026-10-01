@@ -690,6 +690,40 @@ void ui_widget_game_data_function_invoke(
 		multiplayer_type_menu_update_extended_description(widget);
 	else if (function == 7)
 		difficulty_select_menu_update_extended_description(widget);
+	else if (function == 3)
+		playlist_settings_menu_update_extended_description(widget);
+	else if (function == 4)
+		playlist_gametype_select_menu_update_extended_description(widget);
+	else if (function == 6)
+		solo_level_select_list_update_displayed_items(widget);
+	else if (function == 13)
+		mutliplayer_settings_select_list_update_displayed_items(widget);
+	else if (function == 14)
+		player_profile_3wide_list_update(widget);
+	else if (function == 15)
+		player_profile_edit_select_menu_update_extended_description(widget);
+	else if (function == 16)
+		player_profile_1wide_list_update(widget);
+	else if (function == 17)
+		game_options_menu_update_text_desc(widget);
+	else if (function == 19)
+		player_profile_color_picker_update(widget);
+	else if (function == 20)
+		game_options_menu_update_pic_desc(widget);
+	else if (function == 22)
+		mp_level_select_list_update_displayed_items(widget);
+	else if (function == 23)
+		get_active_player_profile_display_name(widget);
+	else if (function == 24)
+		get_editable_player_profile_display_name(widget);
+	else if (function == 25)
+		get_editable_playlist_profile_display_name(widget);
+	else if (function == 26)
+		get_active_player_profile_color_index(widget);
+	else if (function == 35)
+		multiplayer_edit_profile_set_ruleset_textbox_string_index(widget);
+	else if (function == 39)
+		warn_if_difficulty_will_nuke_saved_game(widget);
 	else if (function == 8)
 		set_textbox_to_build_number(widget);
 	else if (function == 21)

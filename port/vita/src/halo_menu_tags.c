@@ -13,6 +13,7 @@
 #include "sound/sound_definitions.h"
 #include "interface/ui_widget.h"
 #include "interface/player_ui.h"
+#include "saved games/saved_game_files.h"
 #include "interface/interface.h"
 #include "game/game_globals.h"
 #include "scenario/scenario.h"
@@ -332,6 +333,8 @@ int halo_vita_menu_root_checkpoint(void)
         return 0;
     }
     halo_vita_ui_render_clock_update();
+    saved_game_files_initialize();
+    vita_log("[VITA UI SAVES] original saved-game and profile owners initialized");
     vita_log("original player_ui_initialize begin");
     player_ui_initialize();
     vita_log("original player_ui_initialize PASS");
