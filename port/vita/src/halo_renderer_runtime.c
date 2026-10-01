@@ -35,6 +35,8 @@ int halo_vita_menu_bitmap_resources_activate(void);
  * derive the same full-screen and title-safe rectangles used by retail. */
 void compute_window_bounds(long player_index, long num_players,
     rectangle2d *pixel_bounds, rectangle2d *safe_frame_bounds);
+/* Original render.c also declares this main.c helper locally. */
+short main_get_window_count(void);
 
 static boolean vita_renderer_ready;
 static boolean vita_texture_cache_opened;
