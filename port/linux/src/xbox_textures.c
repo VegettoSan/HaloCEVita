@@ -575,6 +575,19 @@ static void texture_dump(GLenum target, const struct xgpu_texture_description *d
 }
 #endif
 
+#ifdef HALO_VITA
+static void vita_upload_check(GLuint texture, GLenum target, long level, const char *phase)
+{
+	GLenum error = glGetError();
+	if (error != GL_NO_ERROR)
+	{
+		vita_log("[VITA TEXTURE] rejected phase=%s id=%u target=%x level=%ld GL error=0x%x",
+			phase, texture, target, level, error);
+		vita_fatal("Xbox texture upload/state failed in vitaGL");
+	}
+}
+#endif
+
 static void upload(GLuint texture, GLenum target, const struct xgpu_texture_description *description,
 	const unsigned char *base, const D3DCOLOR *palette)
 {
@@ -613,13 +626,25 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 #endif
 	glBindTexture(target, texture);
 	xgpu_gl_state_invalidate();
+#ifdef HALO_VITA
+	vita_upload_check(texture, target, -1, "bind/incoming state");
+#endif
 #ifdef HALO_ANDROID
 	/* converted texels are BGRA in memory (32-bit ARGB words); ES takes
 	RGBA */
 	glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, converted ? GL_BLUE : GL_RED);
 	glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, converted ? GL_RED : GL_BLUE);
 #endif
+#ifdef HALO_VITA
+	/* vitaGL implements ROW_LENGTH, but rejects UNPACK_ALIGNMENT. The
+	 * original decoder produces tight 32-bit BGRA rows; DXT uploads use
+	 * compressed blocks. Neither path needs byte-row alignment padding.
+	 * Reset any prior unpack row length through the supported API. */
+	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	vita_upload_check(texture, target, -1, "tight rows");
+#else
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+#endif
 #ifndef HALO_VITA
 	glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, (GLint)description->levels - 1);
@@ -633,7 +658,9 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 			const unsigned char *source = base + face * face_size + xgpu_texture_level_offset(description, level);
 			GLsizei width = (GLsizei)level_dimension(description->width, level);
 			GLsizei height = (GLsizei)level_dimension(description->height, level);
+#ifndef HALO_VITA
 			GLsizei depth = (GLsizei)level_dimension(description->depth, level);
+#endif
 
 			if (description->compressed && !decode_compressed)
 			{
@@ -662,6 +689,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 				#endif
 					glTexImage2D(image_target, (GLint)level, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 			}
+#ifdef HALO_VITA
+			vita_upload_check(texture, image_target, (long)level,
+				description->compressed ? "compressed mip" : "decoded BGRA mip");
+#endif
 		}
 	}
 	#ifdef HALO_VITA

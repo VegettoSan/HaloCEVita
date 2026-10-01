@@ -168,3 +168,7 @@ Date2026-10-01; A049/A050. Adapt the original D3D8 Z/stencil surface to vitaGL's
 ## D022 — Reuse original streamed color conversion on Vita
 
 Date2026-10-01; A051 and renderer plan6.5. vitaGL rejects desktop's GL_BGRA attribute-size convention. Share the existing Android CPU B/R byte swap for declared D3DCOLOR elements, then use4 normalized unsigned bytes. Keep authored source data immutable and existing strides/registers/shader equations intact. Add bounded Vita allocation/declaration checks; do not assume color values are all white or remove color attributes. Immediate float-color path remains original. Host byte/format tests are not a hardware draw test.
+
+## D023 — Express tight upload rows through supported vitaGL pixel state
+
+Date2026-10-01; A054/A055. Preserve original Xbox decoding and direct DXT uploads; replace only the Vita unsupported UNPACK_ALIGNMENT request with supported UNPACK_ROW_LENGTH0. Decoded output is tightly packed32-bit BGRA, and compressed blocks do not consume byte-row alignment. Reset row stride explicitly without altering authored texture dimensions, compression, mip offsets or cache data. Check every upload phase/level. Do not call a declared-but-rejected token, suppress0x500, discard mip levels or replace the real bitmap with a placeholder.

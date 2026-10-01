@@ -206,3 +206,5 @@ A053 validation: KI-026 allocation/attachment correction and A051 color/phase ch
 A05400.19 hardware loads first real shield-noise resource successfully and reaches texture upload, then GL_INVALID_ENUM0x500 triggers explicit fatal exit. upload calls glPixelStorei(GL_UNPACK_ALIGNMENT,1); vitaGL6e7fe40 implements only UNPACK_ROW_LENGTH, despite defining ALIGNMENT in the header. Preserve original DXT/BGRA layout and use the supported tightly packed row contract; add phase/level GL checks and actual-function tests. No evidence of GPU overload or corrupt resource offsets. No Halo shader/draw/present yet.
 
 A054 validates KI-026 through real960x544 request/attachment, original clear and037W1. Shared depth identity across scenes and STORE_DEPTH_STENCIL remain separate unverified contracts. Active-root fatal cleanup/heap still lacks new evidence.
+
+KI-027 source correctionA05500.20: supported ROW_LENGTH0 for tight BGRA/DXT input, plus phase/level GL checks. Actual-function mock regression reproduces old alignment0x500 and passes corrected mip/row/failure contracts. Native texture GPU acceptance and visible image remain pending.
