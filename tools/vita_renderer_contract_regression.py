@@ -86,28 +86,32 @@ int main(void) {
     assert(halo_vita_menu_bitmap_resources_activate());
     assert(halo_vita_menu_bitmap_resources_activate()); /* idempotent */
     assert(!memcmp(&saved, &record, sizeof(record))); /* no double offset or handle mutation */
-    for (i = 0; i < 10; ++i) {
+    for (i = 0; i < 8; ++i) {
         fixture();
         switch (i) {
         case 0: record.flags = 0; break;
         case 1: record.tag_index++; break;
         case 2: record.cache_block_index = 0; break;
-        case 3: record.base_address = &record; break;
-        case 4: record.hardware_format = &record; break;
-        case 5: record.pixels_offset = -1; break;
-        case 6: record.pixels_size = 0; break;
-        case 7: record.pixels_offset = 32700; break;
-        case 8: record.width = 0; break;
-        case 9: record.pixels_offset = 2047; break;
+        case 3: record.pixels_offset = -1; break;
+        case 4: record.pixels_size = 0; break;
+        case 5: record.pixels_offset = 32700; break;
+        case 6: record.width = 0; break;
+        case 7: record.pixels_offset = 2047; break;
         }
         saved = record;
         assert(!halo_vita_menu_bitmap_resources_activate());
         assert(!vita_menu_bitmap_resources_activated);
         assert(!memcmp(&saved, &record, sizeof(record)));
     }
+    fixture(); record.flags = 0x83; record.base_address = (void *)(uintptr_t)0x024f0040;
+    record.hardware_format = (void *)(uintptr_t)0xdead0040;
+    record.pixels_offset = 4096; record.pixels_size = 2816;
+    saved = record;
+    assert(halo_vita_menu_bitmap_resources_activate());
+    assert(!memcmp(&saved, &record, sizeof(record))); /* serialized pointers stay opaque */
     fixture(); record.pixels_offset = 32768 - 128;
     assert(halo_vita_menu_bitmap_resources_activate());
-    puts("PASS: actual compiled-bitmap validator preserves records; 10 invalid state/range cases and exact EOF");
+    puts("PASS: actual compiled-bitmap validator preserves records; 8 invalid state/range cases, serialized Xbox pointers and exact EOF");
 }
 ''')
 
@@ -184,7 +188,7 @@ int main(void) {
 # Only allocation/data handles are mocked; no query returns a constant.
 def original(path, signature):
     source = (ROOT / path).read_text()
-    start = source.index(signature)
+    start = source.rindex(signature)
     brace = source.index('{', start)
     level = 1
     end = brace + 1
@@ -269,6 +273,88 @@ int main(void) {
     assert(main_get_window_count() == 1);
     for (i = 0; i < allocation_count; ++i) free(allocations[i]);
     puts("PASS: original shell state owns valid inactive clock/player/cinematic globals; exact window queries and resets");
+    return 0;
+}
+''')
+
+
+# Cold compiled records can contain obsolete Xbox pointer words. Run the
+# original cached query/load bodies: the allocator/read and GPU registration
+# boundary are mocked, but the pointer replacement/branch ordering is actual.
+run('cached-load', COMMON.replace('static void vita_log(const char *format, ...) { (void)format; }', '') + r'''
+#define TEST_FLAG(flags, bit) ((flags) & (1U << (bit)))
+#define MAX(a,b) ((a) > (b) ? (a) : (b))
+#define match_assert(file, line, expression) assert(expression)
+typedef unsigned char byte;
+enum { _bitmap_cached_bit = 7 };
+struct bitmap_data {
+    unsigned flags; long cache_block_index, tag_index, pixels_offset, pixels_size;
+    void *base_address, *hardware_format;
+};
+struct xbox_texture_cache_texture {
+    struct bitmap_data *bitmap; int hardware_format, loaded, used; long read_request_handle;
+};
+static byte live_pixels[4096];
+static struct xbox_texture_cache_texture resident;
+static struct { byte *base_address; void *cache, *textures; } xbox_texture_cache_globals;
+static boolean debug_texture_cache;
+static unsigned long texture_cache_last_failure_time;
+static void *global_real_argb_purple;
+static int load_count, registration_count, read_count, touch_count;
+static long rasterizer_xbox_bitmap_get_pixel_data_size(struct bitmap_data *b) {
+    return b->pixels_size;
+}
+static long lruv_block_new(void *cache, long size) {
+    assert(cache && size == 2816); ++load_count; return 7;
+}
+static long lruv_block_get_address(void *cache, long index) { assert(cache && index == 7); return 0; }
+static long datum_new_at_index(void *data, long index) { assert(data && index == 7); return index; }
+static void *datum_get(void *data, long index) { assert(data && index == 7); return &resident; }
+static void texture_cache_initialize_hardware_format(struct bitmap_data *b, int *format) {
+    assert(b->base_address == live_pixels && b->cache_block_index == 7);
+    ++registration_count; *format = 42; /* real initializer registers the just-replaced base */
+}
+static long cache_file_read(long tag, long offset, long size, void *dest, int *loaded, int block) {
+    assert(tag == 0xe1780004L && offset == 4096 && size == 2816);
+    assert(dest == live_pixels && block); memset(dest, 0x5a, (size_t)size);
+    ++read_count; *loaded = TRUE; return 13;
+}
+static void lruv_block_touch(void *cache, long index) { assert(cache && index == 7); ++touch_count; }
+static void console_warning(const char *format, ...) { (void)format; assert(0); }
+static const char *tag_get_name(long tag) { (void)tag; return "synthetic"; }
+static void cache_file_promote_read(long request) { (void)request; assert(0); }
+static unsigned long system_milliseconds(void) { return 0; }
+static unsigned long sound_render_time(void) { return 0; }
+static void sound_idle(void) { assert(0); }
+static void SwitchToThread(void) { assert(0); }
+static void terminal_printf(void *color, const char *format) { (void)color; (void)format; assert(0); }
+#define _error_silent 0
+static void error(int level, const char *message) { (void)level; (void)message; assert(0); }
+static void scenario_debug_to_file(void) {}
+static void texture_cache_name_block_proc(void) {}
+static void lruv_debug_to_file(const char *path, const char *name, long size, void *cache,
+    void (*scenario)(void), void (*block_name)(void)) {
+    (void)path; (void)name; (void)size; (void)cache; (void)scenario; (void)block_name; assert(0);
+}
+static void *rasterizer_get_bitmap_default_hardware_format(struct bitmap_data *b) { (void)b; assert(0); return NULL; }
+''', original('source/cache/xbox_texture_cache.c', 'static boolean texture_cache_start_loading_bitmap(')
+     + original('source/cache/xbox_texture_cache.c', 'void *_texture_cache_bitmap_get_hardware_format('), r'''
+int main(void) {
+    struct bitmap_data b = {0x83, NONE, 0xe1780004L, 4096, 2816,
+        (void *)(uintptr_t)0x024f0040, (void *)(uintptr_t)0xdead0040};
+    struct bitmap_data saved = b;
+    int placeholder;
+    xbox_texture_cache_globals.base_address = live_pixels;
+    xbox_texture_cache_globals.cache = xbox_texture_cache_globals.textures = &placeholder;
+    assert(!_texture_cache_bitmap_get_hardware_format(&b, FALSE, FALSE));
+    assert(!memcmp(&b, &saved, sizeof(b))); /* no-load never reads serialized handles */
+    assert(_texture_cache_bitmap_get_hardware_format(&b, TRUE, TRUE) == &resident.hardware_format);
+    assert(b.base_address == live_pixels && b.hardware_format == saved.hardware_format);
+    assert(b.pixels_offset == saved.pixels_offset && b.pixels_size == saved.pixels_size && b.flags == saved.flags);
+    assert(resident.bitmap == &b && resident.loaded && resident.used && live_pixels[2815] == 0x5a);
+    assert(_texture_cache_bitmap_get_hardware_format(&b, TRUE, TRUE) == &resident.hardware_format);
+    assert(load_count == 1 && registration_count == 1 && read_count == 1 && touch_count == 2);
+    puts("PASS: actual cached query/load replaces serialized Xbox base before registration/read; ignores serialized hardware; resident reuse");
     return 0;
 }
 ''')

@@ -150,3 +150,8 @@ Date 2026-09-30, A041. vitaGL SHADER_PAIR alternates its varying-semantic pool p
 ## D018 — Restore original shell-state owners used by rasterizer queries
 
 Date2026-10-01; A042. The UI-only frame still invokes original window-count and cinematic/player queries. Add the original clock/player/control/cinematic allocations and per-map resets under the Vita renderer owner instead of returning hardcoded query values or allocating imitation globals. Original gameplay/input updates remain disabled. State is allocated once from the existing process-lifetime game-state buffer, as for the staged decal owner; full game_initialize integration must later reconcile these owners to avoid double allocations.
+
+
+## D019 — Serialized cached bitmap pointers are opaque before LRU load
+
+Date2026-10-01; A045/A046. Refine D016's cold-cache validation using actual00.17 hardware and original source: cached bit + cache_block_index NONE defines an unloaded bitmap; serialized base_address/hardware_format need not be NULL. Preserve these fields without rebasing or consuming them. Original texture_cache_start_loading_bitmap must replace base with the new LRU address before hardware registration/read; cached hardware lookup selects the live cache-entry hardware instead of bitmap.hardware_format. Keep matching owner and resource bounds, and reject a foreign resident cache index. This avoids both a false rejection and a fake bitmap registration.

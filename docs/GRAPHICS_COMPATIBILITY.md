@@ -143,3 +143,6 @@ The separate `HALO_VITA_MENU_RENDER_PROBE` target now compiles the original Linu
 ## A038–A041 hardware/source reconciliation
 
 00.16 now links and initializes the original rasterizer/device on Vita, including texture-cache map open; it fails on duplicate compiled-bitmap postprocess before any draw (A038). 00.17 keeps compiled bitmap offsets/flags intact and validates cold cache state/ranges, corrects the standalone pregame window index, and preserves vitaGL eager pair semantics across shader-cache hits/misses. Per-element pixel uniform locations remove the remaining assumed contiguous array upload in the Vita path. Real generated GLSL and rejected Cg are saved under ux0:data/HaloCE/halo_{vertex,pixel}.{glsl,cg}. A041 host contracts verify ordering/cache/immutability, not driver acceptance. Retail uniform budgets, unsupported volume/LOD/border states, FBO behavior and visible menu remain hardware gates.
+
+
+A045/A046:00.17 hardware stops at039 before resource read/upload/shader/draw. Cached bitmap base/hardware words may be serialized Xbox values even with LRU index NONE.00.18 validates the cold cached contract without consuming those words; original loader owns replacement and registration. Actual loader/query host fixture passes; native/hardware texture upload remains unverified. No GPU capability change is inferred from this controlled exit.

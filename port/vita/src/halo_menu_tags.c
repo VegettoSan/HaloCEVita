@@ -234,6 +234,7 @@ int halo_vita_menu_bitmap_resources_activate(void)
     long bitmap_group_index;
     long group_count = 0;
     long bitmap_count = 0;
+    long serialized_pointer_count = 0;
 
     if (vita_menu_bitmap_resources_activated)
         return 1;
@@ -273,10 +274,14 @@ int halo_vita_menu_bitmap_resources_activate(void)
                     (int)bitmap->depth, (unsigned)bitmap->flags);
                 return 0;
             }
+            /* Cached records may retain serialized Xbox pointer values. The
+             * original cache lookup uses cache_block_index, overwrites base
+             * with its own LRU allocation before Register/read, and ignores
+             * hardware_format on this branch. Neither pointer is a resident
+             * Vita address; preserve it without validating/dereferencing it. */
             if (!TEST_FLAG(bitmap->flags, _vita_bitmap_cached_bit) ||
                 bitmap->tag_index != bitmap_group_index ||
-                bitmap->cache_block_index != NONE || bitmap->base_address ||
-                bitmap->hardware_format || bitmap->pixels_offset < 0 ||
+                bitmap->cache_block_index != NONE || bitmap->pixels_offset < 0 ||
                 bitmap->pixels_size <= 0 ||
                 !vita_cache_resource_range_valid((uint32_t)bitmap->pixels_offset,
                     (size_t)bitmap->pixels_size)) {
@@ -287,6 +292,8 @@ int halo_vita_menu_bitmap_resources_activate(void)
                     bitmap->hardware_format, bitmap->pixels_offset, bitmap->pixels_size);
                 return 0;
             }
+            if (bitmap->base_address || bitmap->hardware_format)
+                ++serialized_pointer_count;
             ++bitmap_count;
         }
         ++group_count;
@@ -297,8 +304,8 @@ int halo_vita_menu_bitmap_resources_activate(void)
         return 0;
     }
     vita_menu_bitmap_resources_activated = TRUE;
-    vita_log("[VITA 039] compiled bitmap cache state validated: groups=%ld bitmaps=%ld; absolute pixel offsets preserved; original on-demand texture load ready",
-        group_count, bitmap_count);
+    vita_log("[VITA 039] compiled bitmap cache state validated: groups=%ld bitmaps=%ld serialized_pointer_records=%ld; absolute pixel offsets preserved; original on-demand texture load ready",
+        group_count, bitmap_count, serialized_pointer_count);
     return 1;
 }
 
