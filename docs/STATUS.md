@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-01
 
-Source00.32 shell integration (A097/A098): original profiles, generic event effects, keyboard queue and per-frame completion connected; host relocation/input/effects PASS. Native SDK build pending. Start confirms keyboard; Select exits staged build. All-window/hardware acceptance remains unverified.
+Source00.32 shell integration (A097/A098): original profiles, generic event effects, keyboard queue and per-frame completion connected; host relocation/input/effects PASS. Native SDK build pending; remote main f6debea Build170 failed declarations now fixed in local84c4584. Local keyboard integration431f4fa is not pushed because automatic approval review requires explicit in-thread authorization. No new VPK. Start confirms keyboard; Select exits staged build. All-window/hardware acceptance remains unverified.
 
 Latest hardware **00.31: BOOTS / partial HALO DRAW RENDERS / original D-pad focus visible** (A094). User confirms selected option feedback. Supplied log proves focus wrap, Campaign conditional root/back, then separate fatal unsupported game-data5 (Multiplayer) and14 (Settings) after blocked creation24/34. Full window navigation is now the priority; user defers the remaining white backgrounds. No complete-menu/gameplay/stability claim.
 

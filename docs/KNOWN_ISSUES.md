@@ -303,3 +303,6 @@ A089/A090: root/list/history navigation exists, but the event-function owner sti
 
 
 A094 hardware00.31 refines KI-038: original D-pad/focus visuals work, but Multiplayer and Settings fatally reject game-data5/14 after unsupported creation24/34; Campaign conditional root has no focus because handler101 is unavailable. Exact map433 reachable widgets include saved-profile, description, keyboard and event-effect requirements. White backgrounds are deferred by user instruction; stop alpha experiments while completing navigation.
+
+
+A097–A099 pending local00.32: keyboard/event queue and per-frame original null updates connected; original input/effects/retail relocation and new shell/storage contracts PASS on host. Native Build170 failed declarations now corrected locally. No local SDK; default-branch push is blocked by automatic approval review pending explicit in-thread authorization. Do not present local source as an available VPK or all windows as working. Network/world handlers and full native profile closure remain gates. White rectangles are deferred at user request. Start confirms keyboard and Select exits this staged build.
