@@ -190,3 +190,9 @@ KI-025 source correctionA04700.18: pre-root cleanup now closes/disposes complete
 
 
 A048 validation: KI-024/KI-025 corrections, actual original loader/state/disposal contracts and exact ABI declarations are included in verified00.18/source4ee1d99/workflow116. Required render/dispose/cache-close symbols, native package ABI/assets and publication PASS. Both hardware runtime corrections still require the new00.18 log; original draw/render and an empty heap report are not inferred from CI.
+
+## KI-026 — Packed depth texture allocation unsupported by vitaGL
+
+A04900.18 hardware passes039/036S/036D/root and reaches037W0, then packed depth texture960x544 fails with GL_INVALID_VALUE0x501 and explicit fatal exit. No037W1 or Halo draw/present. vitaGL supports color texture attachment and a renderbuffer request for lazily allocated per-FBO GXM depth/stencil; generic packed depth texture allocation/attachment is unsupported. Adapt both operations and preserve depth identity across equal-size color switches. Completeness alone is insufficient proof of later GXM allocation or cross-scene depth persistence. Depth-only and depth sampling remain separate unsupported contracts.
+
+A049 hardware: KI-024's384 compiled bitmap records now validate on Vita; original root is active again. KI-025 pre-root cleanup is not exercised by this active-root fatal exit; no new heap evidence.
