@@ -132,6 +132,11 @@ target_compile_options(halo_core PRIVATE -std=gnu89 -fms-extensions -fshort-wcha
   "SHELL:-include ${CMAKE_CURRENT_SOURCE_DIR}/include/halo_vita_prefix.h" "SHELL:-include ${SEMANTICS}"
   -idirafter ${ROOT}/port/include/xdk)
 target_compile_definitions(halo_core PRIVATE __STRICT_ANSI__ DEBUG xbox)
+# ui_widget.c uses HALO_LINUX for desktop-only mouse/pointer behavior. Vita
+# shares the Linux portability prefix but must keep the original controller UI
+# path. Force this header after halo_vita_prefix.h for this translation unit.
+set_source_files_properties(${ROOT}/source/interface/ui_widget.c PROPERTIES COMPILE_OPTIONS
+  "-include;${CMAKE_CURRENT_SOURCE_DIR}/include/halo_vita_ui_widget_prefix.h")
 # Use the same deterministic musl libm subset as the upstream native ports.
 set_source_files_properties(${MUSL_MATH_SOURCES} PROPERTIES COMPILE_OPTIONS
   "-std=gnu11;-w;-I${ROOT}/port/third_party/musl-math/include;-include;${ROOT}/port/third_party/musl-math/include/libm.h")
