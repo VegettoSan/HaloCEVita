@@ -16,7 +16,7 @@
  * 1 accept, 3/4/5/6 dpad up/down/left/right, 7 back.  They are translated here
  * to January's private widget/gamepad event constants; no tag-specific menu
  * index or focus pointer is modified by the platform layer. */
-boolean halo_vita_ui_process_menu_action(short action)
+int halo_vita_ui_process_menu_action(short action)
 {
     struct widget_instance *widget;
     struct ui_widget_definition *definition;
