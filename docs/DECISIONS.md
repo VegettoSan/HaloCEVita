@@ -176,3 +176,8 @@ Date2026-10-01; A054/A055. Preserve original Xbox decoding and direct DXT upload
 ## D024 — Scale screen targets while retaining original Xbox coordinate space
 
 Date2026-10-01; A056, explicit user request. Choose original640x480 game/UI coordinates and320x240 internal screen color/depth through existing screen_scale0.5. Preserve original viewport/clear/scissor/texture-target and aspect-preserving Present behavior; keep native960x544 context as the final display surface. This avoids unsupported sub640 game coordinates and an untested new scanout mode.4:3 presentation is intentional, with side bars. Named platform dimensions make policy and logs explicit. Native display memory/non-screen resources/CPU arena remain; pixel-count reduction is not an FPS or GPU-overload-resolution claim. Hardware must verify the new mode before RENDERS.
+
+
+## D025 — Reuse Vita stream storage only after explicit GPU completion
+
+Date2026-10-01; A058/A059/KI-028. The exact00.20 core/ELF identifies an unchecked NULL allocation in vitaGL whole-buffer SubData cloning during original font drawing. Keep original bounded2MiB/256KiB allocations and draw bytes, but synchronize and map existing storage on Vita. Reserve all streams of a draw before offsets are assigned; copy only authored byte count, retaining16-byte offset alignment. Reuse on wrap instead of orphaning. Check map/unmap/errors and bounds. Synchronous GPU waits trade throughput for a bounded correct bring-up contract; no asynchronous safety, measured FPS, depth persistence or visible-menu claim. Do not enable a global driver copy speedhack or increase memory to hide per-glyph cloning. Non-Vita remains original.

@@ -215,3 +215,6 @@ A057 validation: KI-027 supported-row/mip correction and A056 low-resolution mod
 ## KI-028 — Vita SubData clones entire in-flight stream for each glyph
 
 A05800.20 reaches original Halo draw with error0 at320x240, then aborts in SceLibKernel memcpy called by glBufferSubData during original font rendering. Exact workflow121 ELF/relocation and allocation-then-copy disassembly confirm a NULL clone destination. Primary vitaGL6e7fe40 clones the full2MiB vertex buffer after each draw; allocation failure has no guard in this archive. Bound the Vita upload path and synchronize before mapping/reusing storage. Preserve geometry and same-draw stream reservations; reject failed mapping instead of calling SubData with a NULL clone. No measured total/peak memory or FPS claim. Menu Present/render remain unverified. KI-027 texture upload and A056320x240 allocation now pass hardware; no shaders need replacement based on this crash.
+
+
+KI-028 source correctionA05900.21 uses checked synchronized mapping of existing vertex/index allocations, avoiding per-draw full clones/orphans; exact-byte transfers preserve source bounds. Host actual-function lifetime/guard-page/failure contracts PASS; native map/sync symbols and hardware original font/frame/present remain required. Synchronous scene transitions retain KI-026 depth persistence risk; no STABLE/FPS/visible-menu claim.

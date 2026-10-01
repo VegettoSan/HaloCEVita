@@ -1128,6 +1128,14 @@ static void gl_initialize(void)
 	debug_settings.dump_shaders = *config_string("debug.gpu_dump_shaders") ?
 		config_string("debug.gpu_dump_shaders") : NULL;
 	debug_settings.statistics = config_boolean("debug.gpu_stats");
+#ifdef HALO_VITA
+	{ GLenum error = glGetError();
+		vita_log("[VITA STREAM] initial vertex=%u bytes=%u index=%u bytes=%u gl_error=%x",
+			device.stream_buffer, (unsigned)STREAM_BUFFER_SIZE, device.index_buffer,
+			(unsigned)INDEX_BUFFER_SIZE, (unsigned)error);
+		if (error != GL_NO_ERROR) vita_fatal("Vita D3D8 initial resource allocation failed");
+	}
+#endif
 	xgpu_gl_state_invalidate();
 	device.gl_ready = TRUE;
 }
@@ -2062,6 +2070,9 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 #endif
 	glLinkProgram(entry->program);
 	glGetProgramiv(entry->program, GL_LINK_STATUS, &status);
+#ifdef HALO_VITA
+	vita_log("[VITA SHADER] original program=%u link status=%d", entry->program, status);
+#endif
 	if (!status)
 	{
 		char log[4096];
@@ -3348,12 +3359,57 @@ static void index_extent(const WORD *indices, unsigned long count, unsigned long
 
 /* ---------- vertex data */
 
+#ifdef HALO_VITA
+/* vitaGL SubData copies an entire recently drawn buffer on every update.
+ * Reuse the bounded allocation after completing previous GPU reads instead.
+ * This deliberately serializes bring-up; no global driver speedhack or
+ * assumed unsynchronized append behavior. Unmap resets vitaGL's use marker. */
+static unsigned long vita_stream_span(unsigned long size, unsigned long capacity)
+{
+	if (!size || size > capacity || size > (~0UL - 15))
+		vita_fatal("Vita stream request exceeds its bounded allocation");
+	return (size + 15) & ~15UL;
+}
+
+static void vita_stream_write(GLenum target, unsigned long offset, unsigned long size,
+	unsigned long capacity, const void *data)
+{
+	void *mapped;
+	if (!data || !size || offset > capacity || size > capacity - offset)
+		vita_fatal("Vita stream write exceeds its reserved range");
+	gl_check_errors("stream before mapping");
+	glFinish();
+	gl_check_errors("stream synchronization");
+	mapped = glMapBufferRange(target, (GLintptr)offset, (GLsizeiptr)size, GL_MAP_WRITE_BIT);
+	gl_check_errors("stream mapping");
+	if (!mapped)
+		vita_fatal("Vita stream mapping returned NULL");
+	/* Padding aligns the next offset; it is not part of the source object. */
+	memcpy(mapped, data, size);
+	if (!glUnmapBuffer(target))
+		vita_fatal("Vita stream unmap failed");
+	gl_check_errors("stream unmapping");
+	{ static unsigned long writes;
+		if (writes < 4) vita_log("[VITA STREAM] synchronized write target=%x offset=%lu bytes=%lu capacity=%lu PASS",
+			(unsigned)target, offset, size, capacity);
+		writes++;
+	}
+}
+#endif
+
 /* makes room for size bytes of uploads, orphaning the stream buffer if it
 is full. A draw reserves room for all of its streams at once: orphaning
 between two of them would leave the attributes already pointed at the
 buffer reading its new, empty storage. */
 static void stream_reserve(unsigned long size)
 {
+#ifdef HALO_VITA
+	if (size > STREAM_BUFFER_SIZE || device.stream_offset > STREAM_BUFFER_SIZE)
+		vita_fatal("Vita vertex reservation exceeds stream capacity");
+	if (size > STREAM_BUFFER_SIZE - device.stream_offset)
+		/* The next mapped write finishes prior reads before reusing offset0. */
+		device.stream_offset = 0;
+#else
 	if (device.stream_offset + size > STREAM_BUFFER_SIZE)
 	{
 		/* orphan the buffer and start again */
@@ -3361,17 +3417,24 @@ static void stream_reserve(unsigned long size)
 		glBufferData(GL_ARRAY_BUFFER, STREAM_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 		device.stream_offset = 0;
 	}
+#endif
 }
 
 static unsigned long stream_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
-
+#ifdef HALO_VITA
+	unsigned long bytes = size;
+	size = vita_stream_span(size, STREAM_BUFFER_SIZE);
+#else
 	size = (size + 15) & ~15UL;
+#endif
 	stream_reserve(size);
 	offset = device.stream_offset;
 	state_array_buffer(device.stream_buffer);
-#ifdef HALO_ANDROID
+#ifdef HALO_VITA
+	vita_stream_write(GL_ARRAY_BUFFER, offset, bytes, STREAM_BUFFER_SIZE, data);
+#elif defined(HALO_ANDROID)
 	host_gl_buffer_write(GL_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
 	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
@@ -3444,6 +3507,15 @@ static unsigned long index_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
 
+#ifdef HALO_VITA
+	unsigned long bytes = size;
+	size = vita_stream_span(size, INDEX_BUFFER_SIZE);
+	state_element_array_buffer(device.index_buffer);
+	if (device.index_offset > INDEX_BUFFER_SIZE)
+		vita_fatal("Vita index offset exceeds stream capacity");
+	if (size > INDEX_BUFFER_SIZE - device.index_offset)
+		device.index_offset = 0;
+#else
 	size = (size + 15) & ~15UL;
 	state_element_array_buffer(device.index_buffer);
 	if (device.index_offset + size > INDEX_BUFFER_SIZE)
@@ -3451,8 +3523,11 @@ static unsigned long index_upload(const void *data, unsigned long size)
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 		device.index_offset = 0;
 	}
+#endif
 	offset = device.index_offset;
-#ifdef HALO_ANDROID
+#ifdef HALO_VITA
+	vita_stream_write(GL_ELEMENT_ARRAY_BUFFER, offset, bytes, INDEX_BUFFER_SIZE, data);
+#elif defined(HALO_ANDROID)
 	host_gl_buffer_write(GL_ELEMENT_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);

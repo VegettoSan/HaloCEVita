@@ -162,3 +162,8 @@ A05100.19: glVertexAttribPointer in primary vitaGL6e7fe40/source/custom_shaders.
 ## A056 low-resolution screen policy
 
 Vita keeps original640x480 coordinates and scales screen targets to320x240 with the existing original backend scale mechanism; non-screen assets/targets stay intact. Native context/display remains960x544 for final original aspect-preserving upscale/letterbox.320x240 is85.3% fewer screen-target pixels vs previous960x544, not measured overall GPU cost. Actual screen/Present/FBO host bodies pass640/.5, odd-edge rounding, separate color/depth320x240 requests and centered4:3 blit; Android/desktop chooser behavior preserved. Hardware/native acceptance remains required.00.19 closure was unsupported pixel-store state, not observed GPU saturation.
+
+
+## A058/A059 original draw and mapped stream contract
+
+00.20 hardware now proves original320x240 allocation/clear, shield-noise upload, two compiled NV2A pairs and first original draw error0. No Present/visible menu. Exact workflow121 ELF/core identifies later font vertex upload in glBufferSubData copying into NULL after full-buffer clone allocation, not shader rejection/link crash.00.21 keeps2MiB vertex/256KiB index storage, finishes prior GPU reads, maps/writes/unmaps exact source bytes and wraps offsets without SubData clones/orphans. Same-draw aggregate reservations remain; alignment only advances offsets. Actual-function host lifetime/error/guard-page contracts PASS, native/hardware pending. This serializes draws and splits scenes; no FPS/memory benchmark or cross-scene depth persistence guarantee. Primary vitaGL6e7fe40/source/buffers.c and source/gxm.c define the exact lifetime/sync contract. Do not replace original fonts/shaders/menus or enable global driver speedhacks.

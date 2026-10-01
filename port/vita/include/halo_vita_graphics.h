@@ -9,7 +9,7 @@
 #define HALO_VITA_DISPLAY_WIDTH 960
 #define HALO_VITA_DISPLAY_HEIGHT 544
 
-/* Initial diagnostic budgets. Full renderer stream flushing is still pending. */
+/* Bounded bring-up budgets. Vita stream reuse is synchronized before mapping. */
 #define HALO_VITA_GL_RAM_SIZE (16 * 1024 * 1024)
 #define HALO_VITA_GL_CDRAM_SIZE (24 * 1024 * 1024)
 #define HALO_VITA_LEGACY_SIZE (2 * 1024 * 1024)

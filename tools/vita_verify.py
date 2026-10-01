@@ -34,7 +34,7 @@ abi = run('readelf', '-h', '-A', elf)
 assert 'ELF32' in abi and 'Machine:                           ARM' in abi and 'hard-float ABI' in abi
 assert 'VFP registers' in abi
 symbols = run('nm', elf)
-required = ['cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
+required = ['glMapBufferRange', 'glUnmapBuffer', 'glFinish', 'cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
             'crc_checksum_buffer',
             'physical_memory_allocate', 'physical_memory_verify', 'XPhysicalAlloc', 'XQueryMemoryProtect',
             'game_state_allocate_buffer', 'game_state_free_buffer',
@@ -147,9 +147,9 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
                              if tested_package else 'current package untested on Vita;00.11 root BOOTS baseline (A031)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
-            'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'DIAGNOSTIC RENDERS',
-            'rendering_scope': 'diagnostic + upstream NV2A synthetic two-MOV triangle only; HALO DRAW REACHED/RENDERS unverified',
-            'prior_hardware_evidence': 'docs/runtime/2026-09-29-00.11-root-debug.txt (A031)',
+            'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'HALO DRAW REACHED',
+            'rendering_scope': 'prior00.20 original Halo draw reached at320x240 (A058); current package HALO DRAW RENDERS/visible menu unverified',
+            'prior_hardware_evidence': 'docs/ATTEMPTS.md A058:00.20 workflow121 original draw/font stream abort',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
                                   'current package installation/runtime pending; prior00.11 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
