@@ -4747,6 +4747,26 @@ static __inline real widget_instance_get_cumulative_alpha_modifier(
 	return alpha_modifier;
 }
 
+#ifdef HALO_VITA
+/* Observe original tag/instance inputs; do not force opacity or rewrite tags. */
+static void vita_widget_text_color_observe(struct widget_instance *widget,
+	struct ui_widget_definition *definition, real cumulative,
+	real_argb_color const *color)
+{
+	static unsigned observed;
+	if (observed < 8) {
+		++observed;
+		vita_log("[VITA UI COLOR] widget=%08lx type=%d font=%08lx tag_alpha=%g instance_alpha=%g cumulative=%g output_argb=%g,%g,%g,%g flags=%08lx time_ms=%lu",
+			(unsigned long)widget->definition_tag_index, (int)widget->type,
+			(unsigned long)definition->text_font.index,
+			definition->text_color.alpha, widget->alpha_modifier, cumulative,
+			color->alpha, color->red, color->green, color->blue,
+			(unsigned long)definition->text_box_flags,
+			(unsigned long)widget_globals.current_system_milliseconds);
+	}
+}
+#endif
+
 static boolean widget_instance_text_box_is_focused(
 	struct widget_instance *widget)
 {
@@ -5009,6 +5029,9 @@ static void widget_instance_render_text_box(
 			widget_globals.current_system_milliseconds *
 				SECONDS_PER_MILLISECOND * 3.0f) + 1.5f) * 0.4f) * color.alpha;
 	}
+#ifdef HALO_VITA
+	vita_widget_text_color_observe(widget, definition, alpha_modifier, &color);
+#endif
 	draw_string_set_draw_mode(font_index, NONE, justification, 0, &color);
 	if (string_has_icons_to_draw(*text))
 		draw_string_and_hack_in_icons(&bounds, &clip, NULL, 0, *text, FALSE);
@@ -5212,6 +5235,9 @@ static void widget_instance_render_spinner_list(
 							SECONDS_PER_MILLISECOND * 3.0f) + 1.0f) * 0.5f) *
 						color.alpha;
 				}
+#ifdef HALO_VITA
+				vita_widget_text_color_observe(widget, definition, text_alpha_modifier, &color);
+#endif
 				draw_string_set_draw_mode(
 					definition->text_font.index,
 					NONE,

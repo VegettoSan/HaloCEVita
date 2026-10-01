@@ -40,6 +40,7 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             'game_state_allocate_buffer', 'game_state_free_buffer',
             'tag_iterator_next', 'tag_get', 'halo_vita_cache_mount_menu',
             'halo_vita_cache_validate_menu', 'halo_vita_cache_unmount_menu', 'vita_cache_read',
+            'vita_cache_resource_bind', 'vita_cache_resource_read', 'vita_cache_resource_error', 'lruv_delete',
             'halo_vita_ui_runtime_initialize', 'halo_vita_ui_runtime_dispose',
             'halo_vita_menu_root_checkpoint', 'halo_vita_menu_root_load',
             'ui_widget_load_by_name_or_tag', 'ui_widget_event_handler_function_invoke',
@@ -152,14 +153,14 @@ files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 tested_package = digest(build / 'HaloCE.vpk') == '7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
-                             if tested_package else 'current package untested on Vita;00.24 partial UI/repeated frames/Start baseline (A072)'),
+                             if tested_package else 'current package untested on Vita;00.25 partial UI/audible title1 with stalls and failed Start disposal (A077)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
-            'rendering_scope': '00.24 hardware partial logo/backgrounds and continuous frames/Start (A072); current package visual improvement unverified',
-            'audio_scope': 'original 2D manager/cache/SDL mixer LINKS; current package hardware activation/audibility pending (A074)',
-            'prior_hardware_evidence': 'docs/ATTEMPTS.md A072:00.24 continuous frames and Start exit, incomplete UI',
+            'rendering_scope': '00.25 hardware partial logo/plain backgrounds, missing labels/transparency/motion (A077); current package visual improvement unverified',
+            'audio_scope': '00.25 original title1 audible with periodic cuts/main-thread stalls (A077);00.26 seekable reads/stream reuse barriers LINK, continuity/FPS pending',
+            'prior_hardware_evidence': 'docs/ATTEMPTS.md A077:00.25 audible cuts,13FPS maximum overclock, UI unchanged, invalid interior LRU free at Start',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
-                                  'current package installation/runtime pending; prior00.24 BOOTS/partial UI (A072)'),
+                                  'current package installation/runtime pending; prior00.25 BOOTS/partial UI/audible title1 with stalls (A077)'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': git_metadata('rev-parse', 'HEAD'),
             'source_has_uncommitted_changes': bool(git_metadata(

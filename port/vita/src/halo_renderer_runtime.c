@@ -238,6 +238,8 @@ int halo_vita_renderer_render_menu_frame(void)
     real_point3d position = { 0.0f, 0.0f, 0.0f };
     real_vector3d forward = { 0.0f, 0.0f, 1.0f };
     real_vector3d up = { 0.0f, 1.0f, 0.0f };
+    boolean observe_time;
+    uint64_t frame_begin = 0, ui_end = 0, present_end = 0, audio_end = 0;
 
     if (!vita_renderer_ready || !global_d3d_device) {
         vita_log("MAIN MENU BLOCKED: render frame requested before rasterizer initialization");
@@ -247,6 +249,9 @@ int halo_vita_renderer_render_menu_frame(void)
     halo_vita_main_render_time_update();
     halo_vita_ui_render_clock_update();
     vita_menu_frame_count++;
+    observe_time = vita_menu_frame_count <= 3 || vita_menu_frame_count == 30 ||
+        vita_menu_frame_count == 120;
+    if (observe_time) frame_begin = vita_time_us();
     if (vita_menu_frame_count == 2)
         vita_log("[VITA 041] second original Main Menu frame begin");
     else if (vita_menu_frame_count == 3)
@@ -310,6 +315,7 @@ int halo_vita_renderer_render_menu_frame(void)
     halo_screen_ui_offset(TRUE);
     render_ui_widgets(0, &window_parameters.camera.viewport_bounds);
     halo_screen_ui_offset(FALSE);
+    if (observe_time) ui_end = vita_time_us();
     if (vita_first_menu_frame)
         vita_log("[VITA 037UI] render_ui_widgets PASS");
 
@@ -330,12 +336,21 @@ int halo_vita_renderer_render_menu_frame(void)
     }
 
     rasterizer_present(NULL, NULL);
+    if (observe_time) present_end = vita_time_us();
 #ifdef HALO_VITA_MENU_AUDIO
     /* First-frame shader compilation can take seconds on Vita. Queue the
      * original soundtrack after that frame, so its initial packets cannot
      * drain while the main thread is still compiling the first UI shaders. */
     halo_vita_menu_audio_frame();
 #endif
+    if (observe_time) {
+        audio_end = vita_time_us();
+        vita_log("[VITA FRAME TIME] frame=%lu begin_ui_us=%llu end_present_us=%llu audio_us=%llu total_us=%llu",
+            vita_menu_frame_count, (unsigned long long)(ui_end - frame_begin),
+            (unsigned long long)(present_end - ui_end),
+            (unsigned long long)(audio_end - present_end),
+            (unsigned long long)(audio_end - frame_begin));
+    }
 
     if (vita_first_menu_frame) {
         vita_log("[VITA 038] original Main Menu frame presented");

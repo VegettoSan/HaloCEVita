@@ -687,10 +687,14 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 #endif
 				decode_level(description, level, source, palette, converted);
 #ifdef HALO_VITA
-				/* Observe decoded original font coverage without changing bytes. */
-				if (description->format == 0x04 && face == 0 && level == 0) {
-					static unsigned coverage_logged;
-					if (coverage_logged < 4) {
+				/* Observe original font and image coverage without changing bytes.
+				 * Keep separate budgets so image uploads do not exhaust font data. */
+				if (face == 0 && level == 0) {
+					static unsigned font_coverage_logged, image_coverage_logged;
+					unsigned *coverage_logged = description->format == 0x04 ?
+						&font_coverage_logged : &image_coverage_logged;
+					unsigned limit = description->format == 0x04 ? 4 : 8;
+					if (*coverage_logged < limit) {
 						unsigned long p, pixels = (unsigned long)width * (unsigned long)height;
 						unsigned long zero = 0, opaque = 0, white = 0;
 						unsigned min_alpha = 255, max_alpha = 0;
@@ -701,7 +705,7 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 							zero += alpha == 0; opaque += alpha == 255;
 							white += (converted[p] & 0x00ffffffUL) == 0x00ffffffUL;
 						}
-						++coverage_logged;
+						++*coverage_logged;
 						vita_log("[VITA UI ALPHA] id=%u format=%lx dims=%dx%d alpha=%u..%u zero=%lu opaque=%lu whiteRGB=%lu pixels=%lu",
 							texture, (unsigned long)description->format, (int)width, (int)height,
 							min_alpha, max_alpha, zero, opaque, white, pixels);

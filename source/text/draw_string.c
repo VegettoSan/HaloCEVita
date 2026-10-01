@@ -113,6 +113,9 @@ symbols in this file:
 #include "math/real_math.h"
 #include "rasterizer/rasterizer.h"
 #include "text/draw_string.h"
+#ifdef HALO_VITA
+#include "vita_runtime.h"
+#endif
 #include "text/font_group.h"
 #include "text/international_strings.h"
 #include "text/text_group.h"
@@ -657,6 +660,16 @@ static void parse_string_new(
 	packed_color = (packed_color << 8) | (long)(color->green * 255.f);
 	packed_color = (packed_color << 8) | (long)(color->blue * 255.f);
 	state->color = packed_color;
+#ifdef HALO_VITA
+	{ static unsigned observed;
+		if (observed < 8) {
+			++observed;
+			vita_log("[VITA UI COLOR] packed font=%08lx argb=%g,%g,%g,%g pixel=%08lx",
+				(unsigned long)font_index, color->alpha, color->red,
+				color->green, color->blue, (unsigned long)packed_color);
+		}
+	}
+#endif
 	state->font_header = styled_font_get(font_index, style);
 
 	return;

@@ -159,6 +159,8 @@ static void failed_shader_source(GLuint shader, const char *name)
 void vita_graphics_halo_shader_begin(const char *stage, const char *source)
 {
 	char path[128]; FILE *file;
+	static unsigned vertex_sources, pixel_sources;
+	unsigned *ordinal = strcmp(stage, "vertex") == 0 ? &vertex_sources : &pixel_sources;
 	compiler_stage = stage;
 	shark_install_log_cb(compiler_log);
 	snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s.glsl", stage);
@@ -166,6 +168,18 @@ void vita_graphics_halo_shader_begin(const char *stage, const char *source)
 	if (file) { fputs(source, file); fclose(file); }
 	vita_log("[VITA SHADER] original NV2A %s compile begin source_bytes=%u saved=%s",
 		stage, (unsigned)strlen(source), file ? path : "NO");
+	/* The legacy path keeps the most recent shader. Also retain the first
+	 * four compilation sources per stage, so fonts cannot overwrite all
+	 * evidence of the original background combiners. Ordinals are per stage,
+	 * not a claim that two equally numbered files form a linked program. */
+	if (*ordinal < 4) {
+		snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s_%02u.glsl", stage, *ordinal);
+		file = fopen(path, "wb");
+		if (file) { fputs(source, file); fclose(file); }
+		vita_log("[VITA SHADER] stage=%s compile_ordinal=%u saved=%s",
+			stage, *ordinal, file ? path : "NO");
+		++*ordinal;
+	}
 }
 int vita_graphics_halo_shader_result(uint32_t shader, const char *stage)
 {

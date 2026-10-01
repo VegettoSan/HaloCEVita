@@ -271,3 +271,6 @@ A077 audible title1 cuts periodically with reported13FPS/0–1FPS stalls at maxi
 
 
 A078 source correction for KI-036:00.26 disk-backed logical resources eliminate per-miss prefix inflation in the main loop;256 exact counted host requests PASS with zero live inflate calls. Native storage latency, uninterrupted mixing and actual FPS still require Vita evidence. Prepare-time disk use is the logical map size; write/checksum/flush failure prevents activation and removes owned scratch.
+
+
+A080 follow-up to KI-031:00.25 decoded font pages contain transparent/opaque glyph coverage, while observed glyph vertex alpha is0. Tag/cumulative/output/packed color and retained first background shader sources are now bounded observations; no confirmed upstream alpha cause or opacity workaround. The staged renderer still emits UI-only draws. Missing scenario/model bitmaps require original world/camera/material draw integration, not a loop that displays every bitmap tag.00.26 needs new hardware debug/shader/photo evidence; the resumed local workspace has no retail ui.map for offline pixel/color inspection.
