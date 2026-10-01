@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-01
 
+Latest hardware00.27 (A087): BOOTS / partial HALO DRAW RENDERS with original bitmap option lettering now visible. User reports good music/feedback; photo still shows white/gray rectangles and no navigation. Source has no active widget input processor. Full UI/transparency/navigation/scenario remain pending.
+
 Current source00.27 (A085) selects the existing original CPU DXT3 decoder for a controlled mask-sampling experiment. Real9 menu mask frames and uploader/synthetic alpha contracts PASS on host. Required native SDK build, package verification and publication PASS in Vita Build #145/run36894968119 (A086);00.27 is LINKS, hardware validation pending. DXT1/DXT5 remain native. This is not a confirmed transparency/full-UI correction.
 
 A084 exact uploaded-map audit corrects the label hypothesis: main-menu option lettering is authored in DXT3 bitmap alpha, while its auxiliary text alpha0 is intentional in the file. Raw Campaign mask retains0..119 alpha and14537 transparent pixels; focused frame1 retains0..255. Original background GLSL preserves this mask in a controlled host GPU replay. Vita sampling/compiler/actual draw inputs remain to isolate; do not force auxiliary text alpha. Build-number font text remains separate.
