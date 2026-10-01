@@ -20,6 +20,18 @@
 #include "vita_runtime.h"
 #include "halo_ui_pointer.h"
 
+/* Keep vitaGL headers out of Halo's MSVC-semantics translation unit. The
+ * diagnostic uses only ABI-stable GLES scalar entry points and constants. */
+#ifdef HALO_VITA
+extern void glGetIntegerv(unsigned int pname, int *data);
+extern void glReadPixels(int x, int y, int width, int height,
+    unsigned int format, unsigned int type, void *data);
+extern unsigned int glGetError(void);
+#define VITA_GL_VIEWPORT 0x0BA2u
+#define VITA_GL_RGBA 0x1908u
+#define VITA_GL_UNSIGNED_BYTE 0x1401u
+#endif
+
 /* cache_files.c owns the map-open sequencing and intentionally keeps this
  * per-map entry point out of texture_cache.h. Vita mounts ui.map through its
  * checked logical-range backend instead of scenario_tags_load(), so restore
@@ -49,6 +61,48 @@ static boolean vita_bitmap_resources_ready;
 static boolean vita_decals_ready;
 static boolean vita_shell_state_ready;
 static boolean vita_first_menu_frame = TRUE;
+static unsigned long vita_menu_frame_count;
+
+#ifdef HALO_VITA
+/* Sample nine small blocks from the real currently-bound Halo target. This is
+ * readback-only diagnostics: it neither clears nor replaces the retail frame.
+ * A nonzero RGB count proves rasterization reached the 320x240 source before
+ * the D3D8 Present upscale; zero isolates the problem before presentation. */
+static void vita_probe_real_menu_target(void)
+{
+    unsigned char pixels[8 * 8 * 4];
+    int viewport[4] = {0, 0, 0, 0};
+    unsigned long nonblack = 0, samples = 0;
+    unsigned long r = 0, g = 0, b = 0, a = 0;
+    int gx, gy, x, y, i;
+    unsigned int error;
+
+    glGetIntegerv(VITA_GL_VIEWPORT, viewport);
+    if (viewport[2] < 8 || viewport[3] < 8) {
+        vita_log("[VITA PIXEL] source probe skipped viewport=%d,%d,%d,%d",
+            viewport[0], viewport[1], viewport[2], viewport[3]);
+        return;
+    }
+
+    for (gy = 1; gy <= 3; gy++) {
+        for (gx = 1; gx <= 3; gx++) {
+            x = viewport[0] + (viewport[2] * gx) / 4 - 4;
+            y = viewport[1] + (viewport[3] * gy) / 4 - 4;
+            glReadPixels(x, y, 8, 8, VITA_GL_RGBA, VITA_GL_UNSIGNED_BYTE, pixels);
+            for (i = 0; i < 8 * 8; i++) {
+                unsigned char *p = &pixels[i * 4];
+                r += p[0]; g += p[1]; b += p[2]; a += p[3];
+                if (p[0] || p[1] || p[2]) nonblack++;
+                samples++;
+            }
+        }
+    }
+    error = glGetError();
+    vita_log("[VITA PIXEL] real Halo target viewport=%d,%d,%d,%d samples=%lu nonblack=%lu rgba_sum=%lu,%lu,%lu,%lu gl_error=0x%x",
+        viewport[0], viewport[1], viewport[2], viewport[3], samples, nonblack,
+        r, g, b, a, error);
+}
+#endif
 
 int halo_vita_renderer_initialize(void)
 {
@@ -183,6 +237,10 @@ int halo_vita_renderer_render_menu_frame(void)
         return 0;
     }
 
+    vita_menu_frame_count++;
+    if (vita_menu_frame_count == 2)
+        vita_log("[VITA 041] second original Main Menu frame begin");
+
     csmemset(&frame_parameters, 0, sizeof(frame_parameters));
     csmemset(&window_parameters, 0, sizeof(window_parameters));
 
@@ -253,14 +311,22 @@ int halo_vita_renderer_render_menu_frame(void)
         vita_log("[VITA 037W3] rasterizer_windows_end PASS");
 
     rasterizer_frame_end();
-    if (vita_first_menu_frame)
+    if (vita_first_menu_frame) {
         vita_log("[VITA 037E] rasterizer_frame_end PASS");
+#ifdef HALO_VITA
+        vita_probe_real_menu_target();
+#endif
+    }
 
     rasterizer_present(NULL, NULL);
 
     if (vita_first_menu_frame) {
         vita_log("[VITA 038] original Main Menu frame presented");
         vita_first_menu_frame = FALSE;
+    } else if (vita_menu_frame_count == 2) {
+        vita_log("[VITA 041] second original Main Menu frame presented");
+    } else if (vita_menu_frame_count == 30 || vita_menu_frame_count == 120) {
+        vita_log("[VITA 041] original Main Menu loop alive frame=%lu", vita_menu_frame_count);
     }
     return 1;
 }
