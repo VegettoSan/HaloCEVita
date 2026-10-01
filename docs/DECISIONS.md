@@ -160,3 +160,7 @@ Date2026-10-01; A045/A046. Refine D016's cold-cache validation using actual00.17
 ## D020 — Completed subsystem flags own pre-root failure teardown
 
 Date2026-10-01; A047. Menu readiness can fail after original rasterizer allocation succeeds. Track original completion independently and invoke original close/dispose owners before tag/arena/context teardown, only before an active root exists. Keep original game-owned decal destruction before device destruction. Avoid synthetic frees, hiding allocation reports or treating a failed partial rasterizer initializer as fully initialized. Active-root shutdown and complete platform GL cache reset need their own validated owner contract.
+
+## D021 — Vita depth objects retain one owning FBO
+
+Date2026-10-01; A049/A050. Adapt the original D3D8 Z/stencil surface to vitaGL's exposed renderbuffer request API, retaining a separate handle from sampleable color textures. vitaGL6e7fe40 implements physical depth/stencil per framebuffer, not per renderbuffer; attaching one RB to multiple color-keyed FBOs would silently lose shared depth identity. Therefore cache the Vita depth FBO by depth handle and update only an equal-size color attachment. Never reattach the RB on a cache hit. Color-only read/copy FBOs remain keyed by color. Preserve original Z/stencil clears/tests; unsupported depth-only, size mismatch and depth sampling are not fake-success paths. Lazy physical allocation and STORE_DEPTH_STENCIL persistence remain hardware/build capability gates. Non-Vita backend behavior remains unchanged.

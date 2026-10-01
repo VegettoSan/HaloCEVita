@@ -146,3 +146,9 @@ The separate `HALO_VITA_MENU_RENDER_PROBE` target now compiles the original Linu
 
 
 A045/A046:00.17 hardware stops at039 before resource read/upload/shader/draw. Cached bitmap base/hardware words may be serialized Xbox values even with LRU index NONE.00.18 validates the cold cached contract without consuming those words; original loader owns replacement and registration. Actual loader/query host fixture passes; native/hardware texture upload remains unverified. No GPU capability change is inferred from this controlled exit.
+
+## A049/A050 packed depth vs renderbuffer on Vita
+
+00.18 hardware rejects packed glTexImage2D(GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8) with0x501 before first-window completion. Do not infer support from numeric tokens. Primary vitaGL6e7fe40 source/textures.c rejects this input; shared.h _glFramebufferTexture2D only accepts color attachment. Exposed source/vitaGL.h/framebuffers.c provide glGen/Bind/DeleteRenderbuffers, glRenderbufferStorage(GL_DEPTH24_STENCIL8) and glFramebufferRenderbuffer.00.19 uses those requests plus checked FBO color/depth attachments. Native archive resolution must be verified by CI; GPU acceptance remains pending.
+
+vitaGL gxm.c lazily allocates the physical depth/stencil surface per FBO. A050 keeps one FBO per depth object across equal-size color switches and does not reattach depth on hits. Original Z/stencil masks/clears/tests are retained. glCheckFramebufferStatus chiefly checks color presence and cannot prove later GXM allocation. STORE_DEPTH_STENCIL load/store behavior, depth-only, mismatched-size pairs and depth sampling remain unverified/blocked. Actual-function host mocks pass namespace, scaling, cache identity and GL/error rejection; no retail draw/render claim. References: https://github.com/Rinnegatamante/vitaGL/blob/6e7fe40/source/framebuffers.c and source/{shared.h,textures.c,gxm.c,vitaGL.h} at the same revision.

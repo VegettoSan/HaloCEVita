@@ -254,6 +254,11 @@ struct render_target_entry
 	/* the next with the same address bucket (render_target_bucket) */
 	struct render_target_entry *next_in_bucket;
 	struct xgpu_render_target target;
+#ifdef HALO_VITA
+	/* vitaGL depth/stencil is requested through a renderbuffer, not a
+	 * sampleable packed-depth texture. Keep the GL namespaces separate. */
+	GLuint depth_buffer;
+#endif
 	unsigned long last_rendered;
 };
 
@@ -809,6 +814,9 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 		}
 	}
 	entry = calloc(1, sizeof(*entry));
+#ifdef HALO_VITA
+	if (!entry) vita_fatal("D3D8 render target metadata allocation failed");
+#endif
 	entry->target.data = surface->Data;
 	entry->target.width = width;
 	entry->target.height = height;
@@ -817,26 +825,50 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	entry->target.scale[1] = scale[1];
 	entry->target.gl_width = (unsigned long)(width * scale[0] + 0.5f);
 	entry->target.gl_height = (unsigned long)(height * scale[1] + 0.5f);
-	glGenTextures(1, &entry->target.texture);
-	glBindTexture(GL_TEXTURE_2D, entry->target.texture);
-#ifndef HALO_VITA
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-#endif
+#ifdef HALO_VITA
 	if (depth)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)entry->target.gl_width,
-			(GLsizei)entry->target.gl_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+	{
+		glGenRenderbuffers(1, &entry->depth_buffer);
+		if (!entry->depth_buffer)
+			vita_fatal("vitaGL could not create the original D3D8 depth renderbuffer");
+		glBindRenderbuffer(GL_RENDERBUFFER, entry->depth_buffer);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
+			(GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0);
+	}
 	else
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height,
-			0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+#endif
+	{
+		glGenTextures(1, &entry->target.texture);
+		glBindTexture(GL_TEXTURE_2D, entry->target.texture);
+#ifndef HALO_VITA
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+		if (depth)
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)entry->target.gl_width,
+				(GLsizei)entry->target.gl_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
+		else
+#endif
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height,
+				0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
+	}
 #ifdef HALO_VITA
 	{
 		GLenum error = glGetError();
-		if (!entry->target.texture || error != GL_NO_ERROR)
+		GLuint object = depth ? entry->depth_buffer : entry->target.texture;
+		if (!object || error != GL_NO_ERROR)
 		{
-			vita_log("D3D8 render target allocation failed depth=%d texture=%u size=%lux%lu GL error=0x%x",
-				depth, entry->target.texture, entry->target.gl_width, entry->target.gl_height, error);
+			vita_log("D3D8 render target allocation failed depth=%d object=%u size=%lux%lu GL error=0x%x",
+				depth, object, entry->target.gl_width, entry->target.gl_height, error);
+			if (depth) glDeleteRenderbuffers(1, &entry->depth_buffer);
+			else glDeleteTextures(1, &entry->target.texture);
+			free(entry);
 			vita_fatal("original D3D8 render target could not be allocated on vitaGL");
 		}
+		vita_log("D3D8 render target request PASS data=%08lx depth=%d texture=%u renderbuffer=%u size=%lux%lu",
+			entry->target.data, depth, entry->target.texture, entry->depth_buffer,
+			entry->target.gl_width, entry->target.gl_height);
+		/* Storage requests are checked here; vitaGL allocates the physical
+		 * GXM depth/stencil surface lazily when the owning FBO starts a scene. */
 	}
 #endif
 	xgpu_gl_state_invalidate();
@@ -864,29 +896,80 @@ static GLuint framebuffer_get(GLuint color, GLuint depth)
 	struct framebuffer_entry *entry;
 	#ifndef HALO_VITA
 	GLenum draw_buffer = color ? GL_COLOR_ATTACHMENT0 : GL_NONE;
+	#else
+	if (!color) vita_fatal("D3D8 depth-only framebuffer needs draw-buffer selection unavailable in vitaGL");
 	#endif
 
 	for (entry = framebuffers; entry; entry = entry->next)
 	{
+#ifdef HALO_VITA
+		/* vitaGL owns hidden depth/stencil per FBO. The same renderbuffer on
+		 * two FBOs would create unrelated surfaces. Retain the depth's FBO
+		 * and replace only its equal-size color attachment. bind_targets
+		 * verifies sizes before entering here. Never reattach the renderbuffer
+		 * on a cache hit: that discards vitaGL's existing hidden depth. */
+		if (depth && entry->depth == depth)
+		{
+			if (entry->color != color)
+			{
+				glBindFramebuffer(GL_FRAMEBUFFER, entry->framebuffer);
+				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
+				GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+				GLenum error = glGetError();
+				if (status != GL_FRAMEBUFFER_COMPLETE || error != GL_NO_ERROR)
+				{
+					vita_log("D3D8 FBO color switch failed color=%u depth=%u status=0x%x error=0x%x",
+						color, depth, status, error);
+					vita_fatal("vitaGL rejected the original D3D8 framebuffer color switch");
+				}
+				entry->color = color;
+				xgpu_gl_state_invalidate();
+			}
+			return entry->framebuffer;
+		}
+#endif
 		if (entry->color == color && entry->depth == depth)
 			return entry->framebuffer;
 	}
 	entry = calloc(1, sizeof(*entry));
+#ifdef HALO_VITA
+	if (!entry) vita_fatal("D3D8 framebuffer metadata allocation failed");
+#endif
 	entry->color = color;
 	entry->depth = depth;
 	glGenFramebuffers(1, &entry->framebuffer);
+#ifdef HALO_VITA
+	if (!entry->framebuffer) vita_fatal("vitaGL could not create the original D3D8 framebuffer");
+#endif
 	glBindFramebuffer(GL_FRAMEBUFFER, entry->framebuffer);
 	if (color)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 	if (depth)
+#ifdef HALO_VITA
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
+#else
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
+#endif
 	#ifdef HALO_VITA
-	if (!color) vita_fatal("D3D8 depth-only framebuffer needs draw-buffer selection unavailable in vitaGL");
+	{
+		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+		GLenum error = glGetError();
+		if (status != GL_FRAMEBUFFER_COMPLETE || error != GL_NO_ERROR)
+		{
+			vita_log("D3D8 FBO attachment failed color=%u depth=%u FBO=%u status=0x%x error=0x%x",
+				color, depth, entry->framebuffer, status, error);
+			glDeleteFramebuffers(1, &entry->framebuffer);
+			free(entry);
+			vita_fatal("vitaGL rejected the original D3D8 framebuffer attachments");
+		}
+		vita_log("D3D8 FBO attachment PASS color=%u depth_renderbuffer=%u FBO=%u status=0x%x GL error=0x%x",
+			color, depth, entry->framebuffer, status, error);
+	}
 	#else
 	glDrawBuffers(1, &draw_buffer);
-	#endif
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		platform_log("framebuffer %u/%u is incomplete", color, depth);
+	#endif
 	xgpu_gl_state_invalidate();
 	entry->next = framebuffers;
 	framebuffers = entry;
@@ -918,7 +1001,14 @@ static BOOL bind_targets(BOOL *has_depth)
 	/* viewports and clears are in the targets' units (render_target_get) */
 	target_scale[0] = color ? color->target.scale[0] : depth->target.scale[0];
 	target_scale[1] = color ? color->target.scale[1] : depth->target.scale[1];
+#ifdef HALO_VITA
+	if (color && depth && (color->target.gl_width != depth->target.gl_width ||
+		color->target.gl_height != depth->target.gl_height))
+		vita_fatal("vitaGL D3D8 color/depth size mismatch is unsupported");
+	state_framebuffer(framebuffer_get(color ? color->target.texture : 0, depth ? depth->depth_buffer : 0));
+#else
 	state_framebuffer(framebuffer_get(color ? color->target.texture : 0, depth ? depth->target.texture : 0));
+#endif
 	*has_depth = depth != NULL;
 	return TRUE;
 }

@@ -15,16 +15,6 @@
 #define GL_TEXTURE_3D 0x806F
 #endif
 
-/* Standard format/type selectors for the depth-stencil allocation probe.
- * Their availability as enum values is not proof vitaGL accepts the pair;
- * d3d8_gl.c checks the actual allocation error before using the target. */
-#ifndef GL_DEPTH_STENCIL
-#define GL_DEPTH_STENCIL 0x84F9
-#endif
-#ifndef GL_UNSIGNED_INT_24_8
-#define GL_UNSIGNED_INT_24_8 0x84FA
-#endif
-
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
 #define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT 0x83F1
 #define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT 0x83F2
