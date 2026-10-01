@@ -18,7 +18,11 @@ int sceIoDclose(int descriptor);
 STAT_HEADER = '''#include <sys/stat.h>
 #pragma once
 #include <stdint.h>
-typedef struct { unsigned st_mode; int64_t st_size; } SceIoStat;
+#undef st_ctime
+#undef st_atime
+#undef st_mtime
+typedef struct { uint64_t filetime; } SceDateTime;
+typedef struct { unsigned st_mode; int64_t st_size; SceDateTime st_ctime,st_atime,st_mtime; } SceIoStat;
 #define SCE_S_ISDIR(mode) S_ISDIR(mode)
 #define SCE_S_IWUSR S_IWUSR
 #define SCE_S_IWGRP S_IWGRP
@@ -103,7 +107,11 @@ int sceIoDclose(int descriptor) {
 int sceIoGetstat(const char *path, SceIoStat *result) {
     char target[1024]; struct stat source;
     if (!translate(path, target, sizeof(target)) || stat(target, &source)) return -1;
-    result->st_mode = source.st_mode; result->st_size=source.st_size; return 0;
+    result->st_mode = source.st_mode; result->st_size=source.st_size;
+    result->st_ctime.filetime=((uint64_t)source.st_ctim.tv_sec+11644473600ULL)*10000000;
+    result->st_atime.filetime=((uint64_t)source.st_atim.tv_sec+11644473600ULL)*10000000;
+    result->st_mtime.filetime=((uint64_t)source.st_mtim.tv_sec+11644473600ULL)*10000000;
+    return 0;
 }
 #include "psp2/io/fcntl.h"
 #include "psp2/io/devctl.h"
@@ -111,7 +119,12 @@ int sceIoGetstat(const char *path, SceIoStat *result) {
 int sceIoOpen(const char *p,int flags,int mode) {char t[1024];return translate(p,t,sizeof(t))?open(t,flags,mode):-1;}
 int sceIoClose(int fd){return close(fd);}
 int sceIoRead(int fd,void *p,unsigned long n){return read(fd,p,n);}
-int sceIoWrite(int fd,const void *p,unsigned long n){return write(fd,p,n);}
+int xapi_test_write_limit, xapi_test_fail_write;
+int sceIoWrite(int fd,const void *p,unsigned long n){
+ if(xapi_test_fail_write)return -1;
+ if(xapi_test_write_limit && n>(unsigned)xapi_test_write_limit)n=xapi_test_write_limit;
+ return write(fd,p,n);}
+int sceRtcGetWin32FileTime(const SceDateTime *t,uint64_t *out){*out=t->filetime;return 0;}
 SceOff sceIoLseek(int fd,SceOff o,int w){return lseek(fd,o,w);}
 int sceIoMkdir(const char *p,int mode){char t[1024];return translate(p,t,sizeof(t))?mkdir(t,mode):-1;}
 int sceIoRemove(const char *p){char t[1024];return translate(p,t,sizeof(t))?unlink(t):-1;}
@@ -139,6 +152,7 @@ def main():
         (headers / 'stat.h').write_text(STAT_HEADER)
         (headers / 'fcntl.h').write_text(FCNTL_HEADER)
         (headers / 'devctl.h').write_text(DEVCTL_HEADER)
+        (headers.parent / 'rtc.h').write_text('#include \"io/stat.h\"\nint sceRtcGetWin32FileTime(const SceDateTime *t,uint64_t *out);\n')
         (work / 'mock.c').write_text(MOCK)
         library = work / 'xapi.so'
         subprocess.run(['gcc', '-std=c11', '-D_DEFAULT_SOURCE', '-shared', '-fPIC',
@@ -242,11 +256,35 @@ def main():
         available, total, free = C.c_uint64(), C.c_uint64(), C.c_uint64()
         assert xapi.GetDiskFreeSpaceExA(b'z:\\', C.byref(available), C.byref(total), C.byref(free))
         assert 0 < available.value <= total.value and free.value == available.value
+        xapi.vita_xapi_file_metadata.argtypes = [C.c_char_p,C.POINTER(C.c_uint32),
+                                               C.POINTER(C.c_uint64),C.POINTER(C.c_uint64)]
+        times = (C.c_uint64 * 3)()
+        assert xapi.vita_xapi_file_metadata(renamed,C.byref(flags),C.byref(size),times)
+        assert flags.value == 128 and size.value == 3 and times[2] > 116444736000000000
+        assert not xapi.vita_xapi_file_metadata(b'z:\\missing.bin',C.byref(flags),C.byref(size),times)
+        xapi.CopyFileA.argtypes = [C.c_char_p,C.c_char_p,C.c_int]
+        payload = bytes(range(256)) * 400
+        (data / 'z/saved/profiles/renamed.bin').write_bytes(payload)
+        copy = b'z:\\saved\\profiles\\copy.bin'
+        failed = b'z:\\saved\\profiles\\failed.bin'
+        limit = C.c_int.in_dll(xapi,'xapi_test_write_limit')
+        limit.value = 7
+        assert xapi.CopyFileA(renamed,copy,1)
+        assert (data / 'z/saved/profiles/copy.bin').read_bytes() == payload
+        assert not xapi.CopyFileA(renamed,copy,1) and xapi.vita_xapi_last_error_get() == 183
+        assert not xapi.CopyFileA(renamed,renamed.upper(),0)
+        assert (data / 'z/saved/profiles/renamed.bin').read_bytes() == payload
+        fail = C.c_int.in_dll(xapi,'xapi_test_fail_write')
+        fail.value = 1
+        assert not xapi.CopyFileA(renamed,failed,1)
+        assert not (data / 'z/saved/profiles/failed.bin').exists()
+        fail.value = 0; limit.value = 0
+        assert xapi.CopyFileA(renamed,copy,0)
         xapi.DeleteFileA.argtypes = [C.c_char_p]
         xapi.RemoveDirectoryA.argtypes = [C.c_char_p]
         assert not xapi.RemoveDirectoryA(b'z:\\saved\\profiles')
-        assert xapi.DeleteFileA(renamed) and xapi.RemoveDirectoryA(b'z:\\saved\\profiles')
-        print('PASS: actual Xbox path/TLS, save directory/create/casefold, counted I/O/EOF, seek/overwrite/truncate, enumerate/rename/delete/free-space contracts')
+        assert xapi.DeleteFileA(renamed) and xapi.DeleteFileA(copy) and xapi.RemoveDirectoryA(b'z:\\saved\\profiles')
+        print('PASS: actual Xbox path/TLS, save directory/create/casefold, counted I/O/EOF, seek/overwrite/truncate, enumerate/rename/delete/free-space, timestamp metadata, multi-buffer/partial-write copy and failure cleanup')
 
 
 if __name__ == '__main__':

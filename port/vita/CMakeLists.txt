@@ -43,6 +43,7 @@ add_library(halo_core STATIC
   ${ROOT}/source/interface/player_ui.c
   ${ROOT}/source/networking/network_game_globals.c
   ${ROOT}/source/main/main.c
+  ${ROOT}/source/editor/editor_stubs.c
   ${ROOT}/source/game/game.c
   ${ROOT}/source/game/game_engine.c
   "${ROOT}/source/saved games/player_profile.c"
@@ -234,7 +235,7 @@ target_link_libraries(HaloCE.elf PRIVATE halo_core
   SceShaccCg_stub taihen_stub SceDisplay_stub SceCtrl_stub SceGxm_stub ScePower_stub
   SceKernelDmacMgr_stub SceIofilemgr_stub SceSysmem_stub SceProcessmgr_stub SceKernelThreadMgr_stub
   SceAudio_stub SceAudioIn_stub SceSysmodule_stub SceAppMgr_stub SceAppUtil_stub
-  SceCommonDialog_stub SceTouch_stub SceHid_stub SceMotion_stub SceCamera_stub -Wl,--end-group)
+  SceRtc_stub SceCommonDialog_stub SceTouch_stub SceHid_stub SceMotion_stub SceCamera_stub -Wl,--end-group)
 vita_create_self(eboot.bin HaloCE.elf UNSAFE)
 set(ASSETS "${CMAKE_CURRENT_BINARY_DIR}/sce_sys")
 add_custom_command(OUTPUT ${ASSETS}/icon0.png ${ASSETS}/bg.png ${ASSETS}/startup.png

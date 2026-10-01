@@ -63,3 +63,19 @@ BOOL WINAPI FindNextFileA(HANDLE find,LPWIN32_FIND_DATAA data)
     return search_next(handle->data,data);
 }
 BOOL WINAPI FindClose(HANDLE find) {return CloseHandle(find);}
+
+extern int vita_xapi_file_metadata(const char *name, uint32_t *attributes,
+    uint64_t *size, uint64_t times[3]);
+BOOL WINAPI GetFileAttributesExA(LPCSTR name, GET_FILEEX_INFO_LEVELS level, LPVOID output)
+{
+    WIN32_FILE_ATTRIBUTE_DATA *data=output;
+    uint32_t attributes; uint64_t size,times[3];
+    if (level!=GetFileExInfoStandard || !data) { SetLastError(ERROR_INVALID_PARAMETER); return FALSE; }
+    if (!vita_xapi_file_metadata(name,&attributes,&size,times)) return FALSE;
+    memset(data,0,sizeof(*data)); data->dwFileAttributes=attributes;
+    data->nFileSizeLow=(DWORD)size;data->nFileSizeHigh=(DWORD)(size>>32);
+    memcpy(&data->ftCreationTime,&times[0],8);
+    memcpy(&data->ftLastAccessTime,&times[1],8);
+    memcpy(&data->ftLastWriteTime,&times[2],8);
+    return TRUE;
+}

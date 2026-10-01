@@ -250,3 +250,8 @@ A084/A085: reuse the existing original Android decoder for DXT3 with checked BGR
 ## D039 — Diagnose actual UI alpha without changing authored graphics
 
 A091: use bounded first-frame native queries/storage corner and an offscreen copy of the exact original image shader draw, with its real uniforms/samplers/streams. Preserve the visible draw and restore all native state/resources; no additional shader pair compilation that could disturb SHADER_PAIR semantics. Host tests establish isolation/lifetime only. Require actual Vita probe output before choosing a pipeline correction.
+
+
+## D040 — Original shell return tail inside staged Vita bring-up
+
+A101: profile/keyboard/event updates reach original main_screen_shell_load through history fallback. Under HALO_VITA_MENU_BRINGUP keep original root/close/music/deferred error/profile reset/keyboard owners and omit intro Bink/attract/full platform setup, matching the already initialized staged startup. Other builds retain original startup. Full world main integration must remove this staging boundary when intro/movie/filesystem threading is supported. Native saved-game operations use real metadata/copy semantics, not success stubs.

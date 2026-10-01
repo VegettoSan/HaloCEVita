@@ -212,3 +212,17 @@ double config_real(const char *name) { return !strcmp(name, "audio.volume") ? 1.
 #ifdef HALO_VITA_MENU_AUDIO
 BOOL platform_sdl_initialize(void) { return halo_vita_audio_device_initialize() ? TRUE : FALSE; }
 #endif
+
+/* Original native CRT comparison needed by saved-game directory identity. */
+int _strnicmp(const char *string1, const char *string2, size_t count)
+{
+	for (; count; count--, string1++, string2++)
+	{
+		int c1 = tolower((unsigned char)*string1);
+		int c2 = tolower((unsigned char)*string2);
+
+		if (c1 != c2 || !c1)
+			return c1 - c2;
+	}
+	return 0;
+}

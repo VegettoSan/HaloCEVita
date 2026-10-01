@@ -4629,6 +4629,10 @@ void main_screen_shell_load(
 	boolean load_main_menu = TRUE;
 
 	ui_widgets_inhibit_processing(FALSE);
+#ifndef HALO_VITA_MENU_BRINGUP
+	/* Staged Vita already initialized saved-game/event/keyboard owners before
+	 * its first root. Returning to this shell must not start Bink/attract mode
+	 * or repeat full-platform initialization while no world runtime exists. */
 	if (main_screen_shell_first_load == TRUE)
 	{
 		char const *command_line = shell_get_command_line();
@@ -4653,9 +4657,12 @@ void main_screen_shell_load(
 		perform_filesystem_initialization();
 		input_abstraction_reset_controller_detection_timer();
 	}
+#endif
 	if (load_main_menu)
 	{
+#ifndef HALO_VITA_MENU_BRINGUP
 		attract_mode_reset_timer();
+#endif
 		ui_widgets_close_all();
 		if (!ui_widget_load_by_name_or_tag("ui\\shell\\main_menu\\main_menu", NONE, NULL, NONE, NONE, NONE, NONE))
 			error(_error_silent, "failed to load main screen shell window");

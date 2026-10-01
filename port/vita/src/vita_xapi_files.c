@@ -4,6 +4,7 @@
 #include <psp2/io/fcntl.h>
 #include <psp2/io/stat.h>
 #include <psp2/io/devctl.h>
+#include <psp2/rtc.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
@@ -489,3 +490,59 @@ int vita_xapi_directory_next(int fd, char *name, uint32_t *attributes, uint64_t 
     return 1;
 }
 void vita_xapi_directory_close(int fd) { sceIoDclose(fd); }
+
+/* Only scalar metadata crosses back to the game's XDK structures. */
+int vita_xapi_file_metadata(const char *name, uint32_t *attributes,
+    uint64_t *size, uint64_t times[3])
+{
+    char path[512]; uint32_t error; int exists; SceIoStat stat;
+    if (!attributes || !size || !times ||
+        !resolve_xbox_path(name,path,sizeof(path),0,0,&exists,&error)) {
+        vita_xapi_last_error_set(!attributes || !size || !times ? 87 : error); return 0;
+    }
+    if (sceIoGetstat(path,&stat)<0) { vita_xapi_last_error_set(2); return 0; }
+    if (sceRtcGetWin32FileTime(&stat.st_ctime,&times[0])<0 ||
+        sceRtcGetWin32FileTime(&stat.st_atime,&times[1])<0 ||
+        sceRtcGetWin32FileTime(&stat.st_mtime,&times[2])<0) {
+        vita_xapi_last_error_set(87); return 0;
+    }
+    *size=(uint64_t)stat.st_size;
+    *attributes=SCE_S_ISDIR(stat.st_mode)?16:128;
+    if (!(stat.st_mode&SCE_S_IWUSR)) *attributes|=1;
+    vita_xapi_last_error_set(0); return 1;
+}
+/* Profile rename copies existing records and optional persistent state. Keep
+ * source identity, fail-if-exists, bounded scratch and partial-write handling. */
+int CopyFileA(const char *from, const char *to, int fail_if_exists)
+{
+    char source[512],target[512]; uint32_t error; int exists,src=-1,dst=-1,ok=0;
+    unsigned char *buffer=NULL;
+    if (!resolve_xbox_path(from,source,sizeof(source),0,0,&exists,&error) ||
+        !resolve_xbox_path(to,target,sizeof(target),1,1,&exists,&error)) {
+        vita_xapi_last_error_set(error); return 0;
+    }
+    if (!strcmp(source,target)) { vita_xapi_last_error_set(87); return 0; }
+    if (exists && fail_if_exists) { vita_xapi_last_error_set(183); return 0; }
+    buffer=malloc(32768);
+    if (!buffer) { vita_xapi_last_error_set(8); return 0; }
+    src=sceIoOpen(source,SCE_O_RDONLY,0);
+    if (src<0) { error=5; goto done; }
+    dst=sceIoOpen(target,SCE_O_WRONLY|SCE_O_CREAT|(fail_if_exists?SCE_O_EXCL:SCE_O_TRUNC),0666);
+    if (dst<0) { error=5; goto done; }
+    for (;;) {
+        int count=sceIoRead(src,buffer,32768),written=0;
+        if (count<0) { error=5; goto done; }
+        if (!count) break;
+        while (written<count) {
+            int n=sceIoWrite(dst,buffer+written,count-written);
+            if (n<=0) { error=5; goto done; }
+            written+=n;
+        }
+    }
+    ok=1; error=0;
+done:
+    if (src>=0 && sceIoClose(src)<0 && ok) { ok=0; error=5; }
+    if (dst>=0 && sceIoClose(dst)<0 && ok) { ok=0; error=5; }
+    if (!ok && dst>=0 && !exists) sceIoRemove(target);
+    free(buffer); vita_xapi_last_error_set(error); return ok;
+}
