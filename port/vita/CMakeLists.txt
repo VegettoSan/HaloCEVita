@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.29")
+set(VITA_APP_VERSION "00.30")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
@@ -173,6 +173,11 @@ set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memor
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/port/linux/src/nv2a_vsh.c ${ROOT}/port/linux/src/nv2a_psh.c ${ROOT}/port/linux/src/xgpu_text.c
   PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)
+# vitaGL can natively store xbox_textures.c's converted BGRA bytes. Rename only
+# this source's upload entry point so the Vita wrapper selects that direct
+# internal format without changing the shared Linux/Android backend.
+set_source_files_properties(${ROOT}/port/linux/src/xbox_textures.c
+  PROPERTIES COMPILE_DEFINITIONS "glTexImage2D=halo_vita_glTexImage2D")
 set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
