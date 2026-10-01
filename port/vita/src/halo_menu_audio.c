@@ -17,6 +17,7 @@
 boolean sound_is_active(void);
 boolean halo_vita_sound_menu_refresh(long definition_index, short refresh_state);
 static boolean ready;
+static boolean frame_started;
 static long music_index = NONE;
 static boolean music_started;
 int halo_vita_menu_audio_ready(void) { return ready; }
@@ -56,6 +57,10 @@ int halo_vita_menu_audio_initialize(void)
     if (!sound_is_active()) vita_fatal("original sound manager initialization failed");
     sound_cache_open();
     sound_initialize_for_new_map();
+    /* Original unpause establishes render_time. Keep the cold manager paused
+     * until GPU startup completes, before any source/fade timestamp is made. */
+    sound_pause(TRUE);
+    frame_started = FALSE;
     ready = TRUE;
     vita_log("[VITA AUDIO] original 2D sound manager/cache ready; audibility requires console test");
     return 1;
@@ -80,6 +85,10 @@ void halo_vita_menu_audio_frame(void)
 {
     if (!ready) return;
     if (game_in_progress()) vita_fatal("staged 2D menu sound must hand off to original game audio");
+    if (!frame_started) {
+        sound_pause(FALSE);
+        frame_started = TRUE;
+    }
     if (music_index != NONE) {
         halo_vita_sound_menu_refresh(music_index, music_started ?
             _looping_sound_refresh_loop : _looping_sound_refresh_start);
@@ -90,7 +99,7 @@ void halo_vita_menu_audio_frame(void)
 void halo_vita_menu_audio_feedback_probe(void)
 {
     static short feedback = 1; /* original private enum: cursor/forward/back */
-    if (!ready) return;
+    if (!ready || !frame_started) return;
     vita_log("[VITA AUDIO] Square diagnostic: original UI feedback=%d; widget navigation still pending", feedback);
     ui_play_audio_feedback_sound(feedback);
     feedback = feedback == 3 ? 1 : feedback + 1;
@@ -105,6 +114,7 @@ void halo_vita_menu_audio_dispose(void)
     sound_dispose();
     sound_classes_dispose();
     ready = FALSE;
+    frame_started = FALSE;
     halo_vita_audio_mixer_shutdown();
     vita_log("[VITA AUDIO] original manager/cache disposed before tag release");
 }

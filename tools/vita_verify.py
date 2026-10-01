@@ -152,14 +152,14 @@ files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 tested_package = digest(build / 'HaloCE.vpk') == '7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
-                             if tested_package else 'current package untested on Vita;00.11 root BOOTS baseline (A031)'),
+                             if tested_package else 'current package untested on Vita;00.24 partial UI/repeated frames/Start baseline (A072)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
             'rendering_scope': '00.24 hardware partial logo/backgrounds and continuous frames/Start (A072); current package visual improvement unverified',
             'audio_scope': 'original 2D manager/cache/SDL mixer LINKS; current package hardware activation/audibility pending (A074)',
             'prior_hardware_evidence': 'docs/ATTEMPTS.md A072:00.24 continuous frames and Start exit, incomplete UI',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
-                                  'current package installation/runtime pending; prior00.11 BOOTS'),
+                                  'current package installation/runtime pending; prior00.24 BOOTS/partial UI (A072)'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': git_metadata('rev-parse', 'HEAD'),
             'source_has_uncommitted_changes': bool(git_metadata(

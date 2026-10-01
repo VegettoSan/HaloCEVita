@@ -40,6 +40,7 @@ static struct sound_pitch_range range={1,{1,&perm}};
 static struct sound_definition definition={{1,&range}};
 static int running,active,registered,classes,initialized,opened,rendered,closed,destroyed;
 static int refresh_calls,feedback_calls,phase[32],feedbacks[8],idled,yields;
+static int paused,pause_calls;static long render_clock;
 static long ids[32];static jmp_buf failure;
 static void vita_log(const char *s,...){(void)s;}
 static _Noreturn void vita_fatal(const char *s){(void)s;longjmp(failure,1);}
@@ -54,7 +55,8 @@ static void sound_classes_initialize_for_new_map(void){assert(classes);}
 static void sound_initialize(void){assert(classes && !initialized);initialized=active=1;}
 static void sound_cache_open(void){assert(active);opened=1;}
 static void sound_initialize_for_new_map(void){assert(opened);}
-static void sound_render(void){assert(active && opened);rendered++;}
+static void sound_pause(boolean p){assert(active && opened && paused!=p);paused=p;pause_calls++;if(!p)render_clock=20000;}
+static void sound_render(void){assert(active && opened && !paused && render_clock==20000);rendered++;}
 static void sound_stop_all(void){assert(active);}
 static void sound_dispose_from_old_map(void){assert(active);}
 static void sound_cache_close(void){assert(active);closed=1;}
@@ -67,7 +69,7 @@ static long __real_sound_render_time(void){return 5678;}
 static void __real_sound_idle(void){assert(active && opened);idled++;}
 static int SwitchToThread(void){yields++;return 1;}
 static boolean sound_refresh_looping(long definition,long identifier,struct sound_source *source,short state,boolean alternate,real fade){
-assert(definition==identifier && !source->spatialization_mode && source->scale==1 && source->gain==1 && !source->obstruction && !source->occlusion && !alternate && fade==0);
+assert((!paused && render_clock==20000) && definition==identifier && !source->spatialization_mode && source->scale==1 && source->gain==1 && !source->obstruction && !source->occlusion && !alternate && fade==0);
 ids[refresh_calls]=definition;phase[refresh_calls++]=state;return 0;}
 void halo_vita_menu_audio_stop(void);
 boolean sound_is_active(void){return active;}
@@ -82,9 +84,10 @@ running=1;if(!setjmp(failure)){halo_vita_menu_audio_initialize();assert(!"runnin
 assert(halo_vita_menu_audio_initialize() && halo_vita_menu_audio_initialize());
 assert(registered==1 && initialized && opened && halo_vita_menu_audio_ready());
 __wrap_sound_idle();assert(idled==1 && __wrap_sound_render_time()==5678);
-assert(halo_vita_menu_audio_start(12));assert(!refresh_calls);
+assert(halo_vita_menu_audio_start(12));assert(!refresh_calls && paused && pause_calls==1 && !render_clock);
+halo_vita_menu_audio_feedback_probe();assert(!feedback_calls);
 halo_vita_menu_audio_frame();assert(refresh_calls==1 && phase[0]==_looping_sound_refresh_start && rendered==1);
-halo_vita_menu_audio_start(12);halo_vita_menu_audio_frame();assert(phase[1]==_looping_sound_refresh_loop);
+halo_vita_menu_audio_start(12);halo_vita_menu_audio_frame();assert(phase[1]==_looping_sound_refresh_loop && pause_calls==2);
 halo_vita_menu_audio_start(13);assert(phase[2]==_looping_sound_refresh_stop && ids[2]==12);
 halo_vita_menu_audio_frame();assert(phase[3]==_looping_sound_refresh_start && ids[3]==13);
 for(int i=0;i<4;i++)halo_vita_menu_audio_feedback_probe();
@@ -92,7 +95,7 @@ assert(feedback_calls==4 && feedbacks[0]==1 && feedbacks[1]==2 && feedbacks[2]==
 halo_vita_menu_audio_dispose();assert(destroyed && !halo_vita_menu_audio_ready());
 __wrap_sound_idle();assert(idled==1 && yields==2 && __wrap_sound_render_time()==1234);
 int calls=refresh_calls;halo_vita_menu_audio_frame();halo_vita_menu_audio_dispose();assert(calls==refresh_calls);
-puts("PASS actual staged audio: cold-cache rejection, original-owner order, no playback until rendered frame, start/loop/stop/source phases, feedback, pre/post-lifecycle cache-service gating and original disposal before SDL close");}
+puts("PASS actual staged audio: cold-cache rejection, original-owner order, no playback until rendered frame, first-frame unpause clock/source phases, feedback, pre/post-lifecycle cache-service gating and original disposal before SDL close");}
 '''
 out=root/'build/vita/tests/menu-audio';out.mkdir(parents=True,exist_ok=True)
 p=out/'menu.c';p.write_text(code);exe=out/'menu'
