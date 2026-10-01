@@ -917,3 +917,12 @@ Next hardware gate:00.24 banner, original worker-start marker, third Present ret
 **Local package:** HaloCE.vpk SHA-256 ecf86d3a951f009bf79772a2d769c19635a91624429e2df84c784cfaa96f5101. Matching ELF/map retained with the package. This digest precedes any later diagnostic additions; match symbols to the installed package.
 
 **Hardware gates:** no audible00.25 result or real cold snd!/lsnd metadata validation yet. Expect original manager/cache-ready and music-arm markers, first completed frame, SDL-running and first decoded packet log; listen for original music and Square effects, then verify Start clean disposal. Capture debug.txt and a short video with sound. This build does not execute the full scenario, models, original process_ui_widgets navigation or HS scripts. Missing labels/white backgrounds are still KI-031; A072 texture-stage correction requires hardware evidence.
+
+
+## 2026-10-01 — A075 — Bounded original UI coverage and draw observations
+
+**Reason:** A07200.24 reaches repeated frames yet labels/transparent image borders remain absent. Its warm frames mean the corrected cold-upload stage overwrite is not proven the entire cause. Existing original font decoder/combiner inputs need actual console evidence before altering original assets or shader arithmetic.
+
+**Change:** Vita-only trace of the first16 prepared original draws: original shader/program, blend/factors and GL shadows, four2D texture bindings, original texture modes, first immediate vertex or explicitly labelled current attributes, UV v4/color v9, original c32 and combiner words. No GL state query/mutation is introduced. First four A4R4G4B4 level0/face0 uploads count min/max alpha, zero/opaque/white-RGB decoded coverage from the existing temporary buffer; pixels remain unchanged, no extra allocation or texture readback. Counts may include an initially blank dynamic font page and later refreshes; they are observations, not a label/transparency fix. Logs remain bounded across the process.
+
+**Validation:** actual texture upload/cache regression PASS immutable BGRA staging, mip bytes, transfer completion, dynamic source/palette refresh, allocation/budget fallback and original4MiB cache cap. Native00.25 VPK builds with the trace; original renderer and120-frame Present contracts PASS. Hardware draw/coverage values remain unavailable. Added diagnostics change local package identity; final package and matching symbols must be used together. Audio source is already published560a00ad43e75ff7f4b2cfcaf47fe2932a0c1b6f; no new navigation/world claim.

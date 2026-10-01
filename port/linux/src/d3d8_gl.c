@@ -3047,6 +3047,28 @@ static void trace_draw(const char *kind, D3DPRIMITIVETYPE type, unsigned long co
 	struct vertex_shader_object *program = current_program();
 	DWORD *rs = D3D__RenderState;
 
+#ifdef HALO_VITA
+	/* Bounded observations of original draw inputs; no GL queries/mutations.
+	 * Missing labels/opaque backgrounds need actual coverage/blend evidence. */
+	{
+		static unsigned observed;
+		if (observed < 16) {
+			const float *v = first_vertex ? first_vertex : device.attributes[0];
+			const float *uv = v + 4 * 4, *color = v + 9 * 4;
+			++observed;
+			vita_log("[VITA UI TRACE] draw=%u frame=%lu kind=%s count=%lu vs=%lu program=%u blend=%lu/%lx/%lx GL=%u/%x/%x tex2D=%u,%u,%u,%u tm=%05lx",
+				observed, device.frame, kind, count, program ? program->id : 0, gl_state.program,
+				rs[D3DRS_ALPHABLENDENABLE], rs[D3DRS_SRCBLEND], rs[D3DRS_DESTBLEND],
+				(unsigned)gl_state.blend, gl_state.blend_source, gl_state.blend_destination,
+				gl_state.textures[0][0], gl_state.textures[1][0], gl_state.textures[2][0], gl_state.textures[3][0], rs[D3DRS_PSTEXTUREMODES]);
+			vita_log("[VITA UI TRACE] draw=%u vertex=%s v0=%g,%g,%g,%g v4=%g,%g,%g,%g v9=%g,%g,%g,%g c32=%g,%g,%g,%g ps0=%08lx final=%08lx/%08lx",
+				observed, first_vertex ? "first" : "current", v[0], v[1], v[2], v[3],
+				uv[0], uv[1], uv[2], uv[3], color[0], color[1], color[2], color[3],
+				device.constants[32][0], device.constants[32][1], device.constants[32][2], device.constants[32][3],
+				rs[D3DRS_PSCONSTANT0_0], rs[D3DRS_PSFINALCOMBINERINPUTSABCD], rs[D3DRS_PSFINALCOMBINERINPUTSEFG]);
+		}
+	}
+#endif
 	if (!trace_frame())
 		return;
 	platform_log("%s type %d count %lu vs %lu (decl %lu) vp %lu,%lu %lux%lu z%.2f-%.2f zen %lu zw %lu zf %lx blend %lu %lx/%lx cull %lx cw %08lx tm %05lx cc %lx fin %08lx/%08lx at %lu/%lx",

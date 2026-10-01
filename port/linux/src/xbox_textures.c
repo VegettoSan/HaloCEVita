@@ -686,6 +686,28 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 				else
 #endif
 				decode_level(description, level, source, palette, converted);
+#ifdef HALO_VITA
+				/* Observe decoded original font coverage without changing bytes. */
+				if (description->format == 0x04 && face == 0 && level == 0) {
+					static unsigned coverage_logged;
+					if (coverage_logged < 4) {
+						unsigned long p, pixels = (unsigned long)width * (unsigned long)height;
+						unsigned long zero = 0, opaque = 0, white = 0;
+						unsigned min_alpha = 255, max_alpha = 0;
+						for (p = 0; p < pixels; ++p) {
+							unsigned alpha = (unsigned)(converted[p] >> 24) & 255;
+							if (alpha < min_alpha) min_alpha = alpha;
+							if (alpha > max_alpha) max_alpha = alpha;
+							zero += alpha == 0; opaque += alpha == 255;
+							white += (converted[p] & 0x00ffffffUL) == 0x00ffffffUL;
+						}
+						++coverage_logged;
+						vita_log("[VITA UI ALPHA] id=%u format=%lx dims=%dx%d alpha=%u..%u zero=%lu opaque=%lu whiteRGB=%lu pixels=%lu",
+							texture, (unsigned long)description->format, (int)width, (int)height,
+							min_alpha, max_alpha, zero, opaque, white, pixels);
+					}
+				}
+#endif
 				#ifndef HALO_VITA
 				if (target == GL_TEXTURE_3D)
 					glTexImage3D(image_target, (GLint)level, GL_RGBA8, width, height, depth, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
