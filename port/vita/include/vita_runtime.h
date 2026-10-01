@@ -35,6 +35,17 @@ int vita_platform_initialize(void);
 int vita_controls_poll(void);
 void vita_platform_shutdown(void);
 int vita_services_probe(void);
+int halo_vita_audio_device_initialize(void);
+#ifdef HALO_VITA_MENU_AUDIO
+int halo_vita_menu_audio_initialize(void);
+int halo_vita_menu_audio_ready(void);
+int halo_vita_menu_audio_start(uint32_t definition_index);
+void halo_vita_menu_audio_stop(void);
+void halo_vita_menu_audio_frame(void);
+void halo_vita_menu_audio_dispose(void);
+void halo_vita_menu_audio_feedback_probe(void);
+void halo_vita_audio_mixer_shutdown(void);
+#endif
 int halo_vita_file_contract_probe(void);
 void halo_vita_main_render_time_update(void);
 void halo_vita_ui_render_clock_update(void);

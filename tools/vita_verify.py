@@ -56,7 +56,13 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             'D3DDevice_Present', 'players_initialize', 'players_initialize_for_new_map',
             'player_control_initialize', 'cinematic_initialize',
             'cinematic_initialize_for_new_map', 'game_time_initialize', 'halo_vita_main_render_time_update',
-            'halo_vita_ui_render_clock_update', 'halo_vita_wait_monotonic_deadline']
+            'halo_vita_ui_render_clock_update', 'halo_vita_wait_monotonic_deadline',
+            'sound_initialize', 'sound_render', 'sound_refresh_looping',
+            'DirectSoundCreate', 'DirectSoundDoWork', 'unspatialized_impulse_sound_new',
+            'ui_play_audio_feedback_sound', 'halo_vita_menu_audio_initialize',
+            'halo_vita_menu_audio_frame', 'halo_vita_menu_audio_start',
+            'halo_vita_menu_audio_dispose', 'halo_vita_audio_mixer_shutdown',
+            'halo_vita_sound_menu_refresh', '__wrap_sound_render_time', '__wrap_sound_idle']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)
@@ -148,9 +154,10 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
                              if tested_package else 'current package untested on Vita;00.11 root BOOTS baseline (A031)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
-            'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'HALO DRAW REACHED',
-            'rendering_scope': 'prior00.20 original Halo draw reached at320x240 (A058); current package HALO DRAW RENDERS/visible menu unverified',
-            'prior_hardware_evidence': 'docs/ATTEMPTS.md A058:00.20 workflow121 original draw/font stream abort',
+            'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
+            'rendering_scope': '00.24 hardware partial logo/backgrounds and continuous frames/Start (A072); current package visual improvement unverified',
+            'audio_scope': 'original 2D manager/cache/SDL mixer LINKS; current package hardware activation/audibility pending (A074)',
+            'prior_hardware_evidence': 'docs/ATTEMPTS.md A072:00.24 continuous frames and Start exit, incomplete UI',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
                                   'current package installation/runtime pending; prior00.11 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,

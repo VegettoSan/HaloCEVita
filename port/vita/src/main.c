@@ -105,7 +105,10 @@ int main(void)
 		uint64_t begin = vita_time_us(), elapsed;
 		command = vita_controls_poll();
 		if (command < 0) break;
-		if (command > 0) {
+#ifdef HALO_VITA_MENU_AUDIO
+		if (command == 2 && root_active) halo_vita_menu_audio_feedback_probe();
+#endif
+		if (command == 1) {
 #ifndef HALO_VITA_MENU_BRINGUP
 			maps = vita_maps_verify();
 			if (memory && maps && vita_cache_probe(graphics, core, shaders) < 0) break;
@@ -124,6 +127,9 @@ int main(void)
 		if (elapsed < 33333) sceKernelDelayThread((unsigned)(33333 - elapsed));
 	}
 cleanup:
+#ifdef HALO_VITA_MENU_AUDIO
+	halo_vita_menu_audio_dispose();
+#endif
 #ifdef HALO_VITA_MENU_RENDER_PROBE
     if (!root_active) halo_vita_renderer_dispose_before_root();
 #endif

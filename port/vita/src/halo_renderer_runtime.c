@@ -188,7 +188,10 @@ int halo_vita_renderer_initialize(void)
         vita_log("[VITA 036D] original decals initialization/new-map PASS");
     }
 
-    vita_log("[VITA WORLD] staged UI renderer only; scenario BSP/models/HS camera and game audio initialization remain pending");
+#ifdef HALO_VITA_MENU_AUDIO
+    if (!halo_vita_menu_audio_initialize()) return 0;
+#endif
+    vita_log("[VITA WORLD] staged UI renderer; scenario BSP/models/HS camera and spatial game audio remain pending");
     vita_renderer_ready = TRUE;
     vita_log("[VITA 036] original Xbox rasterizer ready; D3D8 device=%p", global_d3d_device);
     return 1;
@@ -200,6 +203,9 @@ int halo_vita_renderer_initialize(void)
 void halo_vita_renderer_dispose_before_root(void)
 {
     if (!vita_rasterizer_initialized) return;
+#ifdef HALO_VITA_MENU_AUDIO
+    halo_vita_menu_audio_dispose();
+#endif
     vita_log("[VITA 040] original pre-root renderer disposal begin");
     if (vita_texture_cache_opened) {
         texture_cache_close();
@@ -324,6 +330,12 @@ int halo_vita_renderer_render_menu_frame(void)
     }
 
     rasterizer_present(NULL, NULL);
+#ifdef HALO_VITA_MENU_AUDIO
+    /* First-frame shader compilation can take seconds on Vita. Queue the
+     * original soundtrack after that frame, so its initial packets cannot
+     * drain while the main thread is still compiling the first UI shaders. */
+    halo_vita_menu_audio_frame();
+#endif
 
     if (vita_first_menu_frame) {
         vita_log("[VITA 038] original Main Menu frame presented");

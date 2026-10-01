@@ -13,6 +13,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  menu-audio-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check original texture and 2D sound contracts
+        run: |
+          python3 tools/vita_texture_stage_regression.py
+          python3 tools/vita_sound_tag_regression.py
+          python3 tools/vita_menu_regression.py
+          python3 tools/vita_audio_mixer_regression.py
+          python3 tools/vita_menu_audio_regression.py
+
   vita:
     runs-on: ubuntu-latest
     container:
@@ -47,7 +59,7 @@ jobs:
 
   prerelease:
     name: Publish Vita pre-release
-    needs: vita
+    needs: [vita, menu-audio-contracts]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

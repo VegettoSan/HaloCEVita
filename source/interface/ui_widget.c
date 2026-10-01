@@ -3999,7 +3999,10 @@ void ui_start_main_menu_music(
 
 		if (sound_definition_index != NONE)
 		{
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && defined(HALO_VITA_MENU_AUDIO)
+			if (halo_vita_menu_audio_start((uint32_t)sound_definition_index))
+				widget_globals.main_menu_music_active = TRUE;
+#elif defined(HALO_VITA_MENU_BRINGUP)
 			/* The original sound manager/game-state data are not initialized
 			 * by this UI-only checkpoint. Keep music inactive and observable. */
 			vita_log("MENU AUDIO DEFERRED: title1 tag=%08lx; original game sound state not initialized",
@@ -4029,7 +4032,11 @@ void ui_stop_main_menu_music(
 		if (sound_definition_index != NONE)
 		{
 			error(_error_silent, "stopping main menu music");
+#if defined(HALO_VITA_MENU_BRINGUP) && defined(HALO_VITA_MENU_AUDIO)
+			halo_vita_menu_audio_stop();
+#else
 			scripted_looping_sound_stop(sound_definition_index);
+#endif
 		}
 		else
 		{

@@ -220,3 +220,8 @@ A072/KI-033: original texture uploads/mip composition mutate GL binding state. S
 ## D033 — Sound metadata relocation excludes external samples
 
 A073: use original snd!/lsnd schemas and header layout assertions. Rebase only pitch/permutation/track/detail block pointers and reference names. Original sample resource addresses/file offsets and compiled runtime cache fields remain opaque, including Xbox-looking words. The original cache reader/mixer owns later activation; no replacement music files or arbitrary pointer scanning.
+
+
+## D034 — Stage original 2D sound owners without inventing world semantics
+
+A074: use the original classes/manager/cache, looping state machine, UI feedback and existing DirectSound-SDL backend. Rebase metadata through D033; external samples retain original addresses/offsets. Validate cold runtime state instead of resetting arbitrary serialized words. Arm music from original UI startup and refresh it after completed first presentation so shader compilation cannot consume its opening queue. Complete callbacks only on the original consumer, outside mixer lock. Require a real native SDL stream; reject decode/device failures explicitly. Initialize time/idle service delegation only with a ready sound cache and dispose voices/cache before stream/tags. Exact-signature unavailable spatial/world guards fail loudly and must be removed when real scenario/observer/object owners initialize. Square is an explicit sound diagnostic, not fake menu navigation. No audible or full-scene claim from host/native link evidence.

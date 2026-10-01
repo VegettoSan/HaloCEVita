@@ -3857,3 +3857,19 @@ void sound_render(
 
 	return;
 }
+
+#ifdef HALO_VITA_MENU_AUDIO
+/* Staged pregame bridge: use the original looping state machine with the
+ * same unspatialized source contract as game_sound.c. Full game_sound_update
+ * takes ownership when scenario/object initialization becomes available. */
+boolean halo_vita_sound_menu_refresh(long definition_index, short refresh_state)
+{
+	struct sound_source source;
+	csmemset(&source, 0, sizeof(source));
+	source.spatialization_mode = _sound_spatialization_mode_none;
+	source.scale = 1.f;
+	source.gain = 1.f;
+	return sound_refresh_looping(definition_index, definition_index, &source,
+		refresh_state, FALSE, 0.f);
+}
+#endif

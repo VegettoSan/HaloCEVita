@@ -4,10 +4,14 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.24")
+set(VITA_APP_VERSION "00.25")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
+option(HALO_VITA_MENU_AUDIO "Link original menu sound manager/cache and SDL mixer" ON)
+if(HALO_VITA_MENU_AUDIO AND (NOT HALO_VITA_MENU_BRINGUP OR NOT HALO_VITA_MENU_RENDER_PROBE))
+  message(FATAL_ERROR "Staged menu audio requires menu bring-up and renderer; disable HALO_VITA_MENU_AUDIO for other probes")
+endif()
 include("$ENV{VITASDK}/share/vita.cmake" REQUIRED)
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
@@ -115,6 +119,26 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/game/player_control.c
     ${ROOT}/source/bitmaps/bitmap_utilities.c)
 endif()
+if(HALO_VITA_MENU_AUDIO)
+  target_sources(halo_core PRIVATE
+    src/halo_menu_audio.c src/halo_menu_audio_guard.c
+    ${ROOT}/source/sound/game_sound.c
+    ${ROOT}/source/sound/sound_manager.c
+    ${ROOT}/source/sound/sound_definitions.c
+    ${ROOT}/source/sound/sound_classes.c
+    ${ROOT}/source/sound/sound_preferences.c
+    ${ROOT}/source/sound/sound_environment_definitions.c
+    ${ROOT}/source/sound/sound_dsound_xbox.c
+    ${ROOT}/source/cache/xbox_sound_cache.c
+    ${ROOT}/port/linux/src/dsound_sdl.c)
+  target_compile_definitions(halo_core PRIVATE HALO_VITA_MENU_AUDIO=1)
+  set_source_files_properties(${ROOT}/port/linux/src/dsound_sdl.c
+    PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER COMPILE_OPTIONS
+    "-std=gnu11;-U__STRICT_ANSI__;-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
+  set_source_files_properties(src/halo_menu_audio.c src/halo_menu_audio_guard.c
+    PROPERTIES COMPILE_OPTIONS
+    "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
+endif()
 set(SEMANTICS "${CMAKE_CURRENT_BINARY_DIR}/halo_msvc_semantics.h")
 file(GLOB_RECURSE SEMANTIC_INPUTS CONFIGURE_DEPENDS ${ROOT}/source/*.h ${ROOT}/source/*.c ${ROOT}/port/include/xdk/*.h)
 add_custom_command(OUTPUT ${SEMANTICS}
@@ -167,18 +191,29 @@ if(HALO_VITA_MENU_RENDER_PROBE)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_RENDER_PROBE=1)
   target_link_options(HaloCE.elf PRIVATE -Wl,-u,_rasterizer_initialize)
 endif()
+if(HALO_VITA_MENU_AUDIO)
+  target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_AUDIO=1)
+  # These world/debug owners are unavailable in the staged UI-only runtime.
+  # Fail explicitly if a spatial/object path escapes the 2D menu contract.
+  foreach(OWNER compute_sound_obstruction track_object_impulse_sound
+      game_sound_set_mouth_aperture player_effect_continuous_refresh
+      observer_get_camera scenario_location_underwater render_debug_sphere
+      render_debug_string_at_point render_debug_string sound_render_time sound_idle)
+    target_link_options(HaloCE.elf PRIVATE "-Wl,--wrap=${OWNER}")
+  endforeach()
+endif()
 target_include_directories(HaloCE.elf PRIVATE include)
 target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunction-sections -fdata-sections -ffp-contract=off)
 # vita-elf-create appends SCE module/import metadata to the RX LOAD segment.
-# Keep the constructor/destructor arrays one full 64-KiB page after the former
-# 0x810e0000 boundary, then start normal RW data on the following page. This
+# Keep the constructor/destructor arrays beyond the original audio DSP image
+# and the enlarged code closure, then start RW data on the following page. This
 # preserves the original array contents/order while leaving stable conversion
 # headroom as the original renderer grows.
 target_link_options(HaloCE.elf PRIVATE
   -Wl,-q -Wl,--gc-sections
-  -Wl,--section-start=.init_array=0x810f0000
-  -Wl,--section-start=.fini_array=0x810f001c
-  -Wl,-Tdata=0x81100000
+  -Wl,--section-start=.init_array=0x81280000
+  -Wl,--section-start=.fini_array=0x8128001c
+  -Wl,-Tdata=0x81290000
   "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")
 target_link_libraries(HaloCE.elf PRIVATE halo_core
   -Wl,--start-group vitaGL vitashark SceShaccCgExt SDL3 pthread stdc++ mathneon m z

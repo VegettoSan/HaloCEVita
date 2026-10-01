@@ -76,6 +76,7 @@ BOOL WINAPI SwitchToThread(void)
  * needs servicing while a blocking read is in progress. Reporting the current
  * clock keeps that optional service branch dormant until real audio is brought
  * up; an explicit call still yields instead of pretending to process audio. */
+#ifndef HALO_VITA_MENU_AUDIO
 long sound_render_time(void)
 {
 	return (long)system_milliseconds();
@@ -89,6 +90,7 @@ void sound_idle(void)
 	}
 	sched_yield();
 }
+#endif
 
 DWORD WINAPI GetLastError(void) { return (DWORD)vita_xapi_last_error_get(); }
 VOID WINAPI SetLastError(DWORD error) { vita_xapi_last_error_set((uint32_t)error); }
@@ -198,4 +200,8 @@ int _stricmp(const char *a, const char *b)
 	return tolower((unsigned char)*a) - tolower((unsigned char)*b);
 }
 const char *config_string(const char *name) { (void)name; return ""; }
-int config_boolean(const char *name) { (void)name; return 0; }
+int config_boolean(const char *name) { return !strcmp(name, "audio.enabled"); }
+double config_real(const char *name) { return !strcmp(name, "audio.volume") ? 1.0 : 0.0; }
+#ifdef HALO_VITA_MENU_AUDIO
+BOOL platform_sdl_initialize(void) { return halo_vita_audio_device_initialize() ? TRUE : FALSE; }
+#endif

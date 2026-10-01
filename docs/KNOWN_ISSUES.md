@@ -254,3 +254,8 @@ A072 hardware00.24 resolves KI-032 for this supplied run: third/frame30/frame120
 ## KI-033 — Texture uploads mutate the previously active stage
 
 A072 source/actual-function fixture: later cold/refreshed textures bind on the earlier active unit before destination stage selection. Vita selects the target unit before upload/composition now; historical code fails and fixed host contracts pass. Console alpha/text/effects improvement remains unverified. Do not strip backgrounds or replace authored shader/texture alpha based on this hypothesis.
+
+
+## KI-034 — Original 2D audio links but hardware activation is unverified
+
+A074/00.25: typed snd!/lsnd metadata, real sound manager/cache, Xbox ADPCM/PCM decoder and SDL stream are integrated and CPU/native contracts pass. No current retail map is present in the resumed build workspace, so cold compiled permutation cache-state validation, cache sample reads, sustained native mixing and audible original music/feedback require console evidence. Report manager-ready/armed/decoded packet markers or the explicit fatal diagnostic. World/observer/object/spatial paths remain unavailable guarded owners; complete game_sound_update and scenario/navigation are not activated. Start teardown must pass with live voices before any stability claim.

@@ -141,6 +141,9 @@ int vita_controls_poll(void)
 			xbox.analog[6], xbox.analog[7], xbox.lx, xbox.ly, xbox.rx, xbox.ry);
 	}
 	if (pressed & SCE_CTRL_START) return -1;
+#ifdef HALO_VITA_MENU_AUDIO
+	if (pressed & SCE_CTRL_SQUARE) return 2;
+#endif
 	return (pressed & SCE_CTRL_CROSS) ? 1 : 0;
 }
 int vita_maps_verify(void)
@@ -231,3 +234,11 @@ int vita_services_probe(void)
 		vita_xapi_last_error_get() == 0x1357;
 }
 void vita_platform_shutdown(void) { vita_log("clean exit"); }
+int halo_vita_audio_device_initialize(void)
+{
+	if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+		vita_log("[VITA AUDIO] SDL initialization failed: %s", SDL_GetError());
+		return 0;
+	}
+	return 1;
+}
