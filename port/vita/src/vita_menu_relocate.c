@@ -13,7 +13,7 @@ enum kind { BLOCK, DATA, REFERENCE };
 enum schema { LEAF, REF, BSP, SPRITE, SEQUENCE, BITMAP, STR_ENTRY,
     STRINGS, CHAR_TABLE, FONT, INPUT, SEARCH, EVENT, CHILD, WIDGET, SCENARIO,
     INTERFACE_REFS, GAME_GLOBALS, SOUND, PITCH_RANGE, PERMUTATION,
-    LOOP, LOOP_TRACK, LOOP_DETAIL };
+    LOOP, LOOP_TRACK, LOOP_DETAIL, VKEY, KEYBOARD };
 struct field { uint16_t offset, kind, schema; };
 struct layout { uint16_t size, fields; const struct field *field; };
 struct patch { uint32_t offset, before, after, pointer; };
@@ -59,13 +59,15 @@ static const struct field pitch_range[] = {B(60,PERMUTATION)};
 static const struct field loop[] = {R(44),B(60,LOOP_TRACK),B(72,LOOP_DETAIL)};
 static const struct field loop_track[] = {R(48),R(64),R(80),R(128),R(144)};
 static const struct field loop_detail[] = {R(0)};
+static const struct field vkey[] = {R(16),R(32),R(48),R(64)};
+static const struct field keyboard[] = {R(0),R(16),R(32),B(48,VKEY)};
 #define L(sz,f) {sz,sizeof(f)/sizeof(f[0]),f}
 static const struct layout layouts[] = {
     {0,0,NULL},L(16,ref),L(32,bsp),{32,0,NULL},L(64,seq),L(108,bitmap),
     L(20,str_entry),L(12,strings),L(12,char_table),L(156,font),
     {36,0,NULL},{34,0,NULL},L(72,event),L(80,child),L(1004,widget),L(1456,scenario),
     L(304,interface_refs),L(428,game_globals),L(164,sound),L(72,pitch_range),
-    {124,0,NULL},L(84,loop),L(160,loop_track),L(104,loop_detail)
+    {124,0,NULL},L(84,loop),L(160,loop_track),L(104,loop_detail),L(80,vkey),L(60,keyboard)
 };
 static uint32_t read32(const unsigned char *p)
 { return (uint32_t)p[0] | (uint32_t)p[1]<<8 | (uint32_t)p[2]<<16 | (uint32_t)p[3]<<24; }
@@ -172,6 +174,8 @@ static int walk(struct vita_menu_relocation *p, uint32_t offset, enum schema sch
             if(!block(p,field,(enum schema)f->schema,stride,depth)) return 0;
         }
     }
+    if(schema==KEYBOARD && read32(p->tags+offset+48)>256)
+        return bad(p,"virtual keyboard exceeds key budget",offset);
     if(schema==CHAR_TABLE) {
         uint32_t count=read32(p->tags+offset);
         if(count && count!=256) return bad(p,"font lookup table is not256 entries",offset);
@@ -259,6 +263,7 @@ struct vita_menu_relocation *vita_cache_relocate_menu(void *tags, size_t length,
         else if(group==0x6d617467u) schema=GAME_GLOBALS;
         else if(group==0x736e6421u) schema=SOUND;
         else if(group==0x6c736e64u) schema=LOOP;
+        else if(group==0x76636b79u) schema=KEYBOARD;
         if(schema==LEAF) continue;
         size=layouts[schema].size;
         if(!span(p,read32(p->tags+entry+20),size,&root) || !walk(p,root,schema,0)) {

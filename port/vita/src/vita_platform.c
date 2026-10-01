@@ -140,7 +140,12 @@ int vita_controls_poll(void)
 			pad.buttons, xbox.buttons, xbox.analog[0], xbox.analog[1], xbox.analog[2], xbox.analog[3],
 			xbox.analog[6], xbox.analog[7], xbox.lx, xbox.ly, xbox.rx, xbox.ry);
 	}
+	#ifdef HALO_VITA_MENU_BRINGUP
+	/* Start is an authored shell/keyboard action. Select exits this staged VPK. */
+	if (pressed & SCE_CTRL_SELECT) return -1;
+#else
 	if (pressed & SCE_CTRL_START) return -1;
+#endif
 #ifdef HALO_VITA_MENU_AUDIO
 	if (pressed & SCE_CTRL_SQUARE) return 2;
 #endif

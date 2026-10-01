@@ -126,6 +126,10 @@ int main(void)
 						halo_vita_ui_process_menu_action(1);
 					if (menu_pad.analog[1] && !previous_menu_pad.analog[1])
 						halo_vita_ui_process_menu_action(7);
+					if (menu_pad.analog[2] && !previous_menu_pad.analog[2]) halo_vita_ui_process_menu_action(2);
+					if (pressed & 0x0010) halo_vita_ui_process_menu_action(8);
+					if (menu_pad.analog[6] && !previous_menu_pad.analog[6]) halo_vita_ui_process_menu_action(9);
+					if (menu_pad.analog[7] && !previous_menu_pad.analog[7]) halo_vita_ui_process_menu_action(10);
 				}
 				previous_menu_pad = menu_pad;
 				menu_input_sample_valid = 1;
@@ -133,7 +137,7 @@ int main(void)
 		}
 #endif
 #ifdef HALO_VITA_MENU_AUDIO
-		if (command == 2 && root_active) halo_vita_menu_audio_feedback_probe();
+		/* Square now belongs to the original UI/keyboard, not the audio probe. */
 #endif
 		if (command == 1) {
 #ifndef HALO_VITA_MENU_BRINGUP
@@ -143,6 +147,7 @@ int main(void)
 		}
 #ifdef HALO_VITA_MENU_BRINGUP
 #ifdef HALO_VITA_MENU_RENDER_PROBE
+		if (root_active) halo_vita_ui_process_shell_frame();
 		if (renderer && root_active && !halo_vita_renderer_render_menu_frame()) break;
 #endif
 #else

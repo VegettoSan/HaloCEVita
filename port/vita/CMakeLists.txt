@@ -21,7 +21,8 @@ file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
   src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
-  src/vita_memory_watch.c src/halo_ui_widget_vita.c src/halo_ui_kernel.c src/halo_ui_file_search.c
+  src/vita_memory_watch.c src/halo_ui_widget_vita.c src/halo_ui_events.c
+  src/halo_ui_kernel.c src/halo_ui_file_search.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c

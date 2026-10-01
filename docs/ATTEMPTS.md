@@ -1118,3 +1118,10 @@ A095 native Vita Build169/run36937344982 required build/contracts/publication PA
 ## 2026-10-01 — A097 — Resume interrupted shell integration, fix native declarations
 
 Remote main f6debea contains A094–A096; local pending keyboard/frame changes were preserved while synchronizing the local branch. Vita Build170/run36938017740 failed with static declaration follows non-static declaration for game_options_menu_update_text_desc/pic_desc, introduced by their earlier selective calls. Add exact static forward declarations. No SDK available locally; required native CI will validate the next closure. No all-window/hardware claim.
+
+
+## 2026-10-01 — A098 — Original keyboard and per-frame shell completion
+
+Initialize/dispose the original event manager and keyboard beside saved-game owners. Add typed vcky/key reference relocation validated on the provided983-tag ui.map. Route Cross/Circle/Square/Start/L/R and four D-pad directions to the original queue while keyboard is active; regular shell input retains the tested original focus/dispatch bridge. Start no longer exits staged bring-up, so keyboard Done works; Select exits the test app. Execute original null-event recursive updates for animation, generated lists, authored keyboard completion predicates and auto-close; restore original history after root closes. World/attract/pause update stays deferred.
+
+Commands: original menu relocation regression18 synthetic cases plus exact provided ui.map PASS; input ASan/UBSan and generic effects ASan/UBSan PASS. Required Vita SDK closure/package is pending; hardware acceptance remains necessary. No transparency change.

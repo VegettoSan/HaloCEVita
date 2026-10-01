@@ -7,6 +7,7 @@
 #include "tag_files/files.h"
 #include "interface/marketing_and_strategic_business_development.h"
 #include "vita_runtime.h"
+#include "input/input.h"
 #include <stdarg.h>
 #include <sched.h>
 
@@ -17,6 +18,12 @@
 #undef memcpy
 #undef vsnprintf
 #undef vsprintf
+
+boolean input_has_gamepad(short index)
+{
+    struct vita_gamepad_sample sample;
+    return index == 0 && vita_read_gamepad(&sample);
+}
 
 unsigned long system_milliseconds(void) { return (unsigned long)(vita_time_us() / 1000u); }
 void *system_malloc(long size) { return size > 0 ? malloc((size_t)size) : NULL; }

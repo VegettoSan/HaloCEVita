@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-01
 
+Source00.32 shell integration (A097/A098): original profiles, generic event effects, keyboard queue and per-frame completion connected; host relocation/input/effects PASS. Native SDK build pending. Start confirms keyboard; Select exits staged build. All-window/hardware acceptance remains unverified.
+
 Latest hardware **00.31: BOOTS / partial HALO DRAW RENDERS / original D-pad focus visible** (A094). User confirms selected option feedback. Supplied log proves focus wrap, Campaign conditional root/back, then separate fatal unsupported game-data5 (Multiplayer) and14 (Settings) after blocked creation24/34. Full window navigation is now the priority; user defers the remaining white backgrounds. No complete-menu/gameplay/stability claim.
 
 Current package **00.31: LINKS** (A089–A093). Vita Build167/run36933178304 on source8b9e6068aa0ddd8ce30731d36cb41292629a5d1f: required native build/package verifier, menu-audio-contracts and publication PASS. [00.31 release](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-167); VPK SHA-256 ce7bed392f9179c6bc07a389e3e325abc4e413b705047871fa4a1e420f6a18e4. Independent archive/manifest/ELF32 ARM hard-float/SELF/SFO verification PASS. Staged original shell navigation protects destroyed widget lifetimes and supports both authored D-pad axes/child tabbing; actual host routing ASan/UBSan and native-state probe contracts PASS. First-frame bounded GPU storage/output-alpha observation requires fresh console evidence. Full original update/world closure remains optional and unresolved. Latest actual hardware00.30 still has rectangles despite correct decoded alpha and successful blend restore calls. No sole transparency cause, complete profile/gameplay or00.31 BOOTS claim.

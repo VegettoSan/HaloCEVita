@@ -5,7 +5,7 @@
  * does not link process_ui_widgets(): that routine also owns pause/attract/
  * filesystem/world update work which is outside the verified Main Menu
  * closure.  This wrapper reaches only the original focus/list primitives and
- * a narrow subset of the original event effects, without guessing runtime
+ * the generic original event effects, without guessing runtime
  * layouts or creating a parallel Vita menu.
  */
 
@@ -34,6 +34,7 @@ void halo_vita_menu_deferred_game_time_start(void);
 #undef main_menu_ensure_player_queues_exist
 
 #ifdef HALO_VITA
+void halo_vita_ui_post_button(short index);
 static void halo_vita_log_deferred_world_resume(char const *operation)
 {
     vita_log("[VITA UI TRANSITION] defer world resume operation=%s (ui.map shell has no gameplay world yet)",
@@ -340,7 +341,7 @@ static int halo_vita_dispatch_focused_button(
 }
 
 /* Action values are the small platform commands produced by the Vita shell:
- * 1 accept, 3/4/5/6 dpad up/down/left/right, 7 back. */
+ * 1 accept, 2 X, 3/4/5/6 dpad, 7 back, 8 Start, 9/10 triggers. */
 int halo_vita_ui_process_menu_action(short action)
 {
     struct widget_instance *root;
@@ -367,6 +368,18 @@ int halo_vita_ui_process_menu_action(short action)
     {
     case 1:
         button_index = _gamepad_analog_button_a;
+        break;
+    case 2:
+        button_index = _gamepad_analog_button_x;
+        break;
+    case 8:
+        button_index = _gamepad_binary_button_start;
+        break;
+    case 9:
+        button_index = _gamepad_analog_button_left_trigger;
+        break;
+    case 10:
+        button_index = _gamepad_analog_button_right_trigger;
         break;
     case 3:
         button_index = _widget_event_dpad_up;
@@ -396,10 +409,53 @@ int halo_vita_ui_process_menu_action(short action)
     event.data.button.index = (byte)button_index;
     event.data.button.value = 1;
 
+    if (virtual_keyboard_active()) {
+        halo_vita_ui_post_button(button_index);
+        virtual_keyboard_process();
+        event_manager_flush();
+        return TRUE;
+    }
+
     if (button_index >= _widget_event_dpad_up &&
         button_index <= _widget_event_dpad_right)
         return halo_vita_move_menu_focus(root, button_index, &event);
 
     return halo_vita_dispatch_focused_button(root, button_index, &event);
+}
+/* The original empty-event update runs animations, timeouts and authored
+ * keyboard completion callbacks without entering pause/attract/world update. */
+void halo_vita_ui_process_shell_frame(void)
+{
+    long index;
+    if (!widget_globals.initialized || !we_are_at_the_main_menu) return;
+    widget_globals.current_system_milliseconds = system_milliseconds();
+    if (virtual_keyboard_active()) {
+        virtual_keyboard_process();
+        event_manager_flush();
+        return;
+    }
+    for (index = 0; index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS; ++index) {
+        struct widget_instance *widget = widget_globals.active_widgets[index];
+        if (widget) {
+            struct event_record event = {0};
+            boolean deleted = FALSE;
+            event.controller_index = widget->local_player_index;
+            widget_instance_process_one_event_recursive(widget,
+                ui_widget_definition_get(widget->definition_tag_index),
+                &event, &deleted);
+        }
+        if (!widget_globals.active_widgets[index] && widget_globals.widget_stack[index]) {
+            struct widget_stack_data data;
+            pop_widget(&widget_globals.widget_stack[index], &data);
+            if (data.previous_widget_tag != NONE) {
+                struct widget_instance *restored = ui_widget_load_by_name_or_tag(
+                    NULL, data.previous_widget_tag, NULL, data.local_player_index,
+                    NONE, NONE, NONE);
+                if (restored)
+                    widget_instance_set_focused_child_by_index(
+                        data.focused_child_parent_widget_tag, restored, data.focused_child_index);
+            }
+        }
+    }
 }
 #endif

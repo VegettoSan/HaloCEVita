@@ -14,6 +14,9 @@
 #include "interface/ui_widget.h"
 #include "interface/player_ui.h"
 #include "saved games/saved_game_files.h"
+#include "interface/event_manager.h"
+#include "interface/virtual_keyboard.h"
+static boolean vita_ui_shell_services_initialized;
 #include "interface/interface.h"
 #include "game/game_globals.h"
 #include "scenario/scenario.h"
@@ -239,6 +242,12 @@ int halo_vita_ui_runtime_dispose(void)
         }
         vita_log("[VITA 023] original widget pool freed; globals reset");
     }
+    if (vita_ui_shell_services_initialized) {
+        virtual_keyboard_dispose();
+        event_manager_dispose();
+        saved_game_files_dispose();
+        vita_ui_shell_services_initialized = FALSE;
+    }
     vita_ui_scenario = NULL;
     vita_ui_game_globals = NULL;
     vita_menu_bitmap_resources_activated = FALSE;
@@ -333,7 +342,15 @@ int halo_vita_menu_root_checkpoint(void)
         return 0;
     }
     halo_vita_ui_render_clock_update();
-    saved_game_files_initialize();
+    if (!vita_ui_shell_services_initialized) {
+        saved_game_files_initialize();
+        event_manager_initialize();
+        vita_ui_shell_services_initialized = TRUE;
+        if (!virtual_keyboard_initialize()) {
+            vita_log("MAIN MENU BLOCKED: original virtual keyboard missing");
+            return 0;
+        }
+    }
     vita_log("[VITA UI SAVES] original saved-game and profile owners initialized");
     vita_log("original player_ui_initialize begin");
     player_ui_initialize();
