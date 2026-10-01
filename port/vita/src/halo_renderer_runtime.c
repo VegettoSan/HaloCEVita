@@ -7,7 +7,7 @@
 #include "cseries.h"
 #include "cache/texture_cache.h"
 #include "effects/decals.h"
-#include "game/game_time.h"
+#include "game/game.h"
 #include "game/players.h"
 #include "cutscene/cinematics.h"
 #include "math/real_math.h"

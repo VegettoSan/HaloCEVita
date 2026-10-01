@@ -30,6 +30,8 @@ jobs:
           grep -E '^\.(init_array|fini_array|data|bss)[[:space:]]' build/vita/HaloCE.elf.map || true
       - name: Build VPK
         run: cmake --build build/vita --target vita_vpk -j2
+      - name: Verify native renderer and Vita package
+        run: python3 tools/vita_verify.py
       - name: Upload Vita test package and symbols
         uses: actions/upload-artifact@v4
         with:
@@ -38,6 +40,8 @@ jobs:
             build/vita/HaloCE.vpk
             build/vita/HaloCE.elf
             build/vita/HaloCE.elf.map
+            build/vita/artifacts.json
+            build/vita/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
 

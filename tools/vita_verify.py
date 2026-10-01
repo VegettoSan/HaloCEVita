@@ -14,6 +14,9 @@ import xml.etree.ElementTree as ET
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
 build = Path('build/vita')
+(build / 'logs').mkdir(parents=True, exist_ok=True)
+app_version = re.search(r'set\(VITA_APP_VERSION "([^"]+)"\)',
+                        Path('port/vita/CMakeLists.txt').read_text()).group(1)
 sdk = Path(os.environ['VITASDK'])
 def run(tool, *args):
     return subprocess.run([str(sdk / 'bin' / ('arm-vita-eabi-' + tool)), *map(str, args)],
@@ -40,7 +43,13 @@ required = ['cseries_initialize', 'debug_memory_manager_initialize', 'debug_mall
             'file_reference_create_from_path', 'file_exists', 'xbox_demos_available',
             'GetFileAttributesA', 'GetLastError', 'SetLastError',
             'halo_vita_menu_tags_probe', 'vita_cache_relocate_menu', 'bitmap_group_get_bitmap_from_sequence',
-            'unicode_string_list_get_string', 'font_get_character_by_ascii_code']
+            'unicode_string_list_get_string', 'font_get_character_by_ascii_code',
+            'halo_vita_renderer_initialize', 'halo_vita_renderer_render_menu_frame',
+            'halo_vita_menu_bitmap_resources_activate', 'render_ui_widgets',
+            '_rasterizer_psuedo_dynamic_screen_quad_draw', 'D3DDevice_End',
+            'D3DDevice_Present', 'players_initialize', 'players_initialize_for_new_map',
+            'player_control_initialize', 'cinematic_initialize',
+            'cinematic_initialize_for_new_map', 'game_time_initialize']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)
@@ -109,7 +118,7 @@ with zipfile.ZipFile(build / 'HaloCE.vpk') as package:
     assert set(package.namelist()) == expected, package.namelist()
     assert package.read('eboot.bin') == self_file.read_bytes()
     sfo = sfo_values(package.read('sce_sys/param.sfo'))
-    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == '00.11'
+    assert sfo['TITLE_ID'] == 'HCEV00001' and sfo['APP_VER'] == app_version
     assert sfo['TITLE'] == 'Halo CE Vita'
     assert ('----- HaloCEVita native core bring-up ' + sfo['APP_VER'] + ' -----').encode() in elf.read_bytes(), (
         'Runtime log banner does not match packaged APP_VER')
@@ -139,7 +148,10 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
                                   'current package installation/runtime pending; prior00.11 BOOTS'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': subprocess.run(['git', 'rev-parse', 'HEAD'], capture_output=True, text=True, check=True).stdout.strip(),
-            'source_has_uncommitted_changes': True, 'sdk': str(sdk), 'required_core_symbols': required,
+            'source_has_uncommitted_changes': bool(subprocess.run(
+                ['git', 'status', '--porcelain', '--untracked-files=no'],
+                capture_output=True, text=True, check=True).stdout.strip()),
+            'sdk': str(sdk), 'required_core_symbols': required,
             'optional_unresolved_sdk_hooks': undefined.splitlines(),
             'files': {name: {'sha256': digest(build / name), 'bytes': (build / name).stat().st_size} for name in files}}
 (build / 'artifacts.json').write_text(json.dumps(manifest, indent=2) + '\n')
