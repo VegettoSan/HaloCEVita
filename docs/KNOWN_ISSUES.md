@@ -300,3 +300,6 @@ A089/A091: latest00.30 hardware still shows rectangles. CPU DXT3/5 output retain
 ## KI-038 — Staged shell navigation is not complete profile/gameplay lifecycle
 
 A089/A090: root/list/history navigation exists, but the event-function owner still permits only0/23/86. Campaign handler101 and generated profile/multiplayer lists remain blocked until their real saved-profile/world owners are initialized. Generic effect support and D-pad host tests do not prove every screen is usable. No Campaign/a10/gameplay claim.
+
+
+A094 hardware00.31 refines KI-038: original D-pad/focus visuals work, but Multiplayer and Settings fatally reject game-data5/14 after unsupported creation24/34; Campaign conditional root has no focus because handler101 is unavailable. Exact map433 reachable widgets include saved-profile, description, keyboard and event-effect requirements. White backgrounds are deferred by user instruction; stop alpha experiments while completing navigation.
