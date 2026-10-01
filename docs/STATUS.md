@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-01
 
-Current source **00.24: LINKS** (A070–A071). Restores the original60Hz flip consumer before staged Vita Present and implements its absolute monotonic wait with native kernel delays. Actual host scheduling reproduces00.23's third-frame deadlock and completes120 frames after correction; native ELF/VPK builds. New third-frame markers and existing frame30/120 must confirm progress on hardware; Start/animation recovery remains unverified. Scenario BSP/models/HS scripts/full widget update/audio remain pending.
+Current source **00.24: LINKS** (A070–A071). Restores the original60Hz flip consumer before staged Vita Present and implements its absolute monotonic wait with native kernel delays. Actual host scheduling reproduces00.23's third-frame deadlock and completes120 frames after correction; native ELF/VPK builds and package verifier passes. Published source7baf282; ordinary native Vita workflow133 and prerelease publication succeed. New third-frame markers and existing frame30/120 must confirm progress on hardware; Start/animation recovery remains unverified. Scenario BSP/models/HS scripts/full widget update/audio remain pending.
 
 Latest hardware **00.23: partial HALO DRAW RENDERS, loop stall** (A070/KI-032). Logo and plain backgrounds visible, no text/animation; user reports orange rectangle absent and Start does not exit. Original render/shaders/source pixels and two Presents complete. No frame30/120 or input/exit follows. Missing flip consumer is a source-confirmed deadlock independently reproduced on host; later renderer failures are not excluded. Prior00.23 Vita CI workflow132/run36823114339 succeeded. The newer00.24 correction still needs its own console run.
 

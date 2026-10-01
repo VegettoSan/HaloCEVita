@@ -868,3 +868,21 @@ Initial native link of local343d84a FAILED: `d3d8_gl.c:672: undefined reference 
 **Change:** retain CLOCK_MONOTONIC and the original incremented60Hz nanosecond deadline. The game/native bridge passes only a uint64_t deadline. Native vita_platform uses clock_gettime and bounded sceKernelDelayThread delays, rounds sub-microsecond remainder up and rechecks the absolute deadline after every wakeup. A distant deadline splits into <=1s delays, avoiding truncation of the SDK32-bit parameter. Clock or kernel failure returns explicit failure and the original worker logs/stops; do not manufacture ticks or leave a queue without its consumer. Other platforms retain clock_nanosleep. Add third-frame begin/present markers beside existing frame30/120; bump SFO/banner together to00.24 and require the real deadline bridge in package verification.
 
 **Validation:** enhanced vita_present_regression.py PASS actual native deadline helper with past/due deadlines,16666666ns rounding, early wakeup/recheck,64-bit monotonic time, long-delay chunking and clock/kernel failures. Actual original pthread worker/Present scheduling still passes120 frames,120 consumed flips, one worker, callback-first, interpolation and creation failure; historical third-frame hang reproduces. Desktop/Android preprocessed scheduling tokens identical. vita_renderer_contract_regression.py PASS original bitmap/pair/cache/shell/disposal contracts. Native cmake --build native-build --target vita_vpk -j4 PASS with official SDK2026.08/GCC15.2.0 after adapting the deadline. Full package verification/digests follow. No Vita repeated-frame or Start recovery is claimed before hardware testing.
+
+
+### A071 verified native packages and GitHub publication
+
+Published functional source7baf282d503a3e63ba6204cd70d4f1e2d835232f; its complete treee54a964405c2d465f25adb12ad8effc649351c41 exactly matches localc8bdc1d. The preceding failed local343d84a is preserved on progress-00.24-local-c8bdc1d; GitHub received the combined native-linkable correction as one focused commit, rather than publishing the unsupported-wait intermediate.
+
+Local official SDK2026.08 package verifier PASS: ELF32 ARM hard-float, actual required renderer/clock/deadline symbols, no unexpected unresolved hooks, SELF/SFO/banner00.24 agreement, indexed LiveArea, no retail maps/compiler module. Matching retained local outputs:
+
+```text
+a3ece9e88abcae951c13d3b1197ecdf2f4a7195a17d8eab98dee3720fbb5de72  HaloCE.vpk (641249 bytes)
+cf602e7a9d0bc8ba61240fc70a83ee4a3d1f0829dce5e3ee2ae79e1f013383e5  eboot.bin
+98fd31ada13af4c240b1967f75cf0855b269118e42794cd2e49cdd607da006bc  HaloCE.elf
+e292160aae9a31fe4ce832492db386bc8946026d5a2c9a2e0673f84383c44e78  HaloCE.elf.map
+```
+
+Official Vita workflow133/run36825483709, ordinary vita job110250109803 and prerelease job110250579102 both SUCCEEDED. CI verifier also PASS with00.24; release vita-build-133 targets7baf282. CI package has a separate identity (different build environment paths/output): VPK641187 bytes SHA-25628765b339143bb80eac6aed570922930f42589f758ff6c356d0cc61191b4eee4; ELF10203960 bytes SHA-2562913dccd3ed1702d1f71f78dad582e7b788c257be93cfaa0de348106955be9bd; map2982440 bytes SHA-256754923daa5078534734e0bfb1e4dadc9de801d638b45785abdf77b0f9d68afbb. Keep symbols from the exact installed package. The optional full widget-update closure is a separate unresolved-owner experiment; it does not enable navigation/world/audio in this release.
+
+Next hardware gate:00.24 banner, original worker-start marker, third Present returned, frame30/120, visible effects and Start input/clean exit. A passing link/CPU fixture does not establish those console results.
