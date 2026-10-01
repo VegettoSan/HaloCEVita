@@ -77,7 +77,15 @@ mocks = r'''
 static void decode_level(const struct xgpu_texture_description *d, unsigned long l,
     const unsigned char *src, const D3DCOLOR *p, unsigned long *dst) {
     (void)p; assert(d==expected && !d->compressed);
-    assert(src==base+xgpu_texture_level_offset(d,l)); dst[0]=0xff332211UL;
+    assert(src==base+xgpu_texture_level_offset(d,l)); for(unsigned long i=0;i<level_dimension(d->width,l)*level_dimension(d->height,l);i++)dst[i]=0xff332211UL;
+}
+static void dxt_decode_level(unsigned char kind, const unsigned char *src,
+    unsigned long w, unsigned long h, unsigned long depth, unsigned long *dst) {
+    assert(kind==_texel_dxt3 && expected->compressed && depth==1);
+    unsigned long level=0;
+    while(src!=base+xgpu_texture_level_offset(expected,level)) {level++;assert(level<expected->levels);}
+    assert(w==level_dimension(expected->width,level) && h==level_dimension(expected->height,level));
+    for(unsigned long i=0;i<w*h;i++)dst[i]=0xff332211UL;
 }
 static void glCompressedTexImage2D(GLenum t, GLint l, GLenum f, GLsizei w, GLsizei h,
     GLint border, GLsizei bytes, const void *p) {
@@ -104,10 +112,10 @@ suffix = r'''
 #define FAIL(call) do { if(!setjmp(fatal)){call;assert(!"expected fatal");} } while(0)
 int main(void) {
     unsigned char data[21888]={0}; base=data;
-    struct xgpu_texture_description d={.format=0xe,.width=128,.height=128,.depth=1,.levels=6,.compressed=1};
+    struct xgpu_texture_description d={.format=0xf,.width=128,.height=128,.depth=1,.levels=6,.compressed=1};
     expected=&d;
 #ifdef HISTORICAL
-    (void)glFinish;(void)halo_vita_texture_transfer_finish;
+    (void)glFinish;(void)halo_vita_texture_transfer_finish;(void)dxt_decode_level;
     upload(2,GL_TEXTURE_2D,&d,data,NULL);
     assert(unsafe_realloc==5&&pending_transfer&&!transfer_waits);
     puts("PASS historical actual uploader reproduces 5 reallocations with an outstanding DXT transfer");
@@ -124,12 +132,14 @@ int main(void) {
     assert(!pending_transfer&&!unsafe_realloc);
     d.format=0xc; compressed_calls=0; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(compressed_calls==6);
     d.format=0xf; compressed_calls=0; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(compressed_calls==6);
-    d.format=0xe; compressed_calls=0; fail_level=2; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL));
-    assert(compressed_calls==3 && strstr(phase_log,"compressed mip") && strstr(phase_log,"level=2")); fail_level=-1;
+    d.format=0xe; compressed_calls=0; decoded_calls=0;
+    upload(2,GL_TEXTURE_2D,&d,data,NULL);assert(decoded_calls==6 && !compressed_calls);
+    decoded_calls=0; fail_level=2; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL));
+    assert(decoded_calls==3 && !compressed_calls && strstr(phase_log,"decoded BGRA mip") && strstr(phase_log,"level=2")); fail_level=-1;
     compressed_calls=0; fail_store=1; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL));
     assert(!compressed_calls && strstr(phase_log,"tight rows")); fail_store=0;
     gl_error=0x500; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL)); assert(strstr(phase_log,"bind/incoming state"));
-    d=(struct xgpu_texture_description){.format=6,.width=3,.height=2,.depth=1,.levels=1};
+    decoded_calls=0; d=(struct xgpu_texture_description){.format=6,.width=3,.height=2,.depth=1,.levels=1};
     row_length=9; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(decoded_calls==1 && row_length==0);
     fail_level=0; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL)); assert(strstr(phase_log,"decoded BGRA mip")); fail_level=-1;
     fail_transfer=transfer_waits+1; decoded_calls=0;
@@ -139,7 +149,7 @@ int main(void) {
     d.width=0; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL));
     d.width=3; d.depth=2; FAIL(upload(2,GL_TEXTURE_3D,&d,data,NULL));
     assert(!unsafe_realloc);
-    puts("PASS actual upload: DXT1/3/5 bytes/mips, repeated refresh, separate draw/transfer waits, BGRA staging and transfer/GL failure rejection");
+    puts("PASS actual upload: native DXT1/5 and decoded DXT3 bytes/mips, repeated refresh, separate draw/transfer waits, BGRA staging and transfer/GL failure rejection");
 #endif
 }
 '''

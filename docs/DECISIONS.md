@@ -240,3 +240,8 @@ A078/KI-036: prepare one exact logical stream before runtime resources activate,
 ## D037 — Reuse barriers protect submitted ranges; fresh appends need no global wait
 
 A079: after inspecting primary vitaGL mapping's fixed storage semantics, remove per-upload global completion from fresh append ranges. Preserve the bounded buffer owner, exact-byte writes, alignment and full same-draw reservation. Synchronize before every vertex/index wrap so CPU never overwrites submitted reads. A host negative fixture must reject a missing reuse barrier. No SubData cloning/orphaning/unsynchronized overlap or arbitrary pool growth; console FPS/depth behavior remains pending.
+
+
+## D038 — Controlled original DXT3 decode fallback for Vita UI masks
+
+A084/A085: reuse the existing original Android decoder for DXT3 with checked BGRA staging and original mip/face/shader/cache contracts. Exact user map shows auxiliary label text alpha0 but real bitmap-letter alpha; host original fragment replay preserves it. This is an explicitly pending Vita sampling experiment, not proof of a driver fault or complete UI fix. Native DXT1/DXT5 remain unchanged. The decoded GPU footprint is4x DXT3 source bytes before driver alignment; budget future scene residency before making this a permanent all-scene policy. No authored data/opacity changes, color keys or synthetic labels.

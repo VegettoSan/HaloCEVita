@@ -23,6 +23,7 @@ jobs:
         run: |
           python3 tools/vita_texture_stage_regression.py
           python3 tools/vita_texture_upload_regression.py
+          python3 tools/vita_dxt_mask_regression.py
           python3 tools/vita_vertex_color_regression.py
           python3 tools/vita_menu_clock_regression.py
           python3 tools/vita_sound_tag_regression.py

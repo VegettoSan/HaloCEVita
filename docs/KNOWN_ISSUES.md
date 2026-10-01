@@ -286,3 +286,6 @@ User reports nearly one minute before logo. A083 log first menu Present72.56s, t
 
 
 A084 corrects KI-031's label interpretation using the exact user map: the option text with alpha0 is auxiliary; actual option labels are DXT3 background alpha masks with transparent surroundings. Controlled host GPU replay preserves Campaign lettering/alpha through the original retained fragment shader. This does not establish Vita sampling or identify the sole defect. Keep alpha1 build-number font failure separate. Do not force authored text opacity or introduce a color key.
+
+
+A085 source00.27 uses the original DXT3 decode fallback to isolate native compressed-mask sampling. Host actual decoder/uploader and raw9 menu frames pass; Vita visuals/performance/memory need a new test. DXT3 decoded GPU residency increases4x before alignment. DXT5 logo transparency and alpha1 build-number text remain distinct; a successful DXT3 experiment alone does not prove a complete UI or justify opacity changes.

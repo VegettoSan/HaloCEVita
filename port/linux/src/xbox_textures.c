@@ -398,8 +398,8 @@ static void decode_level(const struct xgpu_texture_description *description, uns
 	}
 }
 
-#ifdef HALO_ANDROID
-/* ---------- DXT decoding, for ES drivers without S3TC (Mali) */
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
+/* ---------- Original DXT decoding for platform sampling fallbacks */
 
 static unsigned long color565(unsigned long value)
 {
@@ -601,6 +601,11 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 
 #ifdef HALO_ANDROID
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
+#elif defined(HALO_VITA)
+	/* A084: the UI labels are DXT3 alpha masks. Reuse the original decoder
+	 * to isolate direct UBC2 sampling while preserving pixels/equations.
+	 * DXT1 and DXT5 retain native compression. Hardware result is pending. */
+	decode_compressed = description->compressed && information.kind == _texel_dxt3;
 #endif
 	#ifdef HALO_VITA
 	if (!description->width || !description->height || !description->depth ||
@@ -619,6 +624,15 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 		largest > (16UL << 20) / sizeof(unsigned long))
 		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 16MiB temporary bound");
 	#endif
+#ifdef HALO_VITA
+	if (decode_compressed) {
+		static unsigned decoded_masks_logged;
+		if (decoded_masks_logged++ < 8)
+			vita_log("[VITA DXT3] original CPU decoder selected: dims=%lux%lux%lu levels=%lu source_bytes_per_face=%lu staging_bytes=%lu",
+				description->width, description->height, description->depth, description->levels,
+				face_size, largest * sizeof(unsigned long));
+	}
+#endif
 	converted = description->compressed && !decode_compressed ? NULL : malloc(largest * sizeof(unsigned long));
 #ifdef HALO_VITA
 	if ((!description->compressed || decode_compressed) && !converted)
@@ -662,9 +676,7 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 			const unsigned char *source = base + face * face_size + xgpu_texture_level_offset(description, level);
 			GLsizei width = (GLsizei)level_dimension(description->width, level);
 			GLsizei height = (GLsizei)level_dimension(description->height, level);
-#ifndef HALO_VITA
 			GLsizei depth = (GLsizei)level_dimension(description->depth, level);
-#endif
 
 			if (description->compressed && !decode_compressed)
 			{
@@ -679,7 +691,7 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 			}
 			else
 			{
-#ifdef HALO_ANDROID
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
 				if (decode_compressed)
 					dxt_decode_level(information.kind, source, (unsigned long)width, (unsigned long)height,
 						(unsigned long)depth, converted);
@@ -724,7 +736,7 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 			if (halo_vita_texture_transfer_finish() < 0)
 				vita_fatal("Vita texture mip transfer completion failed");
 			vita_upload_check(texture, image_target, (long)level,
-				description->compressed ? "compressed mip" : "decoded BGRA mip");
+				description->compressed && !decode_compressed ? "compressed mip" : "decoded BGRA mip");
 #endif
 		}
 	}
