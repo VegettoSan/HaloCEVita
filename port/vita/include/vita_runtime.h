@@ -49,6 +49,7 @@ void halo_vita_audio_mixer_shutdown(void);
 int halo_vita_file_contract_probe(void);
 void halo_vita_main_render_time_update(void);
 void halo_vita_ui_render_clock_update(void);
+int halo_vita_ui_activate_main_menu_state(void);
 int halo_vita_ui_process_menu_action(short action);
 int vita_xapi_file_attributes(const char *xbox_path, uint32_t *attributes, uint32_t *error);
 uint32_t vita_xapi_last_error_get(void);
