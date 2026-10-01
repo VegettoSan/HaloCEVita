@@ -190,3 +190,8 @@ Date2026-10-01; A061/A063/KI-029. vitaGL DXT mip uploads schedule asynchronous G
 ## D027 — Reflect base-array spans for installed non-strict uniform ABI
 
 Date2026-10-01; A062/A063/KI-030. Exact linked glUniform4fv uses a whole-uniform pointer and offset0. Supersede D011/D017's element-location assumption for this native archive. Reflect active vec4 array length/base name and upload its checked complete original prefix when dirty; do not manufacture indexed handles or add offsets to locations. Preserve all192 CPU constant registers, original indices/arithmetic and pixel array shadows; inactive compiled arrays need no upload, malformed/oversize contracts reject. Shader constant compaction remains future work; this does not assert that all192 vectors fit all programs. Previous host-only sparse-location evidence remains historical, not native proof. Non-Vita remains unchanged.
+
+
+## D028 — Expand packed normals at the Vita stream boundary
+
+A065: reuse the exact original NV2A unpack arithmetic on CPU. Keep authored interleaved data immutable; upload separate float3 attributes into the existing bounded stream buffer, reserving the complete draw first. Retain original declaration/register identities and shader instructions. Avoid GLSL integer attributes and modifications to game model data; preserve desktop/Android paths. Hardware geometry and full scenario execution are still unverified.

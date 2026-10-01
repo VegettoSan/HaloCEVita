@@ -29,6 +29,7 @@ Conventions carried over from the Xbox:
 #include "../../vita/include/vita_runtime.h"
 #include "../../vita/include/halo_vita_program.h"
 #include "../../vita/include/halo_vita_graphics.h"
+#include "../../vita/include/halo_vita_vertex.h"
 #endif
 
 #include <math.h>
@@ -3443,6 +3444,7 @@ static unsigned long stream_upload(const void *data, unsigned long size)
 	return offset;
 }
 
+
 #if defined(HALO_ANDROID) || defined(HALO_VITA)
 /* stream_upload, with the D3DCOLOR elements of the stream turned from BGRA
 into the RGBA byte order ES/vitaGL reads */
@@ -3586,6 +3588,44 @@ static BOOL stream_has_colors(const struct vertex_shader_object *declaration, un
 }
 #endif
 
+#ifdef HALO_VITA
+/* Keep the authored interleaved stream unchanged. Each packed attribute gets
+ * a separate tightly packed float3 stream in the same bounded GPU buffer.
+ * setup_streams reserves all these ranges before assigning any offsets. */
+static unsigned long vita_normal_bytes(unsigned long count)
+{
+	if (!count || count > STREAM_BUFFER_SIZE / (3 * sizeof(float)))
+		vita_fatal("Vita packed normal count exceeds stream capacity");
+	return count * 3 * sizeof(float);
+}
+
+static unsigned long vita_normal_upload(const unsigned char *data,
+	unsigned long stride, unsigned long offset, unsigned long count)
+{
+	static float *scratch;
+	static unsigned long capacity;
+	unsigned long bytes = vita_normal_bytes(count), vertex;
+	float *replacement;
+	if (!data || offset > (stride ? stride : 64) ||
+		(stride ? stride : 64) - offset < sizeof(uint32_t))
+		vita_fatal("Vita packed normal exceeds its stream stride");
+	if (capacity < bytes) {
+		replacement = malloc(bytes);
+		if (!replacement) vita_fatal("Vita packed normal allocation failed");
+		free(scratch);
+		scratch = replacement;
+		capacity = bytes;
+	}
+	for (vertex = 0; vertex < count; vertex++) {
+		uint32_t packed;
+		/* Unaligned Xbox declarations are valid; never cast the source. */
+		memcpy(&packed, data + vertex * stride + offset, sizeof(packed));
+		halo_vita_unpack_normpacked3(packed, scratch + vertex * 3);
+	}
+	return stream_upload(scratch, bytes);
+}
+#endif
+
 static void setup_streams(unsigned long first, unsigned long count)
 {
 	struct vertex_shader_object *declaration = device.vertex_shader;
@@ -3594,6 +3634,29 @@ static void setup_streams(unsigned long first, unsigned long count)
 	BOOL placed[16] = { FALSE };
 	BOOL enabled[XGPU_VERTEX_ATTRIBUTE_COUNT] = { FALSE };
 	unsigned long index, total = 0;
+
+#ifdef HALO_VITA
+	/* Check the complete draw up front, including all converted normals. The
+	 * later per-upload reserve must never wrap over attributes of this draw. */
+	for (index = 0; index < declaration->element_count; index++) {
+		const struct vertex_element *element = &declaration->elements[index];
+		unsigned long stride, span;
+		if (element->stream >= 16 || element->reg >= XGPU_VERTEX_ATTRIBUTE_COUNT)
+			vita_fatal("Vita vertex declaration stream/register out of range");
+		if (!device.streams[element->stream].data || element->type == D3DVSDT_NONE)
+			continue;
+		stride = device.streams[element->stream].stride;
+		if (!count || (stride && (count > STREAM_BUFFER_SIZE / stride ||
+			first > ~0UL / stride - count)))
+			vita_fatal("Vita source vertex range overflow");
+		if (element->type == D3DVSDT_NORMPACKED3) {
+			span = vita_stream_span(vita_normal_bytes(count), STREAM_BUFFER_SIZE);
+			if (span > STREAM_BUFFER_SIZE - total)
+				vita_fatal("Vita converted vertex reservation exceeds capacity");
+			total += span;
+		}
+	}
+#endif
 
 	/* the mirror first; then one reservation for everything streamed */
 	for (index = 0; index < declaration->element_count; index++)
@@ -3615,7 +3678,16 @@ static void setup_streams(unsigned long first, unsigned long count)
 		if (mirror_range(base, bytes, &stream_buffers[stream], &stream_offsets[stream], NULL))
 			continue;
 		stream_buffers[stream] = 0;
+#ifdef HALO_VITA
+		{
+			unsigned long span = vita_stream_span(bytes, STREAM_BUFFER_SIZE);
+			if (span > STREAM_BUFFER_SIZE - total)
+				vita_fatal("Vita aggregate vertex reservation exceeds capacity");
+			total += span;
+		}
+#else
 		total += (bytes + 15) & ~15UL;
+#endif
 	}
 	stream_reserve(total);
 	for (index = 0; index < declaration->element_count; index++)
@@ -3644,8 +3716,17 @@ static void setup_streams(unsigned long first, unsigned long count)
 		}
 		if (element->type == D3DVSDT_NORMPACKED3)
 		{
+#ifdef HALO_VITA
+			const unsigned char *base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[stream].data);
+			unsigned long offset = vita_normal_upload(base + first * stride,
+				stride, element->offset, count);
+			state_attribute_pointer(element->reg, device.stream_buffer, 3,
+				GL_FLOAT, GL_FALSE, FALSE, 3 * sizeof(float), offset);
+			stats.streamed_bytes += vita_normal_bytes(count);
+#else
 			state_attribute_pointer(element->reg, stream_buffers[stream], 1, GL_UNSIGNED_INT, GL_FALSE, TRUE,
 				(GLsizei)stride, stream_offsets[stream] + element->offset);
+#endif
 		}
 		else
 		{
@@ -3658,9 +3739,14 @@ static void setup_streams(unsigned long first, unsigned long count)
 	for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
 	{
 		if (!enabled[index])
+#ifdef HALO_VITA
+			state_attribute_value(index, device.attributes[index]);
+#else
 			state_attribute_value(index, declaration->packed_mask & (1UL << index) ? NULL : device.attributes[index]);
+#endif
 	}
 }
+
 
 static GLenum primitive_mode(D3DPRIMITIVETYPE type)
 {

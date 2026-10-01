@@ -220,12 +220,10 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 	unsigned long index;
 
 #ifdef HALO_VITA
-	/* GLSL 1.20 has no integer vertex attributes/bit shifts. A later Vita
-	 * vertex upload wrapper must unpack NORMPACKED3 on CPU before this path. */
-	if (packed_attribute_mask) {
-		platform_log("HALO_VITA BLOCKED: NORMPACKED3 requires CPU attribute unpacking");
-		return NULL;
-	}
+	/* Vita setup_streams supplies the same decoded values as float3 inputs.
+	 * Missing fourth component defaults to1, matching unpack_normpacked3.
+	 * Keep the NV2A arithmetic/register numbering; no GLSL integer input. */
+	packed_attribute_mask = 0;
 	platform_log("HALO_VITA vertex GLSL omits unsupported invariant qualifier; multipass position invariance unverified");
 #endif
 
