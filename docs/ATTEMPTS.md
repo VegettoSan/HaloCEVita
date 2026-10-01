@@ -814,3 +814,17 @@ Vita uniform arrays now reflect compiled GL_FLOAT_VEC4 base names/lengths via gl
 ## 2026-10-01 — A068 — Prepare00.23 native test package
 
 Bump SFO/runtime banner together to00.23; require original frame/UI clock bridge symbols in package verifier. Log the staged UI-only/world-owner limit explicitly at initialization. Contains A065 packed normals, A066 exact bounded texture cache and A067 original render clocks. Native ELF has linked after each focused code change using the same official2026.08 SDK image as CI. Package verification and final artifact digests follow below; no console result/3D/audio/full menu claim yet.
+
+
+### A068 final native package evidence
+
+Native source commit42c41f5, official vitasdk/vitasdk:2026.08 image, GCC15.2.0. cmake --build /workspace/scratch/55baf5a19b7b/native-build --target vita_vpk -j4 PASS; copied the exact outputs to ignored build/vita for VITASDK=<extracted SDK> python3 tools/vita_verify.py PASS. Version00.23, package639590 bytes, ELF32 ARM hard-float, complete required original renderer/clock symbols, no unexpected unresolved imports, SELF/SFO/banner agreement and indexed LiveArea assets. No proprietary maps/runtime compiler packaged. Digests:
+
+```text
+23a25f3d0e341075d2d6f96fd62e338188d4fdd594bf377a395e28fc75c0a1dd  HaloCE.vpk
+c6dc430b16964833cd27aa8e4f8c82ef6ace33ecdf30fc8b4aeb6eeffeee143d  eboot.bin
+490878dce1517999a92b738a8655cbf8d7db39b300f34c2c64c9ea5ef6b60f8b  HaloCE.elf
+941e53543a99f237f47a4adda3059f6c9c7adc33153d28961a45e5dbb4295701  HaloCE.elf.map
+```
+
+Deliver the local00.23 VPK for a distinct hardware run. Preserve exact matching ELF/map for crashes. Expected logs include the00.23 banner, VITA WORLD staged-owner limit, first/second Present and ideally frame30/120; compare visible logo/labels/animated effects and responsiveness. No promise that labels or full world/audio are fixed. Remote remains0efb6e4 because automatic review rejected push; local focused commits91aa9bd/44e51bb/e47704e/58afabf/42c41f5 are preserved for approved publication.

@@ -1,3 +1,9 @@
+## Latest native test package —00.23 (2026-10-01)
+
+Local source42c41f5 builds and verifies00.23 with the same official2026.08 SDK image used by CI. VPK SHA-256 `23a25f3d0e341075d2d6f96fd62e338188d4fdd594bf377a395e28fc75c0a1dd`. Contains original packed-normal expansion, bounded exact texture reuse and original frame/UI render clocks (A065–A068). Real00.22 has partial visible UI;00.23 itself still needs console testing. Full BSP/models/shaders/HS camera/scripts, original event input and audio initialization are pending. Automatic review blocked remote publication; this local build is not a GitHub Actions release.
+
+Install the00.23 VPK over the existing test application and retain existing user data/maps. Confirm the log banner00.23. Allow startup/shader compilation to finish, observe logo/labels/visual animation, then use the existing Start exit if responsive. Supply the complete fresh debug.txt and a photo/video; if a crash occurs, retain the new dump. Exact symbols are retained with the local package. Hardware evidence must distinguish first/second frames from sustained frame30/120.
+
 # Vita build notes
 
 Project milestone: **RENDERS diagnostic + synthetic NV2A triangle on real Vita** (A016). Tested native ARM32 baseline **00.05** compiles both generated shaders, links and draws the visible triangle. GPU-copy/core tests pass, input/header rechecks work and Start exits at34.3s. Full Halo renderer/main/menu/campaign, multipass invariance and repeated stability remain unverified. The verifier associates runtime evidence with the exact tested VPK digest; a changed rebuild remains LINKS until tested.
