@@ -182,3 +182,8 @@ A04500.17 hardware shows bitmap.cached=true/cache_block_index=NONE with nonzero 
 ## KI-025 — Renderer allocations left live on pre-root failure cleanup
 
 A04500.17 heap_dump lists1,925,688 bytes owned by original rasterizer subsystems. Current pre-root cleanup frees UI/arena/core without calling original rasterizer disposal after successful rasterizer initialization. Restore original close/dispose while context, arena and tags are still valid; do not hide debug-memory reporting or free arbitrary owner allocations. Active-root teardown remains a separate pending contract.
+
+
+KI-024 source correctionA04600.18: opaque pointer words accepted only in cold cached records; eight invalid metadata/range cases remain rejected. Actual original load/query regression proves replacement before registration/read. Native/hardware pending.
+
+KI-025 source correctionA04700.18: pre-root cleanup now closes/disposes completed original renderer owners before tags/arena/core/context. Actual Vita owner-order regression passes; new native dispose closure/hardware still pending. Upstream disposer leaves some default texture/surface headers and native GL programs for process exit; no empty-heap/stability claim. Active-root teardown/full restart remain pending.

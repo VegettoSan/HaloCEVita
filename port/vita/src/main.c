@@ -124,6 +124,9 @@ int main(void)
 		if (elapsed < 33333) sceKernelDelayThread((unsigned)(33333 - elapsed));
 	}
 cleanup:
+#ifdef HALO_VITA_MENU_RENDER_PROBE
+    if (!root_active) halo_vita_renderer_dispose_before_root();
+#endif
 	if (root_active) {
 		vita_log("UI root/cache/arena retained until process exit; active-widget teardown not yet linked");
 		ui_disposed = 0;

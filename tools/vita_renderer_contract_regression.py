@@ -358,3 +358,46 @@ int main(void) {
     return 0;
 }
 ''')
+
+
+run('pre-root-dispose', COMMON + r'''
+static boolean vita_rasterizer_initialized, vita_renderer_ready;
+static boolean vita_texture_cache_opened, vita_shell_state_ready;
+static boolean vita_decals_ready, vita_bitmap_resources_ready;
+static char calls[32]; static unsigned call_count;
+static boolean tags_owned = TRUE, arena_owned = TRUE, context_owned = TRUE;
+static void step(char code) {
+    assert(tags_owned && arena_owned && context_owned && vita_rasterizer_initialized);
+    calls[call_count++] = code;
+}
+static void texture_cache_close(void) { step('C'); }
+static void cinematic_dispose(void) { step('c'); }
+static void players_dispose_from_old_map(void) { step('P'); }
+static void players_dispose(void) { step('p'); }
+static void game_time_dispose_from_old_map(void) { step('T'); }
+static void game_time_dispose(void) { step('t'); }
+static void decals_dispose_from_old_map(void) { step('D'); }
+static void decals_dispose(void) { step('d'); }
+static void rasterizer_dispose(void) { step('R'); }
+''', original('port/vita/src/halo_renderer_runtime.c', 'void halo_vita_renderer_dispose_before_root(void)'), r'''
+int main(void) {
+    halo_vita_renderer_dispose_before_root(); assert(call_count == 0);
+    /* Observed039 failure: rasterizer initialized, overall ready false. */
+    vita_rasterizer_initialized = vita_texture_cache_opened = TRUE;
+    halo_vita_renderer_dispose_before_root();
+    assert(call_count == 2 && !memcmp(calls, "CR", 2));
+    assert(!vita_rasterizer_initialized && !vita_texture_cache_opened && !vita_renderer_ready);
+    halo_vita_renderer_dispose_before_root(); assert(call_count == 2);
+    call_count = 0;
+    vita_rasterizer_initialized = vita_texture_cache_opened = TRUE;
+    vita_renderer_ready = vita_bitmap_resources_ready = TRUE;
+    vita_shell_state_ready = vita_decals_ready = TRUE;
+    halo_vita_renderer_dispose_before_root();
+    assert(call_count == 9 && !memcmp(calls, "CcPpTtDdR", 9));
+    assert(!vita_rasterizer_initialized && !vita_texture_cache_opened && !vita_renderer_ready);
+    assert(!vita_shell_state_ready && !vita_decals_ready && !vita_bitmap_resources_ready);
+    halo_vita_renderer_dispose_before_root(); assert(call_count == 9);
+    puts("PASS: pre-root failure disposes completed owners before tags/arena/context release; unopened and repeated shutdown guarded");
+    return 0;
+}
+''')

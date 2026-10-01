@@ -155,3 +155,8 @@ Date2026-10-01; A042. The UI-only frame still invokes original window-count and 
 ## D019 — Serialized cached bitmap pointers are opaque before LRU load
 
 Date2026-10-01; A045/A046. Refine D016's cold-cache validation using actual00.17 hardware and original source: cached bit + cache_block_index NONE defines an unloaded bitmap; serialized base_address/hardware_format need not be NULL. Preserve these fields without rebasing or consuming them. Original texture_cache_start_loading_bitmap must replace base with the new LRU address before hardware registration/read; cached hardware lookup selects the live cache-entry hardware instead of bitmap.hardware_format. Keep matching owner and resource bounds, and reject a foreign resident cache index. This avoids both a false rejection and a fake bitmap registration.
+
+
+## D020 — Completed subsystem flags own pre-root failure teardown
+
+Date2026-10-01; A047. Menu readiness can fail after original rasterizer allocation succeeds. Track original completion independently and invoke original close/dispose owners before tag/arena/context teardown, only before an active root exists. Keep original game-owned decal destruction before device destruction. Avoid synthetic frees, hiding allocation reports or treating a failed partial rasterizer initializer as fully initialized. Active-root shutdown and complete platform GL cache reset need their own validated owner contract.

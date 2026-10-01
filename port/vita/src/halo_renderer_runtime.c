@@ -26,6 +26,7 @@
  * that per-map transition after rasterizer_initialize() has created the
  * process-lifetime Xbox texture cache. */
 void texture_cache_open(void);
+void texture_cache_close(void);
 
 /* Validate the already prepared compiled-cache records before the first draw.
  * scenario_tags_load does not repeat the tag-building bitmap postprocess. */
@@ -39,6 +40,7 @@ void compute_window_bounds(long player_index, long num_players,
 short main_get_window_count(void);
 
 static boolean vita_renderer_ready;
+static boolean vita_rasterizer_initialized;
 static boolean vita_texture_cache_opened;
 static boolean vita_bitmap_resources_ready;
 static boolean vita_decals_ready;
@@ -72,6 +74,7 @@ int halo_vita_renderer_initialize(void)
         vita_log("MAIN MENU BLOCKED: rasterizer returned success without a D3D8 device");
         return 0;
     }
+    vita_rasterizer_initialized = TRUE;
 
     /* Restore only the per-map transition that the Vita ui.map mount skipped.
      * No pixels or menu assets are supplied here; bitmap reads still flow
@@ -131,6 +134,37 @@ int halo_vita_renderer_initialize(void)
     vita_renderer_ready = TRUE;
     vita_log("[VITA 036] original Xbox rasterizer ready; D3D8 device=%p", global_d3d_device);
     return 1;
+}
+
+/* Call only before root activation, while tags/arena/context remain owned.
+ * Track the completed rasterizer separately from overall readiness: a bitmap
+ * validation failure happens after its heap allocations but before ready. */
+void halo_vita_renderer_dispose_before_root(void)
+{
+    if (!vita_rasterizer_initialized) return;
+    vita_log("[VITA 040] original pre-root renderer disposal begin");
+    if (vita_texture_cache_opened) {
+        texture_cache_close();
+        vita_texture_cache_opened = FALSE;
+    }
+    if (vita_shell_state_ready) {
+        cinematic_dispose();
+        players_dispose_from_old_map();
+        players_dispose();
+        game_time_dispose_from_old_map();
+        game_time_dispose();
+        vita_shell_state_ready = FALSE;
+    }
+    if (vita_decals_ready) {
+        decals_dispose_from_old_map();
+        decals_dispose();
+        vita_decals_ready = FALSE;
+    }
+    rasterizer_dispose();
+    vita_rasterizer_initialized = FALSE;
+    vita_renderer_ready = FALSE;
+    vita_bitmap_resources_ready = FALSE;
+    vita_log("[VITA 040] original pre-root renderer disposal PASS");
 }
 
 int halo_vita_renderer_render_menu_frame(void)
