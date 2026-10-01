@@ -1,9 +1,11 @@
-## Latest native test package —00.24 (2026-10-01)
+## Current native test package —00.26 (2026-10-01)
 
 Current00.26 console test (A077–A080): install the matching `vita-build-N` package and confirm banner/SFO00.26. Keep the same original Xbox-v5 maps and overclock setting used for00.25. Compressed maps need about32MiB free disk for the derived seekable ui stream; it is rebuilt once before menu/audio activation, and removed on unbind. Do not modify/replace the original map. A new `seekable logical resource backend ready` marker must precede live resource reads. Listen for continuous title1 for at least60 seconds and compare FPS/stalls; press Square three times to check original cursor/forward/back effects, then Start for clean exit. Report separate music/FX results, typical/minimum FPS and any freezes.
 
 For incomplete images/text, report whether labels appear and whether the logo/widget white borders change; retain a photo or short video. Send that run's `ux0:data/HaloCE/debug.txt`, `gamestate.txt` if regenerated, and all `halo_vertex*.glsl`/`halo_pixel*.glsl` files. The new `_00..03` names retain early original background/font shader compile sources (separate stage ordinals). The log includes bounded `VITA UI COLOR`, `VITA UI ALPHA`, resource read times and `VITA FRAME TIME`. A visible full scenario/3D menu, animation and navigation are still pending; they are not expected from these performance/diagnostic changes alone.
 
+
+### Historical00.24 package
 
 Verified GitHub [Vita Build #133](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-133), source7baf282: ordinary native build/verifier and publication succeeded. CI VPK SHA-256 `28765b339143bb80eac6aed570922930f42589f758ff6c356d0cc61191b4eee4`. The separately delivered local HaloCEVita-00.24.vpk is641249 bytes SHA-256 `a3ece9e88abcae951c13d3b1197ecdf2f4a7195a17d8eab98dee3720fbb5de72`, with its own matching ELF/map archive. Both build the same source tree, but retain the symbols for the exact installed binary.
 
@@ -21,7 +23,7 @@ Historical root deliverable is **00.11: BOOTS** (A031): the exact real-Vita log 
 
 ## Original menu render test
 
-**Latest test package:** [HaloCE.vpk00.21, workflow122](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-122/HaloCE.vpk), sourcefb92bbf, SHA-256 `ce724d66f0ba24eeeb837a29b4a1ded061aefb79ee02d70de006f206930ccb6d` (A060). Native renderer closure, real map/sync API symbols, default verification/upload and publication SUCCESS. Matching ELF/map: [release122](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-122).00.21 avoids repeated stream clones while keeping320x240 internal/original640x480 coordinates/native960x544 presentation.00.21/workflow122 completes original UI/frame/Present, then has a later texture heap abort and black display (A061/A062). Current00.22 transfer/base-array correction awaits its final workflow package.
+**Historical test package:** [HaloCE.vpk00.21, workflow122](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-122/HaloCE.vpk), sourcefb92bbf, SHA-256 `ce724d66f0ba24eeeb837a29b4a1ded061aefb79ee02d70de006f206930ccb6d` (A060). Native renderer closure, real map/sync API symbols, default verification/upload and publication SUCCESS. Matching ELF/map: [release122](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-122).00.21 avoids repeated stream clones while keeping320x240 internal/original640x480 coordinates/native960x544 presentation.00.21/workflow122 completes original UI/frame/Present, then has a later texture heap abort and black display (A061/A062). Current00.22 transfer/base-array correction awaits its final workflow package.
 
 The default native CMake target now enables the real UI/rasterizer path (A038–A063), using user maps at `ux0:data/HaloCE/maps/`. GitHub Actions builds with `vitasdk/vitasdk:2026.08`, verifies the original draw/present/state-owner symbols, hard-float ABI/imports, SELF/SFO version/banner, package members and LiveArea assets, then uploads the VPK/ELF/map plus `artifacts.json`/`SHA256SUMS` and publishes the corresponding `vita-build-N` pre-release. Use the exact run/commit and digest recorded in the newest attempt; the older hash below belongs to the historical00.10 package.
 

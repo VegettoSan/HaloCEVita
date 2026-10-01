@@ -22,6 +22,9 @@ jobs:
       - name: Check original texture and 2D sound contracts
         run: |
           python3 tools/vita_texture_stage_regression.py
+          python3 tools/vita_texture_upload_regression.py
+          python3 tools/vita_vertex_color_regression.py
+          python3 tools/vita_menu_clock_regression.py
           python3 tools/vita_sound_tag_regression.py
           python3 tools/vita_menu_regression.py
           python3 tools/vita_audio_mixer_regression.py
