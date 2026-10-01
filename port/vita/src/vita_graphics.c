@@ -3,6 +3,7 @@
 #include <vitaGL.h>
 #include <vitashark.h>
 #include <psp2/io/stat.h>
+#include <psp2/gxm.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,6 +35,13 @@ void platform_video_swap(void)
 	}
 	if (error != GL_NO_ERROR)
 		vita_fatal("D3D8 present failed during Vita frame swap");
+}
+
+/* Drawing-context completion does not imply transfer-queue completion.
+ * Keep the SDK call native; the game bridge exposes only an integer status. */
+int halo_vita_texture_transfer_finish(void)
+{
+	return sceGxmTransferFinish();
 }
 
 static GLuint probe_program, probe_vbo;

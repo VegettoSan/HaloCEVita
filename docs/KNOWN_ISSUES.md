@@ -232,3 +232,6 @@ A06100.21 passes original UI/font/frame and Present but later aborts in _malloc_
 A062 exact workflow122 glUniform4fv uses a negated uniform pointer with offset0; indexed offsets require STRICT_UNIFORMS_COMPLIANCE, absent in this archive. Existing c[i]/pixel-array lookups assumed a different driver contract; previous host mocks did not model it. Query active compiled vec4 array spans and base locations, then upload the bounded original prefix. No handle arithmetic, fake shader or unconditional192-vector write.00.21 completes Present but user sees black; RENDERS remains unverified.
 
 A061 confirms KI-028 through original font/UI/frame completion in00.21. New allocator failure is separate; retain matching122 ELF/core.
+
+
+A06300.22 corrects KI-029's transfer/reallocation lifetime hazard with checked native waits before mutation and after each mip, preserving all data; actual lifetime fixture PASS. KI-030 base-array reflection/bounded original-prefix uploads pass actual helper/non-strict fixture; no indexed-handle assumption remains. Native and visible/repeated hardware gates pending. Source-confirmed race is not yet proven sole cause of A061 heap damage.

@@ -628,6 +628,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	xgpu_gl_state_invalidate();
 #ifdef HALO_VITA
 	vita_upload_check(texture, target, -1, "bind/incoming state");
+	glFinish();
+	vita_upload_check(texture, target, -1, "prior texture draws");
+	if (halo_vita_texture_transfer_finish() < 0)
+		vita_fatal("Vita prior texture transfer completion failed");
 #endif
 #ifdef HALO_ANDROID
 	/* converted texels are BGRA in memory (32-bit ARGB words); ES takes
@@ -690,6 +694,9 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 					glTexImage2D(image_target, (GLint)level, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 			}
 #ifdef HALO_VITA
+			/* The next mip may move/free a transfer destination. Finish first. */
+			if (halo_vita_texture_transfer_finish() < 0)
+				vita_fatal("Vita texture mip transfer completion failed");
 			vita_upload_check(texture, image_target, (long)level,
 				description->compressed ? "compressed mip" : "decoded BGRA mip");
 #endif
@@ -698,10 +705,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 	#ifdef HALO_VITA
 	{
 		GLenum error = glGetError();
-		static BOOL first_upload_logged;
-		if (!first_upload_logged || error != GL_NO_ERROR)
+		static unsigned long uploads_logged;
+		if (uploads_logged < 8 || error != GL_NO_ERROR)
 		{
-			first_upload_logged = TRUE;
+			uploads_logged++;
 			vita_log("[VITA TEXTURE] upload id=%u target=%x format=%lx dims=%lux%lux%lu levels=%lu bytes/face=%lu gl_error=%x",
 				texture, target, (unsigned long)description->format, description->width,
 				description->height, description->depth, description->levels, face_size, error);

@@ -181,3 +181,12 @@ Date2026-10-01; A056, explicit user request. Choose original640x480 game/UI coor
 ## D025 — Reuse Vita stream storage only after explicit GPU completion
 
 Date2026-10-01; A058/A059/KI-028. The exact00.20 core/ELF identifies an unchecked NULL allocation in vitaGL whole-buffer SubData cloning during original font drawing. Keep original bounded2MiB/256KiB allocations and draw bytes, but synchronize and map existing storage on Vita. Reserve all streams of a draw before offsets are assigned; copy only authored byte count, retaining16-byte offset alignment. Reuse on wrap instead of orphaning. Check map/unmap/errors and bounds. Synchronous GPU waits trade throughput for a bounded correct bring-up contract; no asynchronous safety, measured FPS, depth persistence or visible-menu claim. Do not enable a global driver copy speedhack or increase memory to hide per-glyph cloning. Non-Vita remains original.
+
+
+## D026 — Complete the texture transfer queue before destination/staging reuse
+
+Date2026-10-01; A061/A063/KI-029. vitaGL DXT mip uploads schedule asynchronous GXM transfers and grow destinations between levels. Wait separately through the native sceGxmTransferFinish bridge after each mip and before subsequent mutation; drawing-context glFinish does not replace this. Keep original compression, mip data and decoded staging; fail on SDK errors. Synchronous bring-up sacrifices throughput while protecting lifetime. Exact dump identifies allocator corruption, not its sole writer; hardware confirmation required. No mip truncation/global upload speedhack/pool increase.
+
+## D027 — Reflect base-array spans for installed non-strict uniform ABI
+
+Date2026-10-01; A062/A063/KI-030. Exact linked glUniform4fv uses a whole-uniform pointer and offset0. Supersede D011/D017's element-location assumption for this native archive. Reflect active vec4 array length/base name and upload its checked complete original prefix when dirty; do not manufacture indexed handles or add offsets to locations. Preserve all192 CPU constant registers, original indices/arithmetic and pixel array shadows; inactive compiled arrays need no upload, malformed/oversize contracts reject. Shader constant compaction remains future work; this does not assert that all192 vectors fit all programs. Previous host-only sparse-location evidence remains historical, not native proof. Non-Vita remains unchanged.

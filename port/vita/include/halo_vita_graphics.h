@@ -16,4 +16,6 @@
 #define HALO_VITA_STREAM_SIZE (2 * 1024 * 1024)
 #define HALO_VITA_INDEX_SIZE (256 * 1024)
 #define HALO_VITA_STREAM_RING 1
+/* SDK transfer completion bridge, native ABI; 0 means successful wait. */
+int halo_vita_texture_transfer_finish(void);
 #endif

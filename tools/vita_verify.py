@@ -34,7 +34,7 @@ abi = run('readelf', '-h', '-A', elf)
 assert 'ELF32' in abi and 'Machine:                           ARM' in abi and 'hard-float ABI' in abi
 assert 'VFP registers' in abi
 symbols = run('nm', elf)
-required = ['glMapBufferRange', 'glUnmapBuffer', 'glFinish', 'cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
+required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBufferRange', 'glUnmapBuffer', 'glFinish', 'cseries_initialize', 'debug_memory_manager_initialize', 'debug_malloc', 'profile_initialize',
             'crc_checksum_buffer',
             'physical_memory_allocate', 'physical_memory_verify', 'XPhysicalAlloc', 'XQueryMemoryProtect',
             'game_state_allocate_buffer', 'game_state_free_buffer',

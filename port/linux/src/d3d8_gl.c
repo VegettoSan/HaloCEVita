@@ -223,9 +223,9 @@ struct program_entry
 	GLuint program;
 	GLint constants;
 #ifdef HALO_VITA
-	GLint constant_locations[XGPU_VERTEX_CONSTANT_COUNT];
-	GLint ps_c0_locations[8], ps_c1_locations[8];
-	GLint bump_matrix_locations[4], bump_luminance_locations[4], texture_scale_locations[4];
+	struct halo_vita_uniform_array constant_array;
+	struct halo_vita_uniform_array ps_c0_array, ps_c1_array;
+	struct halo_vita_uniform_array bump_matrix_array, bump_luminance_array, texture_scale_array;
 #endif
 	GLint viewport_scale;
 	GLint viewport_offset;
@@ -2085,12 +2085,12 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 	}
 	state_program(entry->program);
 #ifdef HALO_VITA
-	halo_vita_find_vertex_constants(entry->program, entry->constant_locations);
-	halo_vita_find_uniform_array(entry->program, "ps_c0", entry->ps_c0_locations, 8);
-	halo_vita_find_uniform_array(entry->program, "ps_c1", entry->ps_c1_locations, 8);
-	halo_vita_find_uniform_array(entry->program, "bump_matrix", entry->bump_matrix_locations, 4);
-	halo_vita_find_uniform_array(entry->program, "bump_luminance", entry->bump_luminance_locations, 4);
-	halo_vita_find_uniform_array(entry->program, "texture_scale", entry->texture_scale_locations, 4);
+	halo_vita_find_vertex_constants(entry->program, &entry->constant_array);
+	halo_vita_find_uniform_array(entry->program, "ps_c0", &entry->ps_c0_array, 8);
+	halo_vita_find_uniform_array(entry->program, "ps_c1", &entry->ps_c1_array, 8);
+	halo_vita_find_uniform_array(entry->program, "bump_matrix", &entry->bump_matrix_array, 4);
+	halo_vita_find_uniform_array(entry->program, "bump_luminance", &entry->bump_luminance_array, 4);
+	halo_vita_find_uniform_array(entry->program, "texture_scale", &entry->texture_scale_array, 4);
 #else
 	entry->constants = glGetUniformLocation(entry->program, "c");
 	entry->constant_count = XGPU_VERTEX_CONSTANT_COUNT;
@@ -2835,7 +2835,7 @@ static struct program_entry *prepare_draw(BOOL immediate)
 
 #ifdef HALO_VITA
 	if (!entry->constants_serial || entry->constants_serial != constants_serial) {
-		halo_vita_upload_vertex_constants(entry->constant_locations, device.constants, constant_serials, entry->constants_serial);
+		halo_vita_upload_vertex_constants(&entry->constant_array, device.constants, constant_serials, entry->constants_serial);
 		entry->constants_serial = constants_serial;
 	}
 #else
@@ -2968,8 +2968,8 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->viewport_offset, entry->uniforms.viewport_offset, draw_uniforms.viewport_offset, 1);
 	uniform_float(entry->point_size, &entry->uniforms.point_size, draw_uniforms.point_size);
 #ifdef HALO_VITA
-	halo_vita_upload_uniform_array(entry->ps_c0_locations, entry->uniforms.ps_c0, draw_uniforms.ps_c0, 8);
-	halo_vita_upload_uniform_array(entry->ps_c1_locations, entry->uniforms.ps_c1, draw_uniforms.ps_c1, 8);
+	halo_vita_upload_uniform_array(&entry->ps_c0_array, entry->uniforms.ps_c0, draw_uniforms.ps_c0);
+	halo_vita_upload_uniform_array(&entry->ps_c1_array, entry->uniforms.ps_c1, draw_uniforms.ps_c1);
 #else
 	uniform_vec4(entry->ps_c0, entry->uniforms.ps_c0[0], draw_uniforms.ps_c0[0], 8);
 	uniform_vec4(entry->ps_c1, entry->uniforms.ps_c1[0], draw_uniforms.ps_c1[0], 8);
@@ -2980,9 +2980,9 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->fog_parameters, entry->uniforms.fog_parameters, draw_uniforms.fog_parameters, 1);
 	uniform_float(entry->alpha_reference, &entry->uniforms.alpha_reference, draw_uniforms.alpha_reference);
 #ifdef HALO_VITA
-	halo_vita_upload_uniform_array(entry->bump_matrix_locations, entry->uniforms.bump_matrix, draw_uniforms.bump_matrix, 4);
-	halo_vita_upload_uniform_array(entry->bump_luminance_locations, entry->uniforms.bump_luminance, draw_uniforms.bump_luminance, 4);
-	halo_vita_upload_uniform_array(entry->texture_scale_locations, entry->uniforms.texture_scale, draw_uniforms.texture_scale, 4);
+	halo_vita_upload_uniform_array(&entry->bump_matrix_array, entry->uniforms.bump_matrix, draw_uniforms.bump_matrix);
+	halo_vita_upload_uniform_array(&entry->bump_luminance_array, entry->uniforms.bump_luminance, draw_uniforms.bump_luminance);
+	halo_vita_upload_uniform_array(&entry->texture_scale_array, entry->uniforms.texture_scale, draw_uniforms.texture_scale);
 #else
 	uniform_vec4(entry->bump_matrix, entry->uniforms.bump_matrix[0], draw_uniforms.bump_matrix[0], 4);
 	uniform_vec4(entry->bump_luminance, entry->uniforms.bump_luminance[0], draw_uniforms.bump_luminance[0], 4);
