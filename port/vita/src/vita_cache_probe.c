@@ -51,9 +51,9 @@ int vita_cache_probe(int graphics, int core, int shaders)
 				names[i], info.tag_size, info.compressed, info.tag_count, info.vertices, info.indices, info.tag_crc,
 				(unsigned long long)(vita_time_us() - start));
 			if (!vita_cache_resource_bind(path, info.logical_size)) {
-				vita_log("MAIN MENU BLOCKED: could not bind validated %s to logical resource reader", names[i]);
+				vita_log("MAIN MENU BLOCKED: could not bind validated %s to logical resource reader: %s", names[i], vita_cache_resource_error());
 			} else if (halo_vita_cache_mount_menu(tags, info.tag_size)) {
-				vita_log("cache %s resource reader bound: logical_size=%u exact-range zlib backend ready",
+				vita_log("cache %s resource reader bound: logical_size=%u seekable logical resource backend ready",
 					names[i], info.logical_size);
 				if (halo_vita_cache_validate_menu() && halo_vita_ui_runtime_initialize()) passed++;
 				else {

@@ -230,3 +230,8 @@ A074: use the original classes/manager/cache, looping state machine, UI feedback
 ## D035 — Free the combined LRU allocation through its real owner
 
 A077: keep original lruv_new/initialize combined storage. Verify/clear embedded datum metadata at delete without passing its interior pointer to debug_free; free the owner once. A signature check is evidence of the invalid caller, not a check to disable. Limit correction to Vita while other-platform compatibility is outside this experiment.
+
+
+## D036 — Make compressed maps seekable with a validated disk backing stream
+
+A078/KI-036: prepare one exact logical stream before runtime resources activate, with bounded64KiB inflate scratch and original tags/offsets/cache ownership. Device-generated scratch consumes the map's logical size on disk and is removed at unbind/failure. Always regenerate per bind; do not accept an old cache by name/version alone. Keep original map read-only, validate complete checksum/length/write/flush before handle publication, and fail explicitly if storage is unavailable. Live requests seek only their original range. This retains synchronous completion and does not claim fully asynchronous cache I/O or an audio scheduling replacement.

@@ -20,6 +20,9 @@ struct vita_cache_header_state {
 
 static char resource_map_path[RESOURCE_PATH_CAPACITY];
 static uint32_t resource_map_logical_size;
+static FILE *resource_file;
+static int resource_file_owned;
+static char resource_bind_error[160];
 
 static uint32_t u32(const unsigned char *p)
 {
@@ -54,7 +57,7 @@ static int cache_header_read(FILE *file, struct vita_cache_header_state *state,
 }
 static int cache_capture_range(FILE *file, const struct vita_cache_header_state *state,
 	uint32_t logical_offset, uint32_t bytes, void *destination, int validate_stream,
-	vita_cache_progress progress, void *context, char *error, size_t error_size)
+	vita_cache_progress progress, void *context, char *error, size_t error_size, FILE *logical_copy)
 {
 	unsigned char *target = destination;
 	uint32_t captured = 0, end, next_progress = 0;
@@ -83,7 +86,9 @@ static int cache_capture_range(FILE *file, const struct vita_cache_header_state 
 		memcpy(target, state->bytes + logical_offset, header_bytes);
 		captured += header_bytes;
 	}
-	if (end <= CACHE_HEADER_SIZE) return 1;
+	if (logical_copy && fwrite(state->bytes, 1, CACHE_HEADER_SIZE, logical_copy) != CACHE_HEADER_SIZE)
+		return fail(error, error_size, "logical resource header write failed");
+	if (end <= CACHE_HEADER_SIZE && !logical_copy) return 1;
 	{
 		unsigned char *input = NULL, *output = NULL;
 		uint32_t position = CACHE_HEADER_SIZE;
@@ -110,6 +115,9 @@ static int cache_capture_range(FILE *file, const struct vita_cache_header_state 
 			}
 			if (produced > state->logical_size - position) {
 				fail(error, error_size, "inflated cache exceeds logical size"); goto inflate_done;
+			}
+			if (logical_copy && produced && fwrite(output, 1, produced, logical_copy) != produced) {
+				fail(error, error_size, "logical resource payload write failed (check free storage)"); goto inflate_done;
 			}
 			first = position > logical_offset ? position : logical_offset;
 			if (first < CACHE_HEADER_SIZE) first = CACHE_HEADER_SIZE;
@@ -193,7 +201,7 @@ int vita_cache_read(FILE *file, void *tags, size_t capacity, struct vita_cache_i
 		return fail(error, error_size, "invalid Xbox-v5 cache bounds");
 	info->compressed = state.compressed;
 	if (!cache_capture_range(file, &state, info->tag_offset, info->tag_size, tags, 1,
-		progress, context, error, error_size)) return 0;
+		progress, context, error, error_size, NULL)) return 0;
 	return vita_cache_validate_index(tags, info->tag_size, info, error, error_size);
 }
 int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
@@ -206,47 +214,84 @@ int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
 	if (expected_logical_size && state.logical_size != expected_logical_size)
 		return fail(error, error_size, "cache logical size changed");
 	return cache_capture_range(file, &state, logical_offset, (uint32_t)bytes, destination, 1,
-		progress, context, error, error_size);
+		progress, context, error, error_size, NULL);
 }
+/* Original cache_file_read callers retain their offsets/completion semantics.
+ * Compressed maps get one disk-backed logical stream during binding, before
+ * audio/rendering begin. Live reads then seek directly instead of re-inflating
+ * the complete compressed prefix on the main/game thread for every miss.
+ * Memory stays at the existing two32KiB inflate buffers. The derived file is
+ * process-owned scratch, removed on unbind/failure; original maps are untouched.
+ */
 int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 {
-	size_t length;
-	if (!path || !*path || logical_size < CACHE_HEADER_SIZE || logical_size > MAX_LOGICAL_SIZE) return 0;
-	length = strlen(path);
-	if (length >= sizeof(resource_map_path)) return 0;
-	memcpy(resource_map_path, path, length + 1);
+	FILE *source = NULL, *copy = NULL;
+	struct vita_cache_header_state state;
+	unsigned char probe;
+	int result = 0;
+	vita_cache_resource_unbind();
+	resource_bind_error[0] = 0;
+	if (!path || !*path || logical_size < CACHE_HEADER_SIZE || logical_size > MAX_LOGICAL_SIZE)
+		return fail(resource_bind_error, sizeof(resource_bind_error), "invalid resource map/size");
+	if (strlen(path) + sizeof(".vita-logical.tmp") > sizeof(resource_map_path))
+		return fail(resource_bind_error, sizeof(resource_bind_error), "resource path too long");
+	source = fopen(path, "rb");
+	if (!source) return fail(resource_bind_error, sizeof(resource_bind_error), "resource source open failed");
+	if (!cache_header_read(source, &state, resource_bind_error, sizeof(resource_bind_error))) goto done;
+	if (state.logical_size != logical_size) {
+		fail(resource_bind_error, sizeof(resource_bind_error), "resource logical size changed"); goto done;
+	}
+	if (state.compressed) {
+		snprintf(resource_map_path, sizeof(resource_map_path), "%s.vita-logical.tmp", path);
+		copy = fopen(resource_map_path, "w+b");
+		if (!copy) { fail(resource_bind_error, sizeof(resource_bind_error), "logical resource scratch open failed"); goto done; }
+		resource_file_owned = 1;
+		if (!cache_capture_range(source, &state, CACHE_HEADER_SIZE, 1, &probe, 1,
+			NULL, NULL, resource_bind_error, sizeof(resource_bind_error), copy)) goto done;
+		if (fflush(copy) || fseek(copy, 0, SEEK_END) || ftell(copy) != (long)logical_size) {
+			fail(resource_bind_error, sizeof(resource_bind_error), "logical resource scratch flush/size failed"); goto done;
+		}
+		resource_file = copy; copy = NULL;
+	} else {
+		memcpy(resource_map_path, path, strlen(path) + 1);
+		resource_file = source; source = NULL;
+	}
 	resource_map_logical_size = logical_size;
-	return 1;
+	result = 1;
+done:
+	if (source) fclose(source);
+	if (copy) fclose(copy);
+	if (!result) vita_cache_resource_unbind();
+	return result;
 }
+const char *vita_cache_resource_error(void) { return resource_bind_error; }
 void vita_cache_resource_unbind(void)
 {
+	if (resource_file) fclose(resource_file);
+	resource_file = NULL;
+	if (resource_file_owned && resource_map_path[0]) remove(resource_map_path);
+	resource_file_owned = 0;
 	resource_map_path[0] = 0;
 	resource_map_logical_size = 0;
 }
 int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes)
 {
-	return resource_map_path[0] && resource_map_logical_size && bytes &&
+	return resource_file && resource_map_logical_size && bytes &&
 		logical_offset >= CACHE_HEADER_SIZE && logical_offset <= resource_map_logical_size &&
 		bytes <= resource_map_logical_size - logical_offset;
 }
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size)
 {
-	FILE *file;
-	int result;
-	struct vita_cache_header_state state;
-	if (!resource_map_path[0] || !resource_map_logical_size)
+	if (!resource_file || !resource_map_logical_size)
 		return fail(error, error_size, "no cache resource map bound");
 	if (!destination || !vita_cache_resource_range_valid(logical_offset, bytes))
 		return fail(error, error_size, "invalid bound resource range/destination");
-	file = fopen(resource_map_path, "rb");
-	if (!file) return fail(error, error_size, "cache resource map open failed");
-	result = cache_header_read(file, &state, error, error_size);
-	if (result && state.logical_size != resource_map_logical_size)
-		result = fail(error, error_size, "cache logical size changed");
-	if (result)
-		result = cache_capture_range(file, &state, logical_offset, (uint32_t)bytes,
-			destination, 0, NULL, NULL, error, error_size);
-	fclose(file);
-	return result;
+	/* Header/complete compressed stream validated before publishing the handle.
+	 * Only this issuing thread owns it; audio callbacks consume copied packets. */
+	if (fseek(resource_file, (long)logical_offset, SEEK_SET))
+		return fail(error, error_size, "logical resource seek failed");
+	if (fread(destination, 1, bytes, resource_file) != bytes)
+		return fail(error, error_size, "logical resource read truncated");
+	return 1;
 }

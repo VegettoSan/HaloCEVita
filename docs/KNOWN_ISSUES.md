@@ -268,3 +268,6 @@ A077 hardware00.25 Start fails at data.c:89. Original lruv_new/initialize owns o
 ## KI-036 — Synchronous compressed resource reads interrupt music and frames
 
 A077 audible title1 cuts periodically with reported13FPS/0–1FPS stalls at maximum overclock. Current cache_file_read ignores asynchronous scheduling and re-inflates from the map's beginning for every resource miss, including sound requests. Retain original caches/offsets and provide seekable logical resources with bounded memory; no overclock/FPS improvement claimed until hardware.
+
+
+A078 source correction for KI-036:00.26 disk-backed logical resources eliminate per-miss prefix inflation in the main loop;256 exact counted host requests PASS with zero live inflate calls. Native storage latency, uninterrupted mixing and actual FPS still require Vita evidence. Prepare-time disk use is the logical map size; write/checksum/flush failure prevents activation and removes owned scratch.

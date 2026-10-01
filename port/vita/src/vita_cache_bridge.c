@@ -1,13 +1,11 @@
 /* Game-ABI side of the Vita cache resource boundary.
  *
  * Xbox cache_file_read() is asynchronous because the retail path reads a
- * sector-aligned uncompressed cache. Vita currently keeps the user's Xbox map
- * compressed and resolves each request through the checked logical-range
- * reader. The operation is synchronous: completion is TRUE only after the
- * exact requested bytes have been inflated from the map whose complete stream
- * was validated during the startup tag read. Bound resource reads validate the
- * header, range and compressed prefix; only EOF reads recheck the final checksum. This preserves the original caller contract
- * without a parallel asset loader or fake completion.
+ * sector-aligned uncompressed cache. Vita now prepares a seekable logical
+ * resource stream at binding time, validating compressed data before menu/audio
+ * activation. Requests synchronously seek/read only their exact bytes; they no
+ * longer decompress every prefix. Completion is raised after the read, and the
+ * original texture/sound caches still own their destinations and lifetimes.
  */
 #include "cseries/cseries.h"
 #include "cache/cache_files.h"
@@ -64,6 +62,8 @@ short cache_file_read(
 {
 	char error[160] = {0};
 	boolean traced_bitmap;
+	uint64_t started = vita_time_us();
+	static unsigned resource_reads_traced;
 	static boolean first_success_logged = FALSE;
 
 	if (!completion_flag_reference) {
@@ -89,6 +89,12 @@ short cache_file_read(
 		vita_fatal("original texture cache cannot complete a failed resource read");
 	}
 	*completion_flag_reference = TRUE;
+	if (resource_reads_traced < 12) {
+		++resource_reads_traced;
+		vita_log("[VITA RESOURCE] seek/read tag=%08lx group=%08lx offset=%ld bytes=%ld blocking=%d elapsed_us=%llu",
+			(unsigned long)tag_index, tag_index == NONE ? 0UL : tag_get_group_tag(tag_index), offset, size, (int)blocking,
+			(unsigned long long)(vita_time_us() - started));
+	}
 	if (traced_bitmap)
 		vita_log("[VITA CACHE] first original bitmap resource read result=PASS bytes=%ld destination=%p", size, buffer);
 	if (!first_success_logged) {
