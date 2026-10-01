@@ -291,3 +291,12 @@ A084 corrects KI-031's label interpretation using the exact user map: the option
 A085 source00.27 uses the original DXT3 decode fallback to isolate native compressed-mask sampling. Host actual decoder/uploader and raw9 menu frames pass; Vita visuals/performance/memory need a new test. DXT3 decoded GPU residency increases4x before alignment. DXT5 logo transparency and alpha1 build-number text remain distinct; a successful DXT3 experiment alone does not prove a complete UI or justify opacity changes.
 
 A086:00.27 required native build/host contracts/package verification/publication PASS (workflow145); matching symbols retained. Hardware visuals/performance/memory remain pending. Optional full UI/update link research still fails; native partial-menu package success does not close those owners.
+
+
+## KI-037 — Original UI rectangles persist beyond verified CPU decode
+
+A089/A091: latest00.30 hardware still shows rectangles. CPU DXT3/5 output retains exact authored alpha; generated current image shader clears noise alpha before the final mask sum. The logged GL shadow can be invalid, so its255 sentinel is not effective driver state.00.31 adds two first-frame native storage/output-alpha probes with exact original shader/stream inputs. Hardware probe results are needed to isolate storage, sampling/UV/compiler, raster coverage or blending/presentation. Do not force widget opacity or remove white pixels.
+
+## KI-038 — Staged shell navigation is not complete profile/gameplay lifecycle
+
+A089/A090: root/list/history navigation exists, but the event-function owner still permits only0/23/86. Campaign handler101 and generated profile/multiplayer lists remain blocked until their real saved-profile/world owners are initialized. Generic effect support and D-pad host tests do not prove every screen is usable. No Campaign/a10/gameplay claim.

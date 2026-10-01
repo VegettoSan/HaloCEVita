@@ -29,6 +29,7 @@ jobs:
           python3 tools/vita_sound_tag_regression.py
           python3 tools/vita_menu_regression.py
           python3 tools/vita_ui_input_regression.py
+          python3 tools/vita_ui_alpha_probe_regression.py
           python3 tools/vita_audio_mixer_regression.py
           python3 tools/vita_menu_audio_regression.py
           python3 tools/vita_lru_dispose_regression.py

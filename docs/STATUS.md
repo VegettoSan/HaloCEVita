@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-01
 
+Current source00.31 (A089–A091): staged original shell navigation protects destroyed widget lifetimes and supports both authored D-pad axes/child tabbing. Actual host routing ASan/UBSan and native-state probe contracts PASS. First-frame bounded GPU storage/output-alpha observation added; native build/hardware acceptance pending. Required baseline00.30 Vita Build163/run36928328896 on752d24a passed; full original update/world closure remains optional and unresolved. Latest actual hardware00.30 log shows correct decoded alpha, native blend restore calls and current6911-byte original image shader, but rectangles remain. No sole transparency cause or complete profile/gameplay claim.
+
 Latest hardware00.27 (A087): BOOTS / partial HALO DRAW RENDERS with original bitmap option lettering now visible. User reports good music/feedback; photo still shows white/gray rectangles and no navigation. Source has no active widget input processor. Full UI/transparency/navigation/scenario remain pending.
 
 Current source00.27 (A085) selects the existing original CPU DXT3 decoder for a controlled mask-sampling experiment. Real9 menu mask frames and uploader/synthetic alpha contracts PASS on host. Required native SDK build, package verification and publication PASS in Vita Build #145/run36894968119 (A086);00.27 is LINKS, hardware validation pending. DXT1/DXT5 remain native. This is not a confirmed transparency/full-UI correction.

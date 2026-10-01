@@ -245,3 +245,8 @@ A079: after inspecting primary vitaGL mapping's fixed storage semantics, remove 
 ## D038 — Controlled original DXT3 decode fallback for Vita UI masks
 
 A084/A085: reuse the existing original Android decoder for DXT3 with checked BGRA staging and original mip/face/shader/cache contracts. Exact user map shows auxiliary label text alpha0 but real bitmap-letter alpha; host original fragment replay preserves it. This is an explicitly pending Vita sampling experiment, not proof of a driver fault or complete UI fix. Native DXT1/DXT5 remain unchanged. The decoded GPU footprint is4x DXT3 source bytes before driver alignment; budget future scene residency before making this a permanent all-scene policy. No authored data/opacity changes, color keys or synthetic labels.
+
+
+## D039 — Diagnose actual UI alpha without changing authored graphics
+
+A091: use bounded first-frame native queries/storage corner and an offscreen copy of the exact original image shader draw, with its real uniforms/samplers/streams. Preserve the visible draw and restore all native state/resources; no additional shader pair compilation that could disturb SHADER_PAIR semantics. Host tests establish isolation/lifetime only. Require actual Vita probe output before choosing a pipeline correction.

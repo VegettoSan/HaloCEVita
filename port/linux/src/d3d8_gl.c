@@ -3944,6 +3944,10 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 
 /* ---------- immediate mode */
 
+#ifdef HALO_VITA
+#include "../../vita/include/halo_vita_ui_alpha_probe.h"
+#endif
+
 void WINAPI D3DDevice_Begin(D3DPRIMITIVETYPE primitive_type)
 {
 	device.immediate_active = TRUE;
@@ -4004,6 +4008,20 @@ void WINAPI D3DDevice_End(void)
 	}
 	#endif
 	gl_check_errors("immediate draw");
+#ifdef HALO_VITA
+	/* Inspect only first-frame real bitmap quads. Keep the original visible
+	 * draw above and its shader/stream resources as the diagnostic inputs. */
+	if (device.frame == 0 && type == D3DPT_QUADLIST && count == 4 &&
+		D3D__RenderState[D3DRS_PSTEXTUREMODES] == 0x421 && device.textures[2]) {
+		struct xgpu_texture_description description;
+		xgpu_texture_describe(device.textures[2]->Format, device.textures[2]->Size, &description);
+		if (description.width >= 32 && description.height >= 32) {
+			halo_vita_ui_alpha_probe(device.immediate_vertices, stride / sizeof(float),
+				gl_state.textures[2][0], &description, device.constants, draw_uniforms.ps_c0);
+			xgpu_gl_state_invalidate();
+		}
+	}
+#endif
 }
 
 static void set_attribute(INT reg, float a, float b, float c, float d)
