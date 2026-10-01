@@ -3563,6 +3563,11 @@ boolean ui_widget_event_handler_function_invoke(
 		switch (function_index)
 		{
 		case 0: result = widget_event_function_null(widget, event, widget_deleted); break;
+		case 1: result = widget_event_function_list_widget_goto_next_item(widget, event, widget_deleted); break;
+		case 2: result = widget_event_function_list_widget_goto_previous_item(widget, event, widget_deleted); break;
+		case 22: result = coop_game_initialize(widget, event, widget_deleted); break;
+		case 24: result = multiplayer_type_menu_initialize(widget, event, widget_deleted); break;
+		case 99: result = difficulty_menu_initialize(widget, event, widget_deleted); break;
 		case 23:
 			vita_log("[VITA 027] main_menu_initialize begin");
 			result = main_menu_initialize(widget, event, widget_deleted);
@@ -3576,9 +3581,9 @@ boolean ui_widget_event_handler_function_invoke(
 		default:
 			vita_log("MAIN MENU BLOCKED: unsupported original UI event function index=%u", function_index);
 			result = FALSE;
+			vita_ui_event_failed = TRUE;
 			break;
 		}
-		if (!result) vita_ui_event_failed = TRUE;
 #else
 		result = event_handler_function_list.functions[(short)function_index](widget, event, widget_deleted);
 #endif

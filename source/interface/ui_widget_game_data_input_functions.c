@@ -684,6 +684,12 @@ void ui_widget_game_data_function_invoke(
 	 * fail explicitly until their game dependencies are integrated. */
 	if (function == 0)
 		widget_function_null(widget);
+	else if (function == 1)
+		settings_menu_update_extended_description(widget);
+	else if (function == 5)
+		multiplayer_type_menu_update_extended_description(widget);
+	else if (function == 7)
+		difficulty_select_menu_update_extended_description(widget);
 	else if (function == 8)
 		set_textbox_to_build_number(widget);
 	else if (function == 21)

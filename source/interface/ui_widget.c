@@ -3040,26 +3040,6 @@ static void event_handler_dispatch(
 	struct ui_widget_event_handler_reference *handler,
 	boolean *calling_widget_deleted)
 {
-#ifdef HALO_VITA_MENU_BRINGUP
-	boolean deleted = FALSE;
-	(void)definition;
-	/* The checked Main Menu graph uses creation handlers with only the
-	 * original run-function bit. Other effects remain an explicit blocker
-	 * until their original dependencies are connected. */
-	if (handler->flags != 0 && handler->flags != FLAG(_event_handler_run_function_bit))
-	{
-		vita_log("MAIN MENU BLOCKED: UI event=%d function=%d flags=%08lx requires unintegrated effects",
-			handler->event_type, handler->function, (unsigned long)handler->flags);
-		vita_menu_dispatch_blocked = TRUE;
-		*calling_widget_deleted = FALSE;
-		return;
-	}
-	if (handler->flags && !ui_widget_event_handler_function_invoke(
-		widget, event, handler->function, &deleted))
-		vita_menu_dispatch_blocked = TRUE;
-	*calling_widget_deleted = deleted;
-	return;
-#else
 	boolean widget_deleted = FALSE;
 	boolean success = TRUE;
 	boolean function_failed = FALSE;
@@ -3071,8 +3051,15 @@ static void event_handler_dispatch(
 	if (TEST_FLAG(handler->flags, _event_handler_run_scenario_script_bit) &&
 		handler->script[0])
 	{
+#ifdef HALO_VITA_MENU_BRINGUP
+		vita_log("[VITA UI BLOCKED] scenario script '%s' requires world runtime", handler->script);
+		vita_menu_dispatch_blocked = TRUE;
+		*calling_widget_deleted = FALSE;
+		return;
+#else
 		if (!hs_evaluate_by_name(handler->script))
 			error(_error_silent, "failed to run ui widget event script '%s'", handler->script);
+#endif
 	}
 	if (TEST_FLAG(handler->flags, _event_handler_run_function_bit) &&
 		!widget_deleted &&
@@ -3332,7 +3319,6 @@ static void event_handler_dispatch(
 	*calling_widget_deleted = widget_deleted;
 
 	return;
-#endif
 }
 
 static boolean ui_widget_load_children_recursive(
@@ -3644,14 +3630,9 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 
 				if (widget_globals.active_widgets[widget_stack])
 				{
-#ifdef HALO_VITA_MENU_BRINGUP
-					vita_log("MAIN MENU BLOCKED: existing root requires original widget deletion");
-					return NULL;
-#else
 					previous_local_player_index =
 						widget_globals.active_widgets[widget_stack]->local_player_index;
 					ui_widget_delete(widget_globals.active_widgets[widget_stack]);
-#endif
 				}
 				else
 				{
