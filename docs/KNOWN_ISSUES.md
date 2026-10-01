@@ -173,3 +173,12 @@ A042 source review finds original _rasterizer_window_end always calls main_get_w
 
 
 A044 validation: KI-022 and KI-023 source corrections compile/link and are included in verified workflow113/VPK00.17. Host metadata/state contract tests pass. Both issues remain awaiting the real Vita first-frame log; a CI pass does not demonstrate runtime resolution or visible Halo rendering.
+
+
+## KI-024 — Cold cached bitmap rejected for serialized Xbox pointers
+
+A04500.17 hardware shows bitmap.cached=true/cache_block_index=NONE with nonzero serialized base_address0x024f0040. The Vita validator rejects it although original cached load overwrites base_address before registration and ignores hardware_format. False rejection causes controlled clean exit before any draw. Correct only that contract, retain flags/owner/NONE/resource bounds, and test actual loader/query ordering with stale sentinel addresses. Hardware confirmation pending.
+
+## KI-025 — Renderer allocations left live on pre-root failure cleanup
+
+A04500.17 heap_dump lists1,925,688 bytes owned by original rasterizer subsystems. Current pre-root cleanup frees UI/arena/core without calling original rasterizer disposal after successful rasterizer initialization. Restore original close/dispose while context, arena and tags are still valid; do not hide debug-memory reporting or free arbitrary owner allocations. Active-root teardown remains a separate pending contract.
