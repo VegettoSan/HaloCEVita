@@ -235,3 +235,8 @@ A077: keep original lruv_new/initialize combined storage. Verify/clear embedded 
 ## D036 — Make compressed maps seekable with a validated disk backing stream
 
 A078/KI-036: prepare one exact logical stream before runtime resources activate, with bounded64KiB inflate scratch and original tags/offsets/cache ownership. Device-generated scratch consumes the map's logical size on disk and is removed at unbind/failure. Always regenerate per bind; do not accept an old cache by name/version alone. Keep original map read-only, validate complete checksum/length/write/flush before handle publication, and fail explicitly if storage is unavailable. Live requests seek only their original range. This retains synchronous completion and does not claim fully asynchronous cache I/O or an audio scheduling replacement.
+
+
+## D037 — Reuse barriers protect submitted ranges; fresh appends need no global wait
+
+A079: after inspecting primary vitaGL mapping's fixed storage semantics, remove per-upload global completion from fresh append ranges. Preserve the bounded buffer owner, exact-byte writes, alignment and full same-draw reservation. Synchronize before every vertex/index wrap so CPU never overwrites submitted reads. A host negative fixture must reject a missing reuse barrier. No SubData cloning/orphaning/unsynchronized overlap or arbitrary pool growth; console FPS/depth behavior remains pending.

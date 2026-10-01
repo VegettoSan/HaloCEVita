@@ -59,7 +59,7 @@ static struct bitmap_group group;
 static int scenario, globals;
 static void *vita_ui_scenario = &scenario, *vita_ui_game_globals = &globals;
 static boolean vita_menu_bitmap_resources_activated;
-static char resource_map_path[4] = "map";
+static FILE *resource_file = (FILE *)1;
 static uint32_t resource_map_logical_size = 32768;
 static const long owner = 0xe1780004;
 static void tag_iterator_new(struct tag_iterator *i, long tag) {

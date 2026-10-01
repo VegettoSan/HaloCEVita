@@ -182,3 +182,6 @@ A065: Vita NORMPACKED3 now uses bounded CPU expansion into float3 streams with w
 
 
 A066: Vita guest texture validity uses exact bounded CPU source/palette snapshots checked on every lookup, with safe refresh fallback when the4MiB budget or allocation is unavailable. Dynamic glyph/source edits trigger the same checked uploads. Native link and actual cache/upload host contracts PASS; console throughput/visible labels remain unverified.
+
+
+A079: fixed-stream CPU mapping now appends fresh disjoint ranges without per-draw glFinish, but vertex/index wrap each finish prior reads before offset reuse. Source proof: https://github.com/Rinnegatamante/vitaGL/blob/cd3791e/source/buffers.c (glMapNamedBufferRange fixed ptr+offset, glUnmapNamedBuffer marker reset). No allocation resize or SubData clone reintroduced. Actual in-flight range/negative barrier/guard/bounds fixtures PASS; native archive build and console GPU/FPS/depth gates remain. A077 still has unchanged visible partial UI and zero vertex alpha for glyphs, not a proven GPU texture-alpha failure.

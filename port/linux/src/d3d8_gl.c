@@ -3414,12 +3414,21 @@ static void index_extent(const WORD *indices, unsigned long count, unsigned long
 /* vitaGL SubData copies an entire recently drawn buffer on every update.
  * Reuse the bounded allocation after completing previous GPU reads instead.
  * This deliberately serializes bring-up; no global driver speedhack or
- * assumed unsynchronized append behavior. Unmap resets vitaGL's use marker. */
+ * CPU ranges append without overlapping submitted draws. Synchronize before
+ * each buffer wrap/reuse, preserving allocation and same-draw reservations.
+ * Unmap resets vitaGL's use marker; no SubData/orphan/resize follows. */
 static unsigned long vita_stream_span(unsigned long size, unsigned long capacity)
 {
 	if (!size || size > capacity || size > (~0UL - 15))
 		vita_fatal("Vita stream request exceeds its bounded allocation");
 	return (size + 15) & ~15UL;
+}
+
+static void vita_stream_reuse_sync(void)
+{
+	gl_check_errors("stream before reuse synchronization");
+	glFinish();
+	gl_check_errors("stream reuse synchronization");
 }
 
 static void vita_stream_write(GLenum target, unsigned long offset, unsigned long size,
@@ -3429,8 +3438,6 @@ static void vita_stream_write(GLenum target, unsigned long offset, unsigned long
 	if (!data || !size || offset > capacity || size > capacity - offset)
 		vita_fatal("Vita stream write exceeds its reserved range");
 	gl_check_errors("stream before mapping");
-	glFinish();
-	gl_check_errors("stream synchronization");
 	mapped = glMapBufferRange(target, (GLintptr)offset, (GLsizeiptr)size, GL_MAP_WRITE_BIT);
 	gl_check_errors("stream mapping");
 	if (!mapped)
@@ -3441,7 +3448,7 @@ static void vita_stream_write(GLenum target, unsigned long offset, unsigned long
 		vita_fatal("Vita stream unmap failed");
 	gl_check_errors("stream unmapping");
 	{ static unsigned long writes;
-		if (writes < 4) vita_log("[VITA STREAM] synchronized write target=%x offset=%lu bytes=%lu capacity=%lu PASS",
+		if (writes < 4) vita_log("[VITA STREAM] bounded append write target=%x offset=%lu bytes=%lu capacity=%lu PASS",
 			(unsigned)target, offset, size, capacity);
 		writes++;
 	}
@@ -3457,9 +3464,10 @@ static void stream_reserve(unsigned long size)
 #ifdef HALO_VITA
 	if (size > STREAM_BUFFER_SIZE || device.stream_offset > STREAM_BUFFER_SIZE)
 		vita_fatal("Vita vertex reservation exceeds stream capacity");
-	if (size > STREAM_BUFFER_SIZE - device.stream_offset)
-		/* The next mapped write finishes prior reads before reusing offset0. */
+	if (size > STREAM_BUFFER_SIZE - device.stream_offset) {
+		vita_stream_reuse_sync();
 		device.stream_offset = 0;
+	}
 #else
 	if (device.stream_offset + size > STREAM_BUFFER_SIZE)
 	{
@@ -3565,8 +3573,10 @@ static unsigned long index_upload(const void *data, unsigned long size)
 	state_element_array_buffer(device.index_buffer);
 	if (device.index_offset > INDEX_BUFFER_SIZE)
 		vita_fatal("Vita index offset exceeds stream capacity");
-	if (size > INDEX_BUFFER_SIZE - device.index_offset)
+	if (size > INDEX_BUFFER_SIZE - device.index_offset) {
+		vita_stream_reuse_sync();
 		device.index_offset = 0;
+	}
 #else
 	size = (size + 15) & ~15UL;
 	state_element_array_buffer(device.index_buffer);
