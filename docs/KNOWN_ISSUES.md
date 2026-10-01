@@ -306,3 +306,6 @@ A094 hardware00.31 refines KI-038: original D-pad/focus visuals work, but Multip
 
 
 A097–A099 pending local00.32: keyboard/event queue and per-frame original null updates connected; original input/effects/retail relocation and new shell/storage contracts PASS on host. Native Build170 failed declarations now corrected locally. No local SDK; default-branch push is blocked by automatic approval review pending explicit in-thread authorization. Do not present local source as an available VPK or all windows as working. Network/world handlers and full native profile closure remain gates. White rectangles are deferred at user request. Start confirms keyboard and Select exits this staged build.
+
+
+A102 supersedes the pending authorization/native-closure state above: user explicitly reaffirmed standing main push authorization (AGENTS.md), and00.32 native Build174 plus required host contracts/package verification PASS on75d5893. Original profile/event/keyboard/frame owners are now linked. KI-038 remains open until real-Vita generated lists, keyboard/profile persistence and repeated window transitions pass; full world/network handlers stay guarded. Latest hardware is00.31 with partial menu navigation. White backgrounds remain deferred; Start confirms keyboard and Select exits00.32.
