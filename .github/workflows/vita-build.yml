@@ -86,7 +86,7 @@ jobs:
             echo "===== ${symbol} ====="
             grep -Rsn --include='*.c' --include='*.h' "${symbol}" source port/linux/src port/linux/include port/vita/src port/vita/include | head -40 || true
           done
-      - name: Configure original UI renderer link probe
-        run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON
-      - name: Link original UI renderer closure
+      - name: Configure original UI renderer/update link probe
+        run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON
+      - name: Link original UI renderer/update closure
         run: cmake --build build/vita-render-probe --target HaloCE.elf -j2
