@@ -211,7 +211,14 @@ void lruv_delete(
 	struct lruv_cache *cache)
 {
 	lruv_cache_verify(cache, TRUE);
+#ifdef HALO_VITA
+	/* lruv_new allocates cache + embedded data_array in one allocation.
+	 * data_dispose would free cache+1, which has no allocation header. */
+	data_verify(cache->blocks);
+	csmemset(cache->blocks, 0, sizeof(*cache->blocks));
+#else
 	data_dispose(cache->blocks);
+#endif
 	csmemset(cache, 0, sizeof(*cache));
 	match_free("c:\\halo\\SOURCE\\memory\\lruv_cache.c", 163, cache);
 

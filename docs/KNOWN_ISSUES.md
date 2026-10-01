@@ -259,3 +259,12 @@ A072 source/actual-function fixture: later cold/refreshed textures bind on the e
 ## KI-034 — Original 2D audio links but hardware activation is unverified
 
 A074/00.25: typed snd!/lsnd metadata, real sound manager/cache, Xbox ADPCM/PCM decoder and SDL stream are integrated and CPU/native contracts pass. No current retail map is present in the resumed build workspace, so cold compiled permutation cache-state validation, cache sample reads, sustained native mixing and audible original music/feedback require console evidence. Report manager-ready/armed/decoded packet markers or the explicit fatal diagnostic. World/observer/object/spatial paths remain unavailable guarded owners; complete game_sound_update and scenario/navigation are not activated. Start teardown must pass with live voices before any stability claim.
+
+
+## KI-035 — LRU disposal frees its embedded datum array
+
+A077 hardware00.25 Start fails at data.c:89. Original lruv_new/initialize owns one combined allocation; lruv_delete incorrectly data_dispose(cache+1). Vita now checks/clears the embedded array and frees its owner once. Actual original lifecycle/historical failure tests PASS. Console clean exit remains pending.
+
+## KI-036 — Synchronous compressed resource reads interrupt music and frames
+
+A077 audible title1 cuts periodically with reported13FPS/0–1FPS stalls at maximum overclock. Current cache_file_read ignores asynchronous scheduling and re-inflates from the map's beginning for every resource miss, including sound requests. Retain original caches/offsets and provide seekable logical resources with bounded memory; no overclock/FPS improvement claimed until hardware.
