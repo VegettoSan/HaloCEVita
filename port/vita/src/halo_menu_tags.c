@@ -10,6 +10,7 @@
 #include "bitmaps/bitmaps.h"
 #include "text/font_group.h"
 #include "text/text_group.h"
+#include "sound/sound_definitions.h"
 #include "interface/ui_widget.h"
 #include "interface/player_ui.h"
 #include "interface/interface.h"
@@ -18,6 +19,21 @@
 #include "scenario/scenario_definitions.h"
 
 #define CHECK_LAYOUT(name, expression) typedef char name[(expression) ? 1 : -1]
+CHECK_LAYOUT(vita_sound_size, sizeof(struct sound_definition) == 164);
+CHECK_LAYOUT(vita_sound_ranges, offsetof(struct sound_definition, pitch_ranges) == 152);
+CHECK_LAYOUT(vita_sound_promotion, offsetof(struct sound_definition, promotion_sound) == 112);
+CHECK_LAYOUT(vita_sound_range_size, sizeof(struct sound_pitch_range) == 72);
+CHECK_LAYOUT(vita_sound_permutations, offsetof(struct sound_pitch_range, permutations) == 60);
+CHECK_LAYOUT(vita_sound_permutation_size, sizeof(struct sound_permutation) == 124);
+CHECK_LAYOUT(vita_sound_samples, offsetof(struct sound_permutation, samples) == 64);
+CHECK_LAYOUT(vita_loop_size, sizeof(struct looping_sound_definition) == 84);
+CHECK_LAYOUT(vita_loop_tracks, offsetof(struct looping_sound_definition, tracks) == 60);
+CHECK_LAYOUT(vita_loop_details, offsetof(struct looping_sound_definition, details) == 72);
+CHECK_LAYOUT(vita_loop_track_start, offsetof(struct looping_sound_track, start_sound) == 48);
+CHECK_LAYOUT(vita_loop_track_alternate, offsetof(struct looping_sound_track, alternate_loop_sound) == 128);
+CHECK_LAYOUT(vita_loop_track_size, sizeof(struct looping_sound_track) == 160);
+CHECK_LAYOUT(vita_loop_detail_size, sizeof(struct looping_sound_detail) == 104);
+
 CHECK_LAYOUT(menu_bitmap_size, sizeof(struct bitmap_group) == 108);
 CHECK_LAYOUT(menu_bitmap_sequence, offsetof(struct bitmap_group, sequences) == 84);
 CHECK_LAYOUT(menu_bitmap_data, offsetof(struct bitmap_group, bitmaps) == 96);

@@ -215,3 +215,8 @@ Date2026-10-01; A070/KI-032. Keep the backend60Hz worker, two-flip limit, counte
 ## D032 — Isolate texture mutation to its intended Vita stage
 
 A072/KI-033: original texture uploads/mip composition mutate GL binding state. Select their destination stage before mutation; shadow-cache hits cannot substitute for that selection. Preserve original resources, shaders and sampler assignments. Do not hardcode a transparent color or alpha discard to hide the symptom.
+
+
+## D033 — Sound metadata relocation excludes external samples
+
+A073: use original snd!/lsnd schemas and header layout assertions. Rebase only pitch/permutation/track/detail block pointers and reference names. Original sample resource addresses/file offsets and compiled runtime cache fields remain opaque, including Xbox-looking words. The original cache reader/mixer owns later activation; no replacement music files or arbitrary pointer scanning.
