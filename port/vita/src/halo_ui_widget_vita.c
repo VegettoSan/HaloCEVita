@@ -29,6 +29,31 @@ static struct widget_instance *halo_vita_menu_root(short controller_index)
     return NULL;
 }
 
+static void halo_vita_sync_list_visual_state(struct widget_instance *widget)
+{
+    struct ui_widget_definition *definition;
+
+    if (!widget)
+        return;
+
+    definition = ui_widget_definition_get(widget->definition_tag_index);
+    if (widget->type == _ui_widget_type_spinner_list)
+        spinner_list_update(widget);
+    else if (widget->type == _ui_widget_type_column_list)
+        column_list_update(widget, definition);
+}
+
+static void halo_vita_sync_focus_chain_visuals(struct widget_instance *root)
+{
+    struct widget_instance *widget;
+
+    /* process_ui_widgets() normally calls the original list update before it
+     * processes input.  The narrow Vita bridge intentionally skips that wide
+     * closure, so run only those original list visual-state owners here. */
+    for (widget = root; widget; widget = widget->focused_child)
+        halo_vita_sync_list_visual_state(widget);
+}
+
 /* The normal Halo Main Menu lifecycle marks this state while entering the
  * shell.  The staged Vita path creates the same original root directly, so it
  * must complete that original state transition once the root has been
@@ -52,6 +77,7 @@ int halo_vita_ui_activate_main_menu_state(void)
     }
 
     main_menu_active(TRUE);
+    halo_vita_sync_focus_chain_visuals(root);
     vita_log("[VITA UI STATE] original Main Menu active=%d root=%08lx focused=%08lx",
         (int)main_menu_is_active(),
         (unsigned long)root->definition_tag_index,
@@ -118,17 +144,25 @@ static int halo_vita_move_menu_focus(
         moved = widget_event_function_list_widget_goto_next_item(
             target, event, &deleted);
 
+    /* In the full original update loop this runs on the following widget
+     * update and selects sprite frame 1 for the focused two-frame item while
+     * resetting the others to frame 0.  Keep that exact owner rather than a
+     * Vita-side highlight or hard-coded Main Menu bitmap choice. */
+    if (!deleted)
+        halo_vita_sync_list_visual_state(target);
+
     after = target->focused_child;
     if (moved)
         ui_play_audio_feedback_sound(_ui_audio_feedback_cursor);
 
-    vita_log("[VITA UI INPUT] focus button=%d list=%08lx before=%08lx after=%08lx moved=%d deleted=%d",
+    vita_log("[VITA UI INPUT] focus button=%d list=%08lx before=%08lx after=%08lx moved=%d deleted=%d frame=%ld",
         (int)button_index,
         (unsigned long)target->definition_tag_index,
         before ? (unsigned long)before->definition_tag_index : (unsigned long)NONE,
         after ? (unsigned long)after->definition_tag_index : (unsigned long)NONE,
         (int)moved,
-        (int)deleted);
+        (int)deleted,
+        after ? (long)after->animation.current_frame_index : -1L);
 
     return moved && !deleted;
 }
