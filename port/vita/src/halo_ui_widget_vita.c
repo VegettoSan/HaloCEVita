@@ -244,6 +244,8 @@ static int halo_vita_move_menu_focus(
     struct widget_instance *target = NULL;
     struct widget_instance *before;
     struct widget_instance *after;
+    long list_tag;
+    long before_tag;
     boolean deleted = FALSE;
     boolean moved = FALSE;
 
@@ -275,6 +277,8 @@ static int halo_vita_move_menu_focus(
     }
 
     before = target->focused_child;
+    list_tag = target->definition_tag_index;
+    before_tag = before ? before->definition_tag_index : NONE;
     if (button_index == _widget_event_dpad_up)
         moved = widget_event_function_list_widget_goto_previous_item(
             target, event, &deleted);
@@ -289,14 +293,15 @@ static int halo_vita_move_menu_focus(
     if (!deleted)
         halo_vita_sync_list_visual_state(target);
 
-    after = target->focused_child;
+    /* Original list callbacks may delete the calling list. */
+    after = deleted ? NULL : target->focused_child;
     if (moved)
         ui_play_audio_feedback_sound(_ui_audio_feedback_cursor);
 
     vita_log("[VITA UI INPUT] focus button=%d list=%08lx before=%08lx after=%08lx moved=%d deleted=%d frame=%ld",
         (int)button_index,
-        (unsigned long)target->definition_tag_index,
-        before ? (unsigned long)before->definition_tag_index : (unsigned long)NONE,
+        (unsigned long)list_tag,
+        (unsigned long)before_tag,
         after ? (unsigned long)after->definition_tag_index : (unsigned long)NONE,
         (int)moved,
         (int)deleted,
@@ -480,13 +485,16 @@ static int halo_vita_dispatch_focused_button(
 
             if (handler->event_type == button_index)
             {
+                long widget_tag = widget->definition_tag_index;
+                short handler_function = handler->function;
+                long handler_flags = handler->flags;
                 int handled = halo_vita_dispatch_original_menu_handler(
                     widget, definition, event, handler);
                 vita_log("[VITA UI INPUT] dispatch button=%d widget=%08lx function=%d flags=%08lx handled=%d failed=%d",
                     (int)button_index,
-                    (unsigned long)widget->definition_tag_index,
-                    (int)handler->function,
-                    (unsigned long)handler->flags,
+                    (unsigned long)widget_tag,
+                    (int)handler_function,
+                    (unsigned long)handler_flags,
                     handled,
                     (int)halo_vita_ui_event_failed());
                 return handled;
@@ -557,6 +565,9 @@ int halo_vita_ui_process_menu_action(short action)
     }
 
     widget_globals.current_system_milliseconds = system_milliseconds();
+    /* A rejected creation handler belongs to its own event. Pure open/back
+     * handlers must not inherit a failure from an earlier screen. */
+    halo_vita_ui_event_reset();
     event.type = _event_type_button;
     event.controller_index = 0;
     event.data.button.index = (byte)button_index;
