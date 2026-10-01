@@ -2,6 +2,8 @@
 
 Last updated: 2026-10-01
 
+A084 exact uploaded-map audit corrects the label hypothesis: main-menu option lettering is authored in DXT3 bitmap alpha, while its auxiliary text alpha0 is intentional in the file. Raw Campaign mask retains0..119 alpha and14537 transparent pixels; focused frame1 retains0..255. Original background GLSL preserves this mask in a controlled host GPU replay. Vita sampling/compiler/actual draw inputs remain to isolate; do not force auxiliary text alpha. Build-number font text remains separate.
+
 Current source/hardware **00.26: BOOTS / partial HALO DRAW RENDERS / continuous audible 2D music** (A077–A083). User reports uninterrupted music and Square feedback,29–30FPS and unchanged partial UI; supplied log confirms frames30/120, repeated original feedback and Start/clean exit at155.46s. The comparison uses maximum overclock context; FPS is user-observed, not a new internal benchmark. No repeated-run STABLE or complete-menu claim. Seekable live sound reads are about16–18ms for65520 bytes; sampled steady frame bodies are about19.8ms, excluding the outer-loop pacing. Labels, transparency and full scenario remain unresolved.
 
 The nearly one-minute startup has a source-matched gap: tag loading completes at7.28s; resource preparation precedes the typed-relocation marker at61.97s; mount/resource binding is reported ready at63.19s. The existing log does not time preparation and relocation separately, so their exact shares are not established. First actual menu Present occurs at72.56s after cold shaders and bounded first-draw traces. Compressed maps are regenerated into process-owned disk backing on each launch (D036); no persistent-cache identity policy exists. A083 records the hardware evidence and continuation constraints.

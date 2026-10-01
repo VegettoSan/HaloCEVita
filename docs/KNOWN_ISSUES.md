@@ -283,3 +283,6 @@ A083 refines KI-031: three observed text widget definitions already supply alpha
 ## KI-037 — Slow00.26 startup before resource activation
 
 User reports nearly one minute before logo. A083 log first menu Present72.56s, tag load7.28s and typed-relocation marker61.97s. Between tag load and relocation the source prepares a33582080-byte seekable map on disk; this gap is54.68s including relocation, without separate timing. Cold shaders/bounded tracing add first-frame latency. No audio/FPS regression during the prepared runtime is reported. Future optimization must preserve complete zlib/length validation, exact offsets, source identity and storage failure cleanup; a persistent copy accepted merely by name/version violates D036. Instrument individual preparation/relocation phases before claiming their separate timing or a startup improvement.
+
+
+A084 corrects KI-031's label interpretation using the exact user map: the option text with alpha0 is auxiliary; actual option labels are DXT3 background alpha masks with transparent surroundings. Controlled host GPU replay preserves Campaign lettering/alpha through the original retained fragment shader. This does not establish Vita sampling or identify the sole defect. Keep alpha1 build-number font failure separate. Do not force authored text opacity or introduce a color key.
