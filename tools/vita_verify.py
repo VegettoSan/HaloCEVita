@@ -64,6 +64,8 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             'halo_vita_menu_audio_frame', 'halo_vita_menu_audio_start',
             'halo_vita_menu_audio_dispose', 'halo_vita_audio_mixer_shutdown',
             'halo_vita_sound_menu_refresh', '__wrap_sound_render_time', '__wrap_sound_idle']
+required += ['halo_vita_ui_process_menu_action', 'halo_vita_ui_activate_main_menu_state',
+             'halo_vita_xgpu_texture_get', 'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)
@@ -153,14 +155,16 @@ files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 tested_package = digest(build / 'HaloCE.vpk') == '7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
-                             if tested_package else 'current package untested on Vita;00.25 partial UI/audible title1 with stalls and failed Start disposal (A077)'),
+                             if tested_package else 'current package untested on Vita; prior00.30 partial UI with remaining rectangles (A089)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
-            'rendering_scope': '00.25 hardware partial logo/plain backgrounds, missing labels/transparency/motion (A077); current package visual improvement unverified',
-            'audio_scope': '00.25 original title1 audible with periodic cuts/main-thread stalls (A077);00.26 seekable reads/stream reuse barriers LINK, continuity/FPS pending',
-            'prior_hardware_evidence': 'docs/ATTEMPTS.md A077:00.25 audible cuts,13FPS maximum overclock, UI unchanged, invalid interior LRU free at Start',
+            'rendering_scope': 'prior00.27/00.30 original logo/bitmap labels visible, white rectangles unresolved; current GPU alpha isolation requires console evidence (A087/A089/A091)',
+            'audio_scope': 'prior00.26 continuous title1/Square feedback and reported29-30FPS (A083); current package audibility/performance untested',
+            'navigation_scope': 'original staged widget/list/history bridge; host routing/lifetime contracts pass (A089/A090), console acceptance and saved-profile/world handlers pending',
+            'alpha_probe_scope': 'up to2 first-frame copies of exact original bitmap shader draws; native storage/output readback, no authored alpha mutation (A091)',
+            'prior_hardware_evidence': 'docs/ATTEMPTS.md A083/A087/A089: continuous audio, partial original bitmap UI; current source is not hardware-verified',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
-                                  'current package installation/runtime pending; prior00.25 BOOTS/partial UI/audible title1 with stalls (A077)'),
+                                  'current package installation/runtime pending; prior00.30 BOOTS/partial original UI (A089)'),
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': git_metadata('rev-parse', 'HEAD'),
             'source_has_uncommitted_changes': bool(git_metadata(
