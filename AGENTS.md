@@ -206,6 +206,10 @@ For the real Main Menu bring-up, log the transition through at least:
 
 Do not log a milestone before the operation has actually completed.
 
+## Standing user authorization for this project
+
+On 2026-10-01 the user explicitly confirmed: "Sip siempre estás autorizado a subir a GitHub, guardalo en tu memoria". This confirms the project's existing request to work directly on `VegettoSan/HaloCEVita`, branch `main`, with small functional commits and pushes, and to build/deliver Vita test packages. Continue these authorized actions without asking for permission again merely because a new session starts. Verify the current repository and preserve unrelated work. This authorization does not imply deleting the repository, rewriting history, exposing secrets, or uploading proprietary maps/assets.
+
 ## Git discipline
 
 - Do not rewrite history.
