@@ -210,3 +210,8 @@ A054 validates KI-026 through real960x544 request/attachment, original clear and
 KI-027 source correctionA05500.20: supported ROW_LENGTH0 for tight BGRA/DXT input, plus phase/level GL checks. Actual-function mock regression reproduces old alignment0x500 and passes corrected mip/row/failure contracts. Native texture GPU acceptance and visible image remain pending.
 
 A057 validation: KI-027 supported-row/mip correction and A056 low-resolution mode are included in native verified workflow121/source9405665/VPK00.20. Actual-function mocked upload/screen/FBO/Present contracts PASS. New320x240 mode, real texture GPU acceptance and visible Halo menu remain hardware gates; native context960x544 is intentional presentation. No GPU-overload diagnosis or measured FPS claim is inferred from00.19's unsupported-state exit.
+
+
+## KI-028 — Vita SubData clones entire in-flight stream for each glyph
+
+A05800.20 reaches original Halo draw with error0 at320x240, then aborts in SceLibKernel memcpy called by glBufferSubData during original font rendering. Exact workflow121 ELF/relocation and allocation-then-copy disassembly confirm a NULL clone destination. Primary vitaGL6e7fe40 clones the full2MiB vertex buffer after each draw; allocation failure has no guard in this archive. Bound the Vita upload path and synchronize before mapping/reusing storage. Preserve geometry and same-draw stream reservations; reject failed mapping instead of calling SubData with a NULL clone. No measured total/peak memory or FPS claim. Menu Present/render remain unverified. KI-027 texture upload and A056320x240 allocation now pass hardware; no shaders need replacement based on this crash.
