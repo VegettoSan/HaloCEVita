@@ -221,3 +221,14 @@ KI-028 source correctionA05900.21 uses checked synchronized mapping of existing 
 
 
 A060: KI-028 mapped reuse correction passes exact native workflow122/sourcefb92bbf/VPK00.21, including real glMapBufferRange/glUnmapBuffer/glFinish symbol closure and actual downloaded artifact digests. Host contracts PASS; original font/full-frame Present/visible menu and repeated stability need hardware.320x240 policy remains unchanged. Retain workflow122 ELF/map for the new dump, never use workflow121 symbols to decode00.21.
+
+
+## KI-029 — DXT mip transfers may outlive destination reallocations
+
+A06100.21 passes original UI/font/frame and Present but later aborts in _malloc_r while allocating a compressed texture; free-list links are corrupt. Primary vitaGL6e7fe40 starts asynchronous DXT transfer copies and grows/moves the destination with vgl_realloc between mip levels. glFinish alone waits drawing, not explicit transfer completion. Synchronize native transfers before mutation and after each mip before reallocation/staging reuse. The dump proves heap corruption, not the exact writer; correction needs hardware confirmation and does not diagnose overall memory exhaustion.
+
+## KI-030 — Installed non-strict uniform handles cannot identify array elements
+
+A062 exact workflow122 glUniform4fv uses a negated uniform pointer with offset0; indexed offsets require STRICT_UNIFORMS_COMPLIANCE, absent in this archive. Existing c[i]/pixel-array lookups assumed a different driver contract; previous host mocks did not model it. Query active compiled vec4 array spans and base locations, then upload the bounded original prefix. No handle arithmetic, fake shader or unconditional192-vector write.00.21 completes Present but user sees black; RENDERS remains unverified.
+
+A061 confirms KI-028 through original font/UI/frame completion in00.21. New allocator failure is separate; retain matching122 ELF/core.
