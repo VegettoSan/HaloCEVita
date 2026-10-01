@@ -235,3 +235,8 @@ A061 confirms KI-028 through original font/UI/frame completion in00.21. New allo
 
 
 A06300.22 corrects KI-029's transfer/reallocation lifetime hazard with checked native waits before mutation and after each mip, preserving all data; actual lifetime fixture PASS. KI-030 base-array reflection/bounded original-prefix uploads pass actual helper/non-strict fixture; no indexed-handle assumption remains. Native and visible/repeated hardware gates pending. Source-confirmed race is not yet proven sole cause of A061 heap damage.
+
+
+## KI-031 — Partial visible UI without scenario/update/audio
+
+A064/00.22: logo and rectangular backgrounds visible. Active Vita loop does not invoke original widget update, world render or HS camera/scenario update; music is explicitly deferred. Ordinary workflow131 passes; optional process_ui_widgets closure does not link (desktop pointer and full game/load/network/sound dependencies). Do not claim full ui.map execution from tag mount or UI-only Present. Missing labels require font/alpha and original widget timing investigation.
