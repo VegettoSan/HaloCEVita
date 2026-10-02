@@ -17,6 +17,9 @@ jobs:
     container:
       image: vitasdk/vitasdk:2026.08
     steps:
+      - name: Check out bridge source
+        uses: actions/checkout@v4
+
       - name: Install donor compiler
         run: |
           apt-get update
@@ -35,18 +38,22 @@ jobs:
         working-directory: donor
         run: |
           test "$(git rev-parse HEAD)" = b9409394c0816af72cec477cc7d3a4a7a855d06a
-          # Ubuntu 24.04 Clang emits out-of-line 16-bit atomic calls for this
-          # source. Keep the donor logic intact and link the SDK runtime.
-          test -f "$(arm-vita-eabi-gcc -print-file-name=libatomic.a)"
+          python3 configure.py --lto off --pgo off --portable --release
+          # The SDK has no libatomic.a. The bridge supplies exactly the two
+          # relaxed 16-bit halfword operations the donor game code requests.
+          arm-vita-eabi-gcc -mcpu=cortex-a9 -mthumb -O2 -c \
+            ../tools/vita_atomic_16.c -o build/vita/atomic_halfword.o
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('tools/vita_build.py')
-          source = path.read_text()
-          before = '"pthread", "m", "c",'
-          assert source.count(before) == 1
-          path.write_text(source.replace(before, '"pthread", "m", "atomic", "c",'))
+          path = Path('build.ninja')
+          lines = path.read_text().splitlines(keepends=True)
+          matches = [i for i, line in enumerate(lines)
+                     if line.startswith('build build/vita/halo.elf: vita_link ')]
+          assert len(matches) == 1
+          i = matches[0]
+          lines[i] = lines[i].rstrip('\n') + ' build/vita/atomic_halfword.o\n'
+          path.write_text(''.join(lines))
           PY
-          python3 configure.py --lto off --pgo off --portable --release
           ninja vita
 
       - name: Verify package and record source provenance
@@ -63,7 +70,7 @@ jobs:
               'source': 'BirchWoodGod/halo-ce-vita',
               'commit': 'b9409394c0816af72cec477cc7d3a4a7a855d06a',
               'license': 'GPL-3.0; see the pinned source and donor/LICENSE',
-              'ci_patch': 'Append -latomic to donor Vita link for Ubuntu 24.04 Clang',
+              'ci_patch': 'Link the two relaxed ARM halfword atomic helpers from tools/vita_atomic_16.c',
               'backend': 'native GXM (separate from HaloCEVita vitaGL)',
               'vpk_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
           }
