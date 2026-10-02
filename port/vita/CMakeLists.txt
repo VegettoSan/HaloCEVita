@@ -186,6 +186,13 @@ set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memor
 # Vita bridge, which restores the same D3D blend state before the draw.
 set_source_files_properties(${ROOT}/port/linux/src/d3d8_gl.c
   PROPERTIES COMPILE_DEFINITIONS "xgpu_texture_get=halo_vita_xgpu_texture_get")
+# xbox_textures.c owns the decoded bytes and cache policy. On Vita keep its
+# first allocation as glTexImage2D, but route later same-shape mutable updates
+# through the bridge so vitaGL can copy-on-write with glTexSubImage2D instead
+# of forcing a global glFinish + storage replacement for every cached glyph.
+set_source_files_properties(${ROOT}/port/linux/src/xbox_textures.c
+  PROPERTIES COMPILE_DEFINITIONS
+  "glBindTexture=halo_vita_texture_bind;glDeleteTextures=halo_vita_texture_delete;glTexImage2D=halo_vita_texture_image_2d;glFinish=halo_vita_texture_upload_finish")
 # Keep the shared decoded BGRA upload path. The 00.30 direct-internal-format
 # experiment did not change the hardware rectangles, so do not retain it as a
 # purported transparency fix.
