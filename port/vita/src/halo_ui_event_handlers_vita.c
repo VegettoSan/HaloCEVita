@@ -19,6 +19,11 @@
 #undef ui_widget_event_handler_function_invoke
 
 #ifdef HALO_VITA
+/* Keep this diagnostic on the game-ABI side. These are the original main.c
+ * owners that handlers 8/9 update before handler 73 arms the solo transition. */
+char *main_get_map_name(void);
+short main_get_difficulty(void);
+
 boolean ui_widget_event_handler_function_invoke(
     struct widget_instance *widget,
     struct event_record *event,
@@ -48,6 +53,13 @@ boolean ui_widget_event_handler_function_invoke(
     case 73:
         vita_log("[VITA UI HANDLER] original function index=73 main menu switch to solo game");
         result = switch_from_main_menu_to_single_player(widget, event, widget_deleted);
+        if (result)
+        {
+            char *map_name = main_get_map_name();
+            vita_log("[VITA CAMPAIGN] original solo handoff armed map=%s difficulty=%d",
+                map_name && map_name[0] ? map_name : "<unset>",
+                (int)main_get_difficulty());
+        }
         break;
     default:
         return halo_vita_staged_event_handler_function_invoke(
