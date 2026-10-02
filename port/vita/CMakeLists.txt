@@ -180,11 +180,9 @@ set_source_files_properties(src/halo_services.c src/xinput_vita.c src/xbox_memor
   ${ROOT}/port/linux/src/msvc_wide.c
   ${ROOT}/port/linux/src/nv2a_vsh.c ${ROOT}/port/linux/src/nv2a_psh.c ${ROOT}/port/linux/src/xgpu_text.c
   PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)
-# A texture-cache miss can invalidate d3d8_gl.c's GL shadow after the original
-# raster state was applied. Route only this backend's lookup calls through the
-# Vita bridge, which restores the same D3D blend state before the draw.
-set_source_files_properties(${ROOT}/port/linux/src/d3d8_gl.c
-  PROPERTIES COMPILE_DEFINITIONS "xgpu_texture_get=halo_vita_xgpu_texture_get")
+# d3d8_gl.c applies the complete original raster state after Vita texture
+# lookup/upload. Keep xgpu_texture_get direct; a second blend-only restoration
+# inside the lookup would create a competing owner for the same draw state.
 # xbox_textures.c owns the decoded bytes and cache policy. On Vita keep its
 # first allocation as glTexImage2D, but route later same-shape mutable updates
 # through the bridge so vitaGL can copy-on-write with glTexSubImage2D instead
