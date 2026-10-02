@@ -118,4 +118,18 @@ jobs:
       - name: Configure original UI renderer/update link probe
         run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON
       - name: Link original UI renderer/update closure
-        run: cmake --build build/vita-render-probe --target HaloCE.elf -j2
+        id: renderer_link
+        shell: bash
+        run: |
+          set -o pipefail
+          cmake --build build/vita-render-probe --target HaloCE.elf -j2 2>&1 | tee build/vita-render-probe/renderer-closure-link.log
+      - name: Upload renderer closure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: renderer-closure-${{ github.sha }}
+          path: |
+            build/vita-render-probe/renderer-closure-link.log
+            build/vita-render-probe/HaloCE.elf.map
+          if-no-files-found: warn
+          retention-days: 14
