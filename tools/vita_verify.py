@@ -65,7 +65,8 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             'halo_vita_menu_audio_dispose', 'halo_vita_audio_mixer_shutdown',
             'halo_vita_sound_menu_refresh', '__wrap_sound_render_time', '__wrap_sound_idle']
 required += ['halo_vita_ui_process_menu_action', 'halo_vita_ui_activate_main_menu_state',
-             'halo_vita_xgpu_texture_get', 'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']
+             'xgpu_texture_get', 'xgpu_gl_state_invalidate',
+             'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)

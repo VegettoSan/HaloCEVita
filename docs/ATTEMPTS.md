@@ -1214,3 +1214,8 @@ The exact provided `ui.map` SHA-256 remains
 **Change:** let D3DDevice_Present own its original aspect-preserving clear/blit and make platform_video_swap only swap. Keep 640x480 author/render coordinates, original maps, DXT decoder, shader translator and texture stage behavior. Remove the obsolete xgpu_texture_get blend-only alias/bridge; the post-resource apply_raster_state is the sole draw-state owner. Add a static regression that rejects a second platform blit. Mark the package00.34. Focused commits: bb42b5f (presentation), acdac1c (regression), e1c7d0c (contract comment), edf2c7c/0c5e0fa/974cc85 (blend bridge removal), 7d23640 (version).
 
 **Result:** source-level duplicate blit and redundant state owner removed. Native Vita Build216 is the acceptance gate. This patch does not establish that the GPU white rectangles, text or all-window UI are fixed; only fresh real-Vita cold/warm photos and debug.txt can do so. Optional full process_ui_widgets/world closure is still not part of this staged VPK.
+
+
+## 2026-10-02 — A108 — Repair stale native package symbol gate
+
+Vita Build216/run37071681897 linked the native ELF and generated the00.34 VPK, but tools/vita_verify.py rejected the removed halo_vita_xgpu_texture_get blend-only bridge. The original xgpu_texture_get is now the actual resource owner. Require that real symbol and xgpu_gl_state_invalidate instead; retain every ABI/archive/SELF/renderer gate. No GPU or menu-completion claim. Native CI must pass before delivering this baseline.
