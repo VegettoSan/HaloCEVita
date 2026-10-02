@@ -5,9 +5,10 @@ Last updated: 2026-10-02
 Source00.35 (A108/A109): repaired the obsolete package-symbol gate and restore
 the original D3D color/depth target after Vita resource preparation, before
 raster state. A stateful host execution reproduces the historical destination
-loss and passes the correction on cold/warm draws. Native CI and real-Vita
-visual acceptance for00.35 are pending. Build217 verifies the preceding00.34
-package on0a02040. No complete ui.map or white-panel-fix claim.
+loss and passes the correction on cold/warm draws. Native Build218 on
+a080234 passes all required host/native/package gates and publication (A110).
+The exact00.35 VPK is independently verified and delivered; state LINKS.
+Real-Vita visual acceptance is pending. No complete ui.map or white-panel-fix claim.
 
 Source00.34 comparison (A107): native Vita presentation now swaps the original
 D3D8 aspect-preserving blit once. Removed its obsolete second full-panel blit
