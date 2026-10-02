@@ -40,6 +40,7 @@ jobs:
           python3 tools/vita_resource_seek_regression.py
           python3 tools/vita_stream_regression.py
           python3 tools/vita_renderer_contract_regression.py
+          python3 tools/vita_draw_target_regression.py
           python3 tools/vita_ui_render_contract_regression.py
 
   vita:

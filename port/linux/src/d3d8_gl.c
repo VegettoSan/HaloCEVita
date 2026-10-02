@@ -2825,9 +2825,15 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.texture_modes = D3D__RenderState[D3DRS_PSTEXTUREMODES];
 	bind_textures(&key, uniforms.texture_scale);
 #ifdef HALO_VITA
-	/* Resource uploads/mip composition invalidate or change GL state. Apply
-	 * the complete original raster contract after that work, on cold and warm
-	 * draws alike; the texture bridge only restores blending. */
+	/* Resource uploads/mip composition invalidate or change GL state.
+	 * copy_level_by_blit ends on framebuffer zero, so restore the original
+	 * color/depth destination as well as raster state after resource work.
+	 * Keep the draw's target, viewport, blend and depth under one owner. */
+	if (!bind_targets(&has_depth))
+	{
+		stats.skipped_no_target++;
+		return NULL;
+	}
 	apply_raster_state(has_depth);
 #endif
 	for (stage = 0; stage < D3DTSS_MAXSTAGES; stage++)

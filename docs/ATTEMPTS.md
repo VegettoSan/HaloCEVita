@@ -1219,3 +1219,12 @@ The exact provided `ui.map` SHA-256 remains
 ## 2026-10-02 — A108 — Repair stale native package symbol gate
 
 Vita Build216/run37071681897 linked the native ELF and generated the00.34 VPK, but tools/vita_verify.py rejected the removed halo_vita_xgpu_texture_get blend-only bridge. The original xgpu_texture_get is now the actual resource owner. Require that real symbol and xgpu_gl_state_invalidate instead; retain every ABI/archive/SELF/renderer gate. No GPU or menu-completion claim. Native CI must pass before delivering this baseline.
+
+
+## 2026-10-02 — A109 — Restore Halo draw target after Vita resource copies
+
+Source-confirmed defect: prepare_draw binds the D3D color/depth destination before bind_textures, but copy_level_by_blit used by resource composition ends on framebuffer zero and invalidates the GL shadow. The existing post-resource apply_raster_state restores viewport/blend/depth but never the destination. Re-enter the existing bind_targets owner after resources and before raster restoration on Vita only; reject an unavailable destination. No widget/tag/UV/pixel/alpha/audio/input changes. Package00.35 retains original640x480 presentation and generated NV2A pairs.
+
+Commands: python3 tools/vita_draw_target_regression.py PASS actual prepare_draw prefix with a stateful FBO model: cold copies on color-only/color-depth targets, warm hits without redundant native binds, missing destination rejection. The identical fixture rejects the historical code by reproducing a draw into framebuffer zero. Existing texture-stage and UI renderer contracts PASS. CI now requires the new regression. This proves the destination-ordering defect and host correction, not that it caused the supplied Main Menu white panels. Native build and fresh console cold/warm visuals remain required.
+
+A108 native acceptance: Vita Build217/run37076142312 on0a0204023093baa13f14d665123fae83af622421 passed native ELF/VPK verification, all required host contracts and publication. The optional full original UI/world closure still fails and is not enabled. Uploaded ui.map SHA-25635e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833 passes original transactional relocation (983 tags, CRCe22586e4,9-widget root); bloodgulch.map passes reader validation and safely rejects Main Menu activation. Neither map was modified or packaged.
