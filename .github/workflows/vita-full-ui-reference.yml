@@ -35,6 +35,17 @@ jobs:
         working-directory: donor
         run: |
           test "$(git rev-parse HEAD)" = b9409394c0816af72cec477cc7d3a4a7a855d06a
+          # Ubuntu 24.04 Clang emits out-of-line 16-bit atomic calls for this
+          # source. Keep the donor logic intact and link the SDK runtime.
+          test -f "$(arm-vita-eabi-gcc -print-file-name=libatomic.a)"
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('tools/vita_build.py')
+          source = path.read_text()
+          before = '"pthread", "m", "c",'
+          assert source.count(before) == 1
+          path.write_text(source.replace(before, '"pthread", "m", "atomic", "c",'))
+          PY
           python3 configure.py --lto off --pgo off --portable --release
           ninja vita
 
@@ -52,6 +63,7 @@ jobs:
               'source': 'BirchWoodGod/halo-ce-vita',
               'commit': 'b9409394c0816af72cec477cc7d3a4a7a855d06a',
               'license': 'GPL-3.0; see the pinned source and donor/LICENSE',
+              'ci_patch': 'Append -latomic to donor Vita link for Ubuntu 24.04 Clang',
               'backend': 'native GXM (separate from HaloCEVita vitaGL)',
               'vpk_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
           }
