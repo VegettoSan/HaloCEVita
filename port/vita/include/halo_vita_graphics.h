@@ -1,13 +1,14 @@
 #ifndef HALO_VITA_GRAPHICS_H
 #define HALO_VITA_GRAPHICS_H
-/* Keep Halo's original Xbox/UI 640x480 coordinate space, but rasterize the
- * screen-sized targets at half resolution. The D3D8 backend scales viewports,
- * scissors and clears from the authored 640x480 space into this 320x240 FBO;
- * final presentation expands that image to the native 960x544 Vita panel. */
+/* Keep Halo's original Xbox/UI 640x480 coordinate space and rasterize the
+ * screen-sized targets 1:1 at 640x480 for this UI comparison build. The
+ * authored widget coordinates therefore reach the render target without the
+ * half-resolution 320x240 viewport/scissor scaling step; final presentation
+ * still expands the image to the native 960x544 Vita panel. */
 #define HALO_VITA_GAME_WIDTH 640
 #define HALO_VITA_GAME_HEIGHT 480
-#define HALO_VITA_RENDER_WIDTH 320
-#define HALO_VITA_RENDER_HEIGHT 240
+#define HALO_VITA_RENDER_WIDTH 640
+#define HALO_VITA_RENDER_HEIGHT 480
 #define HALO_VITA_DISPLAY_WIDTH 960
 #define HALO_VITA_DISPLAY_HEIGHT 544
 
