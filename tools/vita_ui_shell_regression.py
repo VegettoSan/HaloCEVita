@@ -71,19 +71,19 @@ static void widget_instance_set_focused_child_by_index(long tag,struct widget_in
 ''' + actual + r'''
 int main(void) {
  widget_globals.initialized=1;widget_globals.active_widgets[0]=&root;
- const int actions[]={1,2,3,4,5,6,7,8,9,10};
- const int buttons[]={0,2,8,9,10,11,1,12,6,7};
+ const int actions[]={1,2,3,4,5,6,7,8,9,10,11};
+ const int buttons[]={0,2,8,9,10,11,1,12,6,7,3};
  keyboard=1;
- for(int i=0;i<10;i++) {
+ for(int i=0;i<11;i++) {
   assert(halo_vita_ui_process_menu_action(actions[i]));assert(posted_index==buttons[i]);
  }
- assert(posts==10&&processed==0&&flushed==0&&!moves&&!dispatches);
+ assert(posts==11&&processed==0&&flushed==0&&!moves&&!dispatches);
  halo_vita_ui_process_shell_frame();assert(processed==1&&flushed==1&&!updates);
  keyboard=0;
- for(int i=0;i<10;i++) {
+ for(int i=0;i<11;i++) {
   assert(halo_vita_ui_process_menu_action(actions[i]));assert(dispatched_index==buttons[i]);
  }
- assert(moves==4&&dispatches==6&&posts==10);
+ assert(moves==4&&dispatches==7&&posts==11);
  halo_vita_ui_process_shell_frame();assert(updates==1&&widget_globals.current_system_milliseconds==1234);
  delete_on_update=1;widget_globals.widget_stack[0]=&root;
  halo_vita_ui_process_shell_frame();assert(updates==2&&pops==1&&focus_restores==1);

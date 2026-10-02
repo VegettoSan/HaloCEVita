@@ -372,6 +372,9 @@ int halo_vita_ui_process_menu_action(short action)
     case 2:
         button_index = _gamepad_analog_button_x;
         break;
+    case 11:
+        button_index = _gamepad_analog_button_y;
+        break;
     case 8:
         button_index = _gamepad_binary_button_start;
         break;

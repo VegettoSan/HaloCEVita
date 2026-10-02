@@ -127,6 +127,7 @@ int main(void)
 					if (menu_pad.analog[1] && !previous_menu_pad.analog[1])
 						halo_vita_ui_process_menu_action(7);
 					if (menu_pad.analog[2] && !previous_menu_pad.analog[2]) halo_vita_ui_process_menu_action(2);
+					if (menu_pad.analog[3] && !previous_menu_pad.analog[3]) halo_vita_ui_process_menu_action(11);
 					if (pressed & 0x0010) halo_vita_ui_process_menu_action(8);
 					if (menu_pad.analog[6] && !previous_menu_pad.analog[6]) halo_vita_ui_process_menu_action(9);
 					if (menu_pad.analog[7] && !previous_menu_pad.analog[7]) halo_vita_ui_process_menu_action(10);
