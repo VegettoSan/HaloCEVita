@@ -22,7 +22,7 @@ file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math
 add_library(halo_core STATIC
   src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
   src/vita_memory_watch.c src/halo_ui_widget_vita.c src/halo_ui_events.c
-  src/halo_ui_kernel.c src/halo_ui_file_search.c
+  src/halo_ui_kernel.c src/halo_ui_file_search.c src/halo_ui_event_handlers_vita.c
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
@@ -39,7 +39,6 @@ add_library(halo_core STATIC
   ${ROOT}/source/text/font_group.c
   ${ROOT}/source/text/text_group.c
   ${ROOT}/source/text/international_strings.c
-  ${ROOT}/source/interface/ui_widget_event_handler_functions.c
   ${ROOT}/source/interface/player_ui.c
   ${ROOT}/source/networking/network_game_globals.c
   ${ROOT}/source/main/main.c
