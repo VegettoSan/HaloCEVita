@@ -409,10 +409,14 @@ int halo_vita_ui_process_menu_action(short action)
     event.data.button.index = (byte)button_index;
     event.data.button.value = 1;
 
-    if (virtual_keyboard_active()) {
+    if (virtual_keyboard_active())
+    {
+        /* Match process_ui_widgets(): controller input is queued first, then
+         * the keyboard consumes at most one event during the frame update.
+         * The staged shell update below is the sole virtual_keyboard_process
+         * owner. Processing here as well made an input frame advance the
+         * keyboard twice before render and could leave transient UI state. */
         halo_vita_ui_post_button(button_index);
-        virtual_keyboard_process();
-        event_manager_flush();
         return TRUE;
     }
 
