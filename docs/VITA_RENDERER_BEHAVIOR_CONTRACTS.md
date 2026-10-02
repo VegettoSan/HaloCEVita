@@ -4,9 +4,9 @@ This note records renderer behavior that HaloCEVita must preserve while the
 original Halo D3D8/NV2A path is adapted to vitaGL.
 
 It is intentionally written as a set of **project contracts**, not as a second
-renderer design.  The conclusions below were cross-checked against independent
+renderer design. The conclusions below were cross-checked against independent
 hardware-valid behavior and then checked against HaloCEVita's own source,
-runtime evidence, or original D3D8/NV2A semantics.  No foreign renderer source
+runtime evidence, or original D3D8/NV2A semantics. No foreign renderer source
 code is imported by this note.
 
 ## Classification
@@ -24,9 +24,11 @@ code is imported by this note.
 
 **CORROBORATED CONTRACT**
 
-Halo's menu/widget geometry is authored in the original logical screen space.
-The Vita output target may be lower resolution for performance, but changing
-render resolution must not rewrite widget coordinates or tag data.
+Halo's menu/widget geometry is authored in the original 640x480 screen space.
+Changing output resolution must not rewrite widget coordinates or tag data.
+During the current UI-correctness phase HaloCEVita also renders the game target
+at 640x480 one-to-one. The final presentation to the 960x544 Vita panel remains
+a separate letterboxed presentation step.
 
 The shared GL backend already performs the D3D-to-GL viewport conversion with:
 
@@ -37,20 +39,22 @@ The shared GL backend already performs the D3D-to-GL viewport conversion with:
 Therefore a misplaced widget is not, by itself, evidence that the original
 widget bounds should be scaled, flipped, or patched in `ui.map`.
 
-**Rule:** keep author geometry untouched.  Fix viewport/scissor/target scaling
-at the renderer boundary.
+**Rule:** keep author geometry untouched. Fix viewport/scissor/target scaling at
+the renderer boundary. While the Main Menu is being stabilized, keep the game
+render target at the original 640x480 so half-resolution scaling cannot hide a
+renderer defect.
 
 ### 2. `D3DPT_TRIANGLEFAN` is a real UI primitive
 
 **FACT + CORROBORATED CONTRACT**
 
-Retail UI draws can arrive as four-vertex triangle fans.  Mapping them to a
+Retail UI draws can arrive as four-vertex triangle fans. Mapping them to a
 different topology produces geometrically valid-looking but incorrect quads and
 can masquerade as a texture/alpha bug.
 
-HaloCEVita now maps `D3DPT_TRIANGLEFAN` to `GL_TRIANGLE_FAN`.
+HaloCEVita maps `D3DPT_TRIANGLEFAN` to `GL_TRIANGLE_FAN`.
 
-**Rule:** do not collapse fan draws to generic triangles.  The regression gate
+**Rule:** do not collapse fan draws to generic triangles. The regression gate
 `tools/vita_ui_render_contract_regression.py` protects this mapping.
 
 ### 3. Resource preparation happens before the final raster-state application
@@ -58,7 +62,7 @@ HaloCEVita now maps `D3DPT_TRIANGLEFAN` to `GL_TRIANGLE_FAN`.
 **FACT + CORROBORATED CONTRACT**
 
 The Vita texture/resource bridge can bind or upload GL resources underneath the
-D3D8 device state cache.  If the D3D8 raster/blend state is applied first and a
+D3D8 device state cache. If the D3D8 raster/blend state is applied first and a
 resource operation mutates GL state afterwards, the cached shadow can claim the
 desired state is active while the real GPU state differs.
 
@@ -66,7 +70,7 @@ This explains a class of defects where:
 
 - cold and warm draws differ;
 - translucent UI becomes white/opaque;
-- navigating to another widget appears to "repair" the frame;
+- navigating to another widget appears to repair the frame;
 - the same draw data produces different output depending on whether a texture
   had to be uploaded.
 
@@ -84,19 +88,19 @@ shared GL-state shadow through the existing invalidation boundary.
 
 **FACT + CORROBORATED CONTRACT**
 
-`bind_textures()` walks the four Xbox texture stages.  A cold cache miss can
+`bind_textures()` walks the four Xbox texture stages. A cold cache miss can
 create/upload a GL texture while this walk is in progress, and that upload uses
-the currently active GL texture unit.  A cached `state_texture()` decision is
+the currently active GL texture unit. A cached `state_texture()` decision is
 not sufficient to prove the hardware unit is currently selected.
 
 On Vita, HaloCEVita therefore selects `GL_TEXTURE0 + stage` **before** the
-resource lookup/upload or mip composition for that stage.  Only then does it
+resource lookup/upload or mip composition for that stage. Only then does it
 restore the stage's final texture/sampler binding.
 
 Without this ordering, a first-time upload for a later stage can overwrite an
-earlier stage's binding.  That produces exactly the dangerous cold/warm pattern
-where a widget is wrong initially but looks different after navigation causes
-resources to become resident.
+earlier stage's binding. That produces the dangerous cold/warm pattern where a
+widget is wrong initially but looks different after navigation causes resources
+to become resident.
 
 **Rule:** do not move the Vita `glActiveTexture()` selection after
 `xgpu_texture_get()`/mip preparation, and do not remove it because the GL shadow
@@ -108,22 +112,22 @@ appears to contain the same stage already.
 
 The clean-room XDK/PDB contract in `xdk_pdb.h` records the blend factors as the
 NV2A/OpenGL enumerant values: for example source alpha is `0x302` and inverse
-source alpha is `0x303`.  The shared renderer therefore passes the verified
+source alpha is `0x303`. The shared renderer therefore passes the verified
 values directly to `glBlendFunc()`.
 
 **Rule:** do not add a second D3D-to-GL blend-factor translation table unless
-the underlying XDK contract itself changes.  A second conversion would alter
+the underlying XDK contract itself changes. A second conversion would alter
 valid alpha behavior rather than fix it.
 
 ### 6. Preserve original alpha semantics
 
 **CORROBORATED CONTRACT**
 
-DXT3 and DXT5 carry real alpha information.  `AL8`/AY8-style one-byte data also
-uses the sample as both luminance and alpha in the existing Xbox texture
-conversion path.  UI correctness depends on the original blend factors,
-texture alpha, vertex color/alpha and alpha-kill state arriving together at the
-draw.
+DXT1 punch-through alpha and DXT3/DXT5 explicit/interpolated alpha are authored
+information. `AL8`/AY8-style one-byte data also uses the sample as both
+luminance and alpha in the existing Xbox texture conversion path. UI correctness
+depends on the original blend factors, texture alpha, vertex color/alpha and
+alpha-kill state arriving together at the draw.
 
 **Do not use as a permanent fix:**
 
@@ -139,9 +143,10 @@ gradients or later HUD/world effects.
 
 **CORROBORATED CONTRACT**
 
-A reduced 3D/render target can be useful on Vita without redefining Halo's
-logical UI coordinates.  Performance scaling belongs at the render-target /
-presentation boundary.
+HaloCEVita currently keeps both logical space and the game target at 640x480 to
+remove render-scale ambiguity from Main Menu bring-up. A reduced future 3D
+render target may still be useful on Vita, but performance scaling belongs at
+the render-target/presentation boundary and must not redefine Halo's UI space.
 
 **Rule:** a future 75%, 50% or other render-scale option must preserve:
 
@@ -150,19 +155,29 @@ presentation boundary.
 - scissor rectangles transformed once;
 - texture sampling/alpha unchanged.
 
-This also means the current low-resolution bring-up target is not evidence that
-tag-space UI coordinates should be rescaled.
-
 ## Texture contracts
 
-### Compressed formats
+### Compressed formats and the Vita boundary
 
-**CORROBORATED CONTRACT**
+**FACT + CORROBORATED CONTRACT**
 
-The original cache uses DXT1, DXT3 and DXT5 paths that must retain their
-format-specific alpha behavior.  Native compressed upload is optional; a
-decoded BGRA fallback is acceptable when vitaGL/GXM sampling or mip behavior is
-unreliable, provided the decoded result is semantically equivalent.
+The original cache uses DXT1, DXT3 and DXT5. Their decoded texels are portable;
+the byte/block layout expected by a specific GPU compressed-texture descriptor
+is not a portable contract. During UI bring-up HaloCEVita therefore avoids
+letting Xbox compressed blocks cross the vitaGL/GXM boundary unchanged:
+
+- DXT3 and DXT5 continue through the existing CPU decoder in
+  `xbox_textures.c`;
+- the remaining DXT1 `glCompressedTexImage2D` call is intercepted at the Vita
+  GL boundary, decoded with the original DXT1 565/punch-through semantics, and
+  uploaded as ordinary BGRA rows.
+
+This is a renderer-boundary adaptation, not an asset rewrite. `ui.map` bytes,
+original texture headers, mip offsets, blend state and shaders stay unchanged.
+
+**Rule:** do not re-enable direct Xbox DXT block upload on Vita merely because
+vitaGL exposes S3TC entry points. Native compressed upload is acceptable later
+only after its exact block-layout/mip contract is proven equivalent on hardware.
 
 For UI bring-up, correctness is more important than avoiding decode cost.
 
@@ -171,10 +186,9 @@ For UI bring-up, correctness is more important than avoiding decode cost.
 **HYPOTHESIS**
 
 Some future world-rendering defects may come from compressed mip-chain handling
-rather than base-level texture data.  This is not currently the best
-explanation for the Main Menu white-overlay defect, because the UI already
-shows correct bitmap content in several draws and the state-order defect was
-directly identified.
+rather than base-level texture data. This is not currently the best sole
+explanation for the Main Menu corruption because the same UI can change between
+cold and warm resource states.
 
 Do not disable all mipmaps globally as a menu fix.
 
@@ -183,7 +197,7 @@ Do not disable all mipmaps globally as a menu fix.
 **CORROBORATED CONTRACT, NOT CURRENT MENU BLOCKER**
 
 Halo assumes depth/stencil contents survive the render-target transitions where
-D3D8 semantics require them.  This will matter for BSP/world rendering and
+D3D8 semantics require them. This will matter for BSP/world rendering and
 effects even if the Main Menu does not expose it strongly.
 
 Treat depth persistence as a renderer contract, not an optimization.
@@ -207,9 +221,9 @@ implementation in HaloCEVita remains our vitaGL path.
 
 **PROPOSAL — AFTER MENU CORRECTNESS**
 
-Persisting a verified decompressed map cache can greatly reduce repeated startup
-cost.  HaloCEVita currently favors safe regeneration because stale cache
-identity is dangerous.
+Persisting a verified decompressed map cache can reduce repeated startup cost.
+HaloCEVita currently favors safe regeneration because stale cache identity is
+dangerous.
 
 A future persistent-cache implementation must validate at least:
 
@@ -233,7 +247,7 @@ Once Campaign/gameplay is stable, Vita-specific quality controls may be useful:
 - less frequent static-scenery updates;
 - less frequent object-lighting recomputation.
 
-None of these belongs in the current menu-correctness patch.  First preserve the
+None of these belongs in the current menu-correctness patch. First preserve the
 original visual contract, then profile and reduce work with measurable toggles.
 
 ## Current diagnosis of the Main Menu visual defect
@@ -242,45 +256,52 @@ original visual contract, then profile and reduce work with measurable toggles.
 
 - The original Main Menu root exists and real retail widgets are being drawn.
 - Real bitmap resources are reaching the GPU path.
-- Audio/menu state is alive.
-- Navigation can change visible composition.
-- The white/translucent corruption has been sensitive to draw/resource timing.
-- A real ordering defect was found: resource preparation could invalidate GL
-  state after the raster state had been considered applied.
+- Audio/menu state is alive and authored navigation/profile windows execute.
+- The supplied hardware photos show the same screens changing substantially
+  after interaction: cold frames can be pale/white or contain large gradient
+  rectangles, while later frames become much closer to the authored UI.
+- The supplied runtime log shows a 320x240 game target in that tested package,
+  correct DXT3/DXT5 CPU-alpha decode, and one remaining native compressed DXT1
+  upload.
+- A real ordering defect was previously found: resource preparation could
+  invalidate GL state after the raster state had been considered applied.
 - Current `main` restores the full raster state after resource preparation.
 - Current `main` selects each Vita GL texture unit before a cold upload can
   modify that stage's binding.
-- Current `main` also processes the virtual-keyboard/menu input timing once per
-  frame rather than repeatedly in one frame.
+- Current `main` now renders the game target at 640x480 and decodes the
+  remaining DXT1 boundary to BGRA before vitaGL.
 
 ### Still unverified on hardware after the latest commits
 
-- whether the white overlay is fully eliminated;
+- whether the large white/gradient rectangles are eliminated;
 - whether every text layer keeps the correct painter order;
 - whether all widgets remain anchored after repeated D-pad navigation;
-- whether keyboard entry remains stable after many key transitions.
+- the performance cost of 640x480 plus the correctness-first DXT decode path.
 
 ### Next Vita acceptance test
 
-Use the current `main` build.  Verify the root menu first, then enter the
-name/virtual-keyboard flow and navigate repeatedly.
+Use the current `main` build. Verify the root menu first, then enter the
+name/virtual-keyboard and profile/settings flows and navigate repeatedly.
 
 Capture:
 
-1. a photo of the first stable Main Menu frame;
+1. a photo of the first Main Menu frame;
 2. a photo after several D-pad transitions;
-3. a photo of the keyboard before and after repeated navigation;
-4. `ux0:data/HaloCE/debug.txt`;
-5. `gamestate.txt` and generated shader dumps if the build emits them.
+3. Enter Name before and after repeated navigation;
+4. profile/settings screens that previously showed the right-side gradient;
+5. `ux0:data/HaloCE/debug.txt`;
+6. `gamestate.txt` and generated shader dumps if emitted.
 
 Acceptance criteria:
 
-- no full-screen or widget-sized white fallback rectangle;
+- log reports a 640x480 game/render target;
+- log reports the Vita DXT1 CPU-decode boundary when DXT1 is first used;
+- no full-screen or widget-sized white/gradient fallback rectangle;
 - logo/buttons remain in stable positions;
 - text does not disappear or switch to unrelated strings;
 - one physical input transition produces one intended UI transition;
 - no crash while the same widgets are revisited;
-- the log reaches the original UI draw/present path without new GL errors.
+- no new GL upload/draw errors.
 
 ## Regression protection
 
@@ -290,17 +311,19 @@ Run:
 python3 tools/vita_ui_render_contract_regression.py
 ```
 
-The test intentionally protects only stable, high-value contracts:
+The test intentionally protects stable, high-value contracts:
 
+- 640x480 game/render target during UI bring-up;
 - triangle-fan topology;
 - D3D viewport Y transform;
 - Xbox/NV2A-to-GL blend-factor compatibility;
 - per-stage GL texture-unit selection before Vita uploads;
+- DXT1-to-BGRA compressed-layout boundary;
 - resource-before-final-raster ordering on Vita;
 - explicit GL state-shadow invalidation boundary.
 
 The Vita CI workflow runs this regression together with the existing texture,
 menu, input, audio, cache and renderer contract gates.
 
-It does **not** claim that the menu is visually fixed.  Only a Vita hardware
+It does **not** claim that the menu is visually fixed. Only a Vita hardware
 test can promote that state to `RENDERS` / `STABLE`.
