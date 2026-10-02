@@ -6,6 +6,21 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef HALO_VITA_MENU_UPDATE_PROBE
+/* The optional closure probe must exercise January's real per-frame UI owner,
+ * not an undeclared placeholder. Keep the call isolated behind the research
+ * switch so the staged shipping shell remains on its narrower verified path
+ * until the full dependency closure is proven on Vita. */
+void process_ui_widgets(void);
+static int halo_vita_menu_update_checkpoint(void)
+{
+	vita_log("[VITA UI UPDATE] original process_ui_widgets begin");
+	process_ui_widgets();
+	vita_log("[VITA UI UPDATE] original process_ui_widgets returned");
+	return 1;
+}
+#endif
+
 int main(void)
 {
 	int platform, core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
