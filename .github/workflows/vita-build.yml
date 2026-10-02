@@ -43,14 +43,15 @@ jobs:
           python3 tools/vita_ui_render_contract_regression.py
 
   vita:
+    name: Vita menu renderer build
     runs-on: ubuntu-latest
     container:
       image: vitasdk/vitasdk:2026.08
     steps:
       - uses: actions/checkout@v4
-      - name: Configure Vita target
+      - name: Configure Vita target with original menu renderer
         run: cmake -S port/vita -B build/vita -G Ninja
-      - name: Link Vita ELF
+      - name: Link Vita ELF and menu renderer closure
         run: cmake --build build/vita --target HaloCE.elf -j2
       - name: Inspect Vita ELF LOAD layout
         run: |
@@ -102,34 +103,29 @@ jobs:
             release/HaloCE.elf
             release/HaloCE.elf.map
 
-  renderer-closure:
+  full-ui-update-closure:
+    name: Full original UI/world closure (research)
     runs-on: ubuntu-latest
     continue-on-error: true
     container:
       image: vitasdk/vitasdk:2026.08
     steps:
       - uses: actions/checkout@v4
-      - name: Discover renderer symbol owners
-        run: |
-          for symbol in rasterizer_preinitialize memory_watch_initialize rasterizer_error renderstate_table texturestagestate_table texture_table global_d3d_caps rasterizer_screen_effects_initialize rasterizer_debug_begin rasterizer_memory_pool_initialize rasterizer_dynamic_geometry_initialize rasterizer_transparent_geometry_initialize rasterizer_vertex_shaders_initialize rasterizer_debug_initialize rasterizer_detail_objects_initialize rasterizer_profile_initialize rasterizer_environment_fog_screen_initialize; do
-            echo "===== ${symbol} ====="
-            grep -Rsn --include='*.c' --include='*.h' "${symbol}" source port/linux/src port/linux/include port/vita/src port/vita/include | head -40 || true
-          done
-      - name: Configure original UI renderer/update link probe
-        run: cmake -S port/vita -B build/vita-render-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON
-      - name: Link original UI renderer/update closure
-        id: renderer_link
+      - name: Configure full original per-frame UI update probe
+        run: cmake -S port/vita -B build/vita-full-ui-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON
+      - name: Link full original UI/world dependency closure
+        id: full_ui_link
         shell: bash
         run: |
           set -o pipefail
-          cmake --build build/vita-render-probe --target HaloCE.elf -j2 2>&1 | tee build/vita-render-probe/renderer-closure-link.log
-      - name: Upload renderer closure diagnostics
+          cmake --build build/vita-full-ui-probe --target HaloCE.elf -j2 2>&1 | tee build/vita-full-ui-probe/full-ui-update-closure-link.log
+      - name: Upload full UI/world closure diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: renderer-closure-${{ github.sha }}
+          name: full-ui-update-closure-${{ github.sha }}
           path: |
-            build/vita-render-probe/renderer-closure-link.log
-            build/vita-render-probe/HaloCE.elf.map
+            build/vita-full-ui-probe/full-ui-update-closure-link.log
+            build/vita-full-ui-probe/HaloCE.elf.map
           if-no-files-found: warn
           retention-days: 14
