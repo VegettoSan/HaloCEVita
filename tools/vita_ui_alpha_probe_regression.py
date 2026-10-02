@@ -117,6 +117,20 @@ int main(void) {
  puts("PASS actual UI alpha probe: two-copy budget, clipped read bounds, original bindings, native state restoration, complete/incomplete FBO lifetime");
 }
 '''
+# Compile the actual caller predicate, too: the historical QUADLIST-only
+# condition never ran for Halo's original TRIANGLEFAN bitmap owner.
+caller = (ROOT / 'port/linux/src/d3d8_gl.c').read_text()
+start = caller.index('if (device.frame == 0 &&', caller.index('void WINAPI D3DDevice_End(')) + 4
+end = caller.index(') {', start)
+predicate = caller[start:end].replace('device.frame', 'frame').replace('device.textures[2]', 'texture')
+predicate = predicate.replace('D3D__RenderState[D3DRS_PSTEXTUREMODES]', 'modes')
+code += '\n'  # The predicate is tested by a separate executable below.
+eligible = '#include <assert.h>\nenum { D3DPT_TRIANGLEFAN=7, D3DPT_QUADLIST=8 };\n'
+eligible += 'static int eligible(unsigned long frame,int type,unsigned long count,unsigned modes,int texture) {return ' + predicate + ';}\n'
+eligible += 'int main(void) {assert(eligible(0,7,4,0x421,1));assert(eligible(0,8,4,0x421,1));assert(!eligible(1,7,4,0x421,1));assert(!eligible(0,7,3,0x421,1));assert(!eligible(0,7,4,1,1));assert(!eligible(0,7,4,0x421,0));}\n'
+(out / 'eligible.c').write_text(eligible)
+subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', str(out / 'eligible.c'), '-o', str(out / 'eligible')], check=True)
+subprocess.run([str(out / 'eligible')], check=True)
 (out / 'probe.c').write_text(code)
 subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror',
                 '-I' + str(ROOT / 'port/vita/include'), str(out / 'probe.c'),

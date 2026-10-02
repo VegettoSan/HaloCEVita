@@ -2812,7 +2812,9 @@ static struct program_entry *prepare_draw(BOOL immediate)
 #endif
 		return NULL;
 	}
+#ifndef HALO_VITA
 	apply_raster_state(has_depth);
+#endif
 
 	memset(&key, 0, sizeof(key));
 	memcpy(key.combiner_state, D3D__RenderState, sizeof(key.combiner_state));
@@ -2822,6 +2824,12 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.combiner_state[D3DRS_PSFINALCOMBINERCONSTANT1] = 0;
 	key.texture_modes = D3D__RenderState[D3DRS_PSTEXTUREMODES];
 	bind_textures(&key, uniforms.texture_scale);
+#ifdef HALO_VITA
+	/* Resource uploads/mip composition invalidate or change GL state. Apply
+	 * the complete original raster contract after that work, on cold and warm
+	 * draws alike; the texture bridge only restores blending. */
+	apply_raster_state(has_depth);
+#endif
 	for (stage = 0; stage < D3DTSS_MAXSTAGES; stage++)
 	{
 		key.alpha_kill[stage] = D3D__TextureState[stage][D3DTSS_ALPHAKILL] == D3DTALPHAKILL_ENABLE;
@@ -4011,7 +4019,7 @@ void WINAPI D3DDevice_End(void)
 #ifdef HALO_VITA
 	/* Inspect only first-frame real bitmap quads. Keep the original visible
 	 * draw above and its shader/stream resources as the diagnostic inputs. */
-	if (device.frame == 0 && type == D3DPT_QUADLIST && count == 4 &&
+	if (device.frame == 0 && (type == D3DPT_QUADLIST || type == D3DPT_TRIANGLEFAN) && count == 4 &&
 		D3D__RenderState[D3DRS_PSTEXTUREMODES] == 0x421 && device.textures[2]) {
 		struct xgpu_texture_description description;
 		xgpu_texture_describe(device.textures[2]->Format, device.textures[2]->Size, &description);
