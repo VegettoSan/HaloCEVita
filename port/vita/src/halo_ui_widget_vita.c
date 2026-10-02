@@ -17,6 +17,15 @@
  * the otherwise UI-only Vita closure.  Keep January's delete/list/history code
  * intact and redirect only those four world-resume calls in this translation
  * unit.  The real functions remain untouched for the future gameplay closure.
+ *
+ * January's game-data callback table is different from the event-handler
+ * table: all 41 original game-data functions are already emitted and linked
+ * by ui_widget_game_data_input_functions.c.  The old Vita dispatcher still
+ * imposed a partial hand-written whitelist, which made authored ui.map widgets
+ * fatal merely for requesting an existing callback (hardware reached index 40,
+ * dim_if_no_system_link_cable).  Redirect only ui_widget.c's call site through
+ * a checked Vita bridge so authored UI data can use the complete original
+ * table without widening the separate event/world closure.
  */
 void halo_vita_menu_deferred_main_menu_ensure_player_queues_exist(void);
 void halo_vita_menu_deferred_game_time_dispose_from_old_map(void);
@@ -27,7 +36,9 @@ void halo_vita_menu_deferred_game_time_start(void);
 #define game_time_dispose_from_old_map halo_vita_menu_deferred_game_time_dispose_from_old_map
 #define game_time_initialize_for_new_map halo_vita_menu_deferred_game_time_initialize_for_new_map
 #define game_time_start halo_vita_menu_deferred_game_time_start
+#define ui_widget_game_data_function_invoke halo_vita_ui_game_data_function_invoke
 #include "../../../source/interface/ui_widget.c"
+#undef ui_widget_game_data_function_invoke
 #undef game_time_start
 #undef game_time_initialize_for_new_map
 #undef game_time_dispose_from_old_map
@@ -35,6 +46,24 @@ void halo_vita_menu_deferred_game_time_start(void);
 
 #ifdef HALO_VITA
 void halo_vita_ui_post_button(short index);
+
+void halo_vita_ui_game_data_function_invoke(
+    struct widget_instance *widget,
+    word function)
+{
+    if (widget && (short)function >= 0 &&
+        function < NUMBEROF(game_data_input_function_list))
+    {
+        vita_log("[VITA UI DATA] original function index=%u", (unsigned int)function);
+        game_data_input_function_list[(short)function](widget);
+        return;
+    }
+
+    vita_log("MAIN MENU BLOCKED: invalid original game-data function index=%u widget=%p",
+        (unsigned int)function, (void *)widget);
+    vita_fatal("invalid original UI game-data handler on Vita");
+}
+
 static void halo_vita_log_deferred_world_resume(char const *operation)
 {
     vita_log("[VITA UI TRANSITION] defer world resume operation=%s (ui.map shell has no gameplay world yet)",
