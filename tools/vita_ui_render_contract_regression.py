@@ -62,6 +62,17 @@ for declaration in (
 require("glBlendFunc(gl_state.blend_source, gl_state.blend_destination);" in renderer,
         "renderer must keep the verified Xbox/NV2A-to-GL blend-factor contract")
 
+# A Vita cache miss can upload/composite a texture while bind_textures is
+# walking the four Xbox texture stages.  The upload uses whichever GL texture
+# unit is currently active, so each stage must select its unit *before* calling
+# xgpu_texture_get/mip composition.  Otherwise a cold upload can overwrite an
+# earlier stage even though a warm draw appears correct.
+stage_comment = renderer.find("Uploads and mip composition bind on the active GL unit")
+stage_select = renderer.find("glActiveTexture(gl_state.active_texture);", stage_comment)
+texture_get = renderer.find("xgpu_texture_get(", stage_comment)
+require(stage_comment >= 0 and stage_select > stage_comment and texture_get > stage_select,
+        "Vita must select each GL texture unit before a texture cache miss/upload")
+
 # Vita resource uploads can mutate GL bindings/state behind the device's state
 # cache.  On Vita, the full raster contract must be applied *after* textures
 # have been resolved/uploaded, immediately before the draw state is consumed.
@@ -83,4 +94,5 @@ require("code that\nchanges GL state behind it" in xgpu,
         "xgpu invalidation contract must remain documented")
 
 print("PASS: Vita UI renderer contracts: fan topology, viewport transform, "
-      "Xbox/GL blend enums, post-resource raster restore and GL shadow invalidation")
+      "Xbox/GL blend enums, texture-stage selection, post-resource raster "
+      "restore and GL shadow invalidation")
