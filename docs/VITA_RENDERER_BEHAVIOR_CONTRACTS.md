@@ -80,13 +80,50 @@ raster contract afterwards on Vita.
 Any lower layer that changes GL state outside `d3d8_gl.c` must invalidate the
 shared GL-state shadow through the existing invalidation boundary.
 
-### 4. Preserve original alpha semantics
+### 4. A texture upload belongs to the texture stage that requested it
+
+**FACT + CORROBORATED CONTRACT**
+
+`bind_textures()` walks the four Xbox texture stages.  A cold cache miss can
+create/upload a GL texture while this walk is in progress, and that upload uses
+the currently active GL texture unit.  A cached `state_texture()` decision is
+not sufficient to prove the hardware unit is currently selected.
+
+On Vita, HaloCEVita therefore selects `GL_TEXTURE0 + stage` **before** the
+resource lookup/upload or mip composition for that stage.  Only then does it
+restore the stage's final texture/sampler binding.
+
+Without this ordering, a first-time upload for a later stage can overwrite an
+earlier stage's binding.  That produces exactly the dangerous cold/warm pattern
+where a widget is wrong initially but looks different after navigation causes
+resources to become resident.
+
+**Rule:** do not move the Vita `glActiveTexture()` selection after
+`xgpu_texture_get()`/mip preparation, and do not remove it because the GL shadow
+appears to contain the same stage already.
+
+### 5. Xbox blend-factor values are already GL/NV2A-compatible
+
+**FACT**
+
+The clean-room XDK/PDB contract in `xdk_pdb.h` records the blend factors as the
+NV2A/OpenGL enumerant values: for example source alpha is `0x302` and inverse
+source alpha is `0x303`.  The shared renderer therefore passes the verified
+values directly to `glBlendFunc()`.
+
+**Rule:** do not add a second D3D-to-GL blend-factor translation table unless
+the underlying XDK contract itself changes.  A second conversion would alter
+valid alpha behavior rather than fix it.
+
+### 6. Preserve original alpha semantics
 
 **CORROBORATED CONTRACT**
 
-DXT3 and DXT5 carry real alpha information.  UI correctness depends on the
-original blend factors, texture alpha, vertex color/alpha and alpha-kill state
-arriving together at the draw.
+DXT3 and DXT5 carry real alpha information.  `AL8`/AY8-style one-byte data also
+uses the sample as both luminance and alpha in the existing Xbox texture
+conversion path.  UI correctness depends on the original blend factors,
+texture alpha, vertex color/alpha and alpha-kill state arriving together at the
+draw.
 
 **Do not use as a permanent fix:**
 
@@ -98,7 +135,7 @@ arriving together at the draw.
 Those can make one screenshot look cleaner while breaking highlights, text,
 gradients or later HUD/world effects.
 
-### 5. Render scale and UI coordinate space are separate decisions
+### 7. Render scale and UI coordinate space are separate decisions
 
 **CORROBORATED CONTRACT**
 
@@ -211,6 +248,8 @@ original visual contract, then profile and reduce work with measurable toggles.
 - A real ordering defect was found: resource preparation could invalidate GL
   state after the raster state had been considered applied.
 - Current `main` restores the full raster state after resource preparation.
+- Current `main` selects each Vita GL texture unit before a cold upload can
+  modify that stage's binding.
 - Current `main` also processes the virtual-keyboard/menu input timing once per
   frame rather than repeatedly in one frame.
 
@@ -255,8 +294,13 @@ The test intentionally protects only stable, high-value contracts:
 
 - triangle-fan topology;
 - D3D viewport Y transform;
+- Xbox/NV2A-to-GL blend-factor compatibility;
+- per-stage GL texture-unit selection before Vita uploads;
 - resource-before-final-raster ordering on Vita;
 - explicit GL state-shadow invalidation boundary.
+
+The Vita CI workflow runs this regression together with the existing texture,
+menu, input, audio, cache and renderer contract gates.
 
 It does **not** claim that the menu is visually fixed.  Only a Vita hardware
 test can promote that state to `RENDERS` / `STABLE`.
