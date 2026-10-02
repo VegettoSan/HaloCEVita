@@ -1,13 +1,13 @@
 #ifndef HALO_VITA_GRAPHICS_H
 #define HALO_VITA_GRAPHICS_H
-/* Keep Halo's original Xbox/UI 640x480 coordinate space and render it 1:1.
- * Final presentation remains native Vita 960x544 and letterboxed.  Keeping
- * the game target unscaled also removes half-resolution sampling/viewport
- * state from the UI-correctness path while the original menu is stabilized. */
+/* Keep Halo's original Xbox/UI 640x480 coordinate space, but rasterize the
+ * screen-sized targets at half resolution. The D3D8 backend scales viewports,
+ * scissors and clears from the authored 640x480 space into this 320x240 FBO;
+ * final presentation expands that image to the native 960x544 Vita panel. */
 #define HALO_VITA_GAME_WIDTH 640
 #define HALO_VITA_GAME_HEIGHT 480
-#define HALO_VITA_RENDER_WIDTH 640
-#define HALO_VITA_RENDER_HEIGHT 480
+#define HALO_VITA_RENDER_WIDTH 320
+#define HALO_VITA_RENDER_HEIGHT 240
 #define HALO_VITA_DISPLAY_WIDTH 960
 #define HALO_VITA_DISPLAY_HEIGHT 544
 
