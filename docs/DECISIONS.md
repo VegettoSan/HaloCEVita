@@ -255,3 +255,8 @@ A091: use bounded first-frame native queries/storage corner and an offscreen cop
 ## D040 — Original shell return tail inside staged Vita bring-up
 
 A101: profile/keyboard/event updates reach original main_screen_shell_load through history fallback. Under HALO_VITA_MENU_BRINGUP keep original root/close/music/deferred error/profile reset/keyboard owners and omit intro Bink/attract/full platform setup, matching the already initialized staged startup. Other builds retain original startup. Full world main integration must remove this staging boundary when intro/movie/filesystem threading is supported. Native saved-game operations use real metadata/copy semantics, not success stubs.
+
+
+## D041 — Preserve original D3D8 presentation ownership on Vita
+
+A107: D3DDevice_Present already composes Halo's 640x480 target with its aspect-preserving destination and original top-left orientation. Vita's platform_video_swap must only call vglSwapBuffers; its second full-panel blit distorted that finished frame. For the same reason, a cold texture lookup does not own blend state separately after prepare_draw was reordered to apply the entire original raster state after bind_textures. Keep both contracts at those single owner boundaries. This is source-confirmed geometry/state ownership, not proof that white panels or full UI behavior are fixed on hardware.
