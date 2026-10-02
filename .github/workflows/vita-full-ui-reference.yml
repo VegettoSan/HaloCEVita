@@ -1,0 +1,71 @@
+name: Vita Full UI Reference
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/vita-full-ui-reference.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reference-vpk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container:
+      image: vitasdk/vitasdk:2026.08
+    steps:
+      - name: Install donor compiler
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends clang lld
+          clang --version
+
+      - name: Check out pinned public source
+        uses: actions/checkout@v4
+        with:
+          repository: BirchWoodGod/halo-ce-vita
+          ref: b9409394c0816af72cec477cc7d3a4a7a855d06a
+          path: donor
+          persist-credentials: false
+
+      - name: Build native GXM reference VPK
+        working-directory: donor
+        run: |
+          test "$(git rev-parse HEAD)" = b9409394c0816af72cec477cc7d3a4a7a855d06a
+          python3 configure.py --lto off --pgo off --portable --release
+          ninja vita
+
+      - name: Verify package and record source provenance
+        run: |
+          python3 - <<'PY'
+          import hashlib, json, pathlib, zipfile
+          path = pathlib.Path('donor/build/vita/halo.vpk')
+          with zipfile.ZipFile(path) as archive:
+              names = set(archive.namelist())
+              assert {'eboot.bin', 'sce_sys/param.sfo'} <= names
+              assert not any(name.startswith('maps/') or name.endswith('.map') for name in names)
+              assert b'HCEV00001' in archive.read('sce_sys/param.sfo')
+          metadata = {
+              'source': 'BirchWoodGod/halo-ce-vita',
+              'commit': 'b9409394c0816af72cec477cc7d3a4a7a855d06a',
+              'license': 'GPL-3.0; see the pinned source and donor/LICENSE',
+              'backend': 'native GXM (separate from HaloCEVita vitaGL)',
+              'vpk_sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
+          }
+          pathlib.Path('donor/build/vita/source.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          print(json.dumps(metadata, indent=2))
+          PY
+
+      - name: Upload full UI reference package
+        uses: actions/upload-artifact@v4
+        with:
+          name: HaloCEVita-full-ui-reference-${{ github.sha }}
+          path: |
+            donor/build/vita/halo.vpk
+            donor/build/vita/source.json
+            donor/LICENSE
+          if-no-files-found: error
+          retention-days: 14
