@@ -41,6 +41,7 @@ jobs:
           python3 configure.py --lto off --pgo off --portable --release
           # The SDK has no libatomic.a. The bridge supplies exactly the two
           # relaxed 16-bit halfword operations the donor game code requests.
+          mkdir -p build/vita
           arm-vita-eabi-gcc -mcpu=cortex-a9 -mthumb -O2 -c \
             ../tools/vita_atomic_16.c -o build/vita/atomic_halfword.o
           python3 - <<'PY'
