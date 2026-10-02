@@ -153,13 +153,6 @@ unsigned long xgpu_texture_level_pitch(const struct xgpu_texture_description *de
 from guest memory as needed; *target receives GL_TEXTURE_2D etc. */
 GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *target,
 	struct xgpu_texture_description *description);
-#ifdef HALO_VITA
-/* d3d8_gl.c routes texture lookup through this narrow Vita bridge so an
- * upload that invalidates GL state cannot leave the original draw's alpha
- * blend state undefined before the draw is submitted. */
-GLuint halo_vita_xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *target,
-	struct xgpu_texture_description *description);
-#endif
 void xgpu_texture_cache_begin_frame(void);
 
 /* ---------- render targets */
