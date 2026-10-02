@@ -12,6 +12,7 @@ RENDERER = ROOT / "port/linux/src/d3d8_gl.c"
 XGPU = ROOT / "port/linux/src/xgpu.h"
 XDK_PDB = ROOT / "port/include/xdk/xdk_pdb.h"
 VITA_GRAPHICS = ROOT / "port/vita/include/halo_vita_graphics.h"
+VITA_PRESENT = ROOT / "port/vita/src/vita_graphics.c"
 VITA_GL = ROOT / "port/vita/include/halo_vita_gl.h"
 VITA_GL_COMPAT = ROOT / "port/vita/src/vita_gl_compat.c"
 
@@ -25,13 +26,14 @@ renderer = RENDERER.read_text(encoding="utf-8")
 xgpu = XGPU.read_text(encoding="utf-8")
 xdk_pdb = XDK_PDB.read_text(encoding="utf-8")
 vita_graphics = VITA_GRAPHICS.read_text(encoding="utf-8")
+vita_present = VITA_PRESENT.read_text(encoding="utf-8")
 vita_gl = VITA_GL.read_text(encoding="utf-8")
 vita_gl_compat = VITA_GL_COMPAT.read_text(encoding="utf-8")
 
 # This comparison build keeps both Halo's original Xbox 640x480 author space
 # and the Vita screen-sized render target at 640x480. The final presentation
-# still stretches that completed target to the native panel; widget/tag
-# coordinates remain untouched by the resolution policy.
+# uses the original D3D8 aspect-preserving blit; widget/tag coordinates
+# remain untouched by the resolution policy.
 for declaration in (
     "#define HALO_VITA_GAME_WIDTH 640",
     "#define HALO_VITA_GAME_HEIGHT 480",
@@ -46,6 +48,16 @@ require("(float)HALO_VITA_RENDER_WIDTH / (float)HALO_VITA_GAME_WIDTH" in rendere
         "Vita X scaling must remain isolated at the render-target boundary")
 require("(float)HALO_VITA_RENDER_HEIGHT / (float)SCREEN_HEIGHT" in renderer,
         "Vita Y scaling must remain isolated at the render-target boundary")
+
+# The D3D8 backend has already letterboxed its finished 640x480 frame into
+# the native framebuffer when the Vita platform hook is called. Re-blitting
+# from the source target here distorts the completed image to 960x544.
+present = vita_present.split("void platform_video_swap(void)", 1)[1].split(
+    "int halo_vita_texture_transfer_finish(void)", 1)[0]
+require("glBlitFramebuffer(" in renderer.split("void WINAPI D3DDevice_Present(", 1)[1],
+        "original D3D8 presentation blit must remain active")
+require("vglSwapBuffers(GL_FALSE);" in present and "glBlitFramebuffer(" not in present,
+        "Vita swap must not stretch an already presented Halo frame")
 
 # UI widgets from the retail cache legitimately submit triangle fans. Losing
 # this mapping silently turns four-vertex widget quads into the wrong topology.
