@@ -27,11 +27,23 @@ void platform_video_swap(void)
 {
 	GLenum error;
 	static int first_present;
+	/* D3D8_Present leaves Halo's back-buffer FBO bound for reading and the
+	 * native vitaGL framebuffer bound for drawing. The generic GL backend first
+	 * performs its aspect-preserving letterbox blit. Override only that final
+	 * presentation policy on Vita: expand the 320x240 internal target over the
+	 * whole 960x544 panel, exactly as requested, while keeping Halo's authored
+	 * 640x480 coordinates untouched inside the renderer. Destination Y is
+	 * reversed for the same top-left D3D convention used by D3DDevice_Present. */
+	glDisable(GL_SCISSOR_TEST);
+	glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+	glBlitFramebuffer(0, 0, HALO_VITA_RENDER_WIDTH, HALO_VITA_RENDER_HEIGHT,
+		0, HALO_VITA_DISPLAY_HEIGHT, HALO_VITA_DISPLAY_WIDTH, 0,
+		GL_COLOR_BUFFER_BIT, GL_LINEAR);
 	vglSwapBuffers(GL_FALSE);
 	error = glGetError();
 	if (!first_present || error != GL_NO_ERROR) {
 		first_present = 1;
-		vita_log("[VITA PRESENT] original D3D8 frame submitted gl_error=%x", error);
+		vita_log("[VITA PRESENT] 320x240 Halo target stretched to 960x544 gl_error=%x", error);
 	}
 	if (error != GL_NO_ERROR)
 		vita_fatal("D3D8 present failed during Vita frame swap");
@@ -86,7 +98,7 @@ int vita_graphics_initialize(void)
 	}
 	vita_log("GL vendor=%s renderer=%s version=%s GLSL=%s", glGetString(GL_VENDOR),
 		glGetString(GL_RENDERER), version, glGetString(GL_SHADING_LANGUAGE_VERSION));
-	vita_log("Vita render policy: game=%dx%d internal=%dx%d display=%dx%d; original aspect/letterbox",
+	vita_log("Vita render policy: game=%dx%d internal=%dx%d display=%dx%d; full-panel stretch",
 		HALO_VITA_GAME_WIDTH, HALO_VITA_GAME_HEIGHT,
 		HALO_VITA_RENDER_WIDTH, HALO_VITA_RENDER_HEIGHT,
 		HALO_VITA_DISPLAY_WIDTH, HALO_VITA_DISPLAY_HEIGHT);
