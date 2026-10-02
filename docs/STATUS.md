@@ -1,6 +1,13 @@
 # Project status
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
+
+2026-10-02 A104–A105: Native Y/Triangle reaches the original menu/keyboard
+action bridge; actual shell/input host contracts PASS, Vita Build192 is the
+native acceptance gate. A separate pinned BirchWoodGod v1.0 GXM reference
+build is queued for full-UI comparison. It is not the HaloCEVita vitaGL
+renderer and does not establish this repository's full menu or scenario.
+See `FULL_UI_REFERENCE.md`. Real-Vita tests of the current source remain pending.
 
 Source00.32 shell integration (A097–A102): original profiles, generic event effects, keyboard queue and per-frame completion connected. Required native Vita Build174/run36940875373 on75d5893b64e1797051572d518918726fca39cece now PASS, including the profile filesystem/retail editor/shell return dependencies that failed Build173 (A101). Host relocation/input/effects/shell/storage contracts PASS. Standing GitHub/main authorization is recorded in AGENTS.md; exact-tree fast-forward publication and local synchronization completed. Start confirms keyboard; Select exits staged build. All-window/hardware acceptance remains unverified.
 

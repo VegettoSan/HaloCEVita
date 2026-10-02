@@ -1162,3 +1162,33 @@ New user photos show oversized/misplaced bitmaps, missing/incorrect text, and wh
 Source inspection: prepare_draw applies raster state before resource upload/mip composition, which invalidates the GL shadow; the texture bridge only restores blending. Vita now applies the complete original raster contract after bind_textures. Other platforms retain their order. No authored opacity, pixel data or shader arithmetic changes. Also fix A091's actual caller to accept original four-vertex TRIANGLEFAN bitmap draws; the QUADLIST-only condition never emitted VITA UI GPU markers in this log.00.33 is the next package version. Neither change alone proves the hardware white cause resolved.
 
 Validation: actual UI alpha-probe contract plus compiled actual caller predicate (fan/quads and excluded frame/count/mode/texture cases); renderer contract regression. Native CI/hardware acceptance remains pending. The geometry and keyboard painter-order defects found during this review are handled in the next focused change.
+
+## 2026-10-02 — A104 — Complete authored button coverage for staged menu/keyboard
+
+Inspection: Vita's `vita_read_gamepad` already sets `analog[3]` on Triangle,
+but staged `main.c` never forwarded it. The original UI action switch also
+lacked Y. Preserve the existing Xbox button index and original keyboard/event
+owners; deliver Triangle as action 11 / `_gamepad_analog_button_y` on a rising
+edge, without a new synthetic menu behavior. Host actual shell and focus/input
+regressions PASS under ASan/UBSan; `git diff --check` PASS. Source published
+on main as `d3a3e23e671c307a954b8329c45cd9983e9a0651` with exact local
+tree identity. Vita Build192 and hardware acceptance are pending. This does
+not make all original widget handlers or the full main loop available.
+
+## 2026-10-02 — A105 — Pinned complete-loop GXM reference build
+
+Hypothesis: the independent native BirchWoodGod port at release v1.0 can
+provide a functioning full-UI comparison VPK while our vitaGL shell is being
+completed. Their public README/release report campaign/menu behavior; our
+hardware has not independently verified it. Their renderer uses GXM directly,
+so this experiment cannot validate our texture/alpha/geometry fixes.
+
+Change: added an isolated CI workflow that checks out donor source commit
+`b9409394c0816af72cec477cc7d3a4a7a855d06a`, builds it using VitaSDK
+2026.08 and Clang with `--lto off --pgo off --portable --release`, validates
+the package has no map and the original title ID, then retains its GPL-3.0
+license and source provenance beside the VPK. No donor code or retail bytes
+are copied into this source tree. Published workflow commit `68aa25e`.
+Reference CI run and a real-Vita test are pending; do not call it our port.
+The exact provided `ui.map` SHA-256 remains
+`35e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833`.
