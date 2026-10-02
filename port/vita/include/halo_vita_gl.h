@@ -21,4 +21,15 @@
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
 #endif
 
+#ifdef HALO_VITA
+/* Xbox cache DXT blocks and the Vita GPU's compressed texture layout do not
+ * share a portable storage contract. DXT3/DXT5 are already decoded by the
+ * shared texture path; route the remaining compressed call (DXT1) through a
+ * checked CPU decode so vitaGL always receives ordinary BGRA texels. */
+void halo_vita_glCompressedTexImage2D(GLenum target, GLint level,
+	GLenum internal_format, GLsizei width, GLsizei height, GLint border,
+	GLsizei image_size, const GLvoid *data);
+#define glCompressedTexImage2D halo_vita_glCompressedTexImage2D
+#endif
+
 #endif
