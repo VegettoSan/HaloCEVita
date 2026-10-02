@@ -19,13 +19,11 @@
  * unit.  The real functions remain untouched for the future gameplay closure.
  *
  * January's game-data callback table is different from the event-handler
- * table: all 41 original game-data functions are already emitted and linked
- * by ui_widget_game_data_input_functions.c.  The old Vita dispatcher still
- * imposed a partial hand-written whitelist, which made authored ui.map widgets
- * fatal merely for requesting an existing callback (hardware reached index 40,
- * dim_if_no_system_link_cable).  Redirect only ui_widget.c's call site through
- * a checked Vita bridge so authored UI data can use the complete original
- * table without widening the separate event/world closure.
+ * table. Keep the existing staged Vita dispatcher for callbacks whose owners
+ * are already in the shell closure, but intercept the hardware-observed index
+ * 40 so Halo can run its original dim_if_no_system_link_cable() logic against
+ * the Vita platform's truthful transport capability. Do not reference the
+ * whole callback table here: doing so retains unrelated network/HUD sections.
  */
 void halo_vita_menu_deferred_main_menu_ensure_player_queues_exist(void);
 void halo_vita_menu_deferred_game_time_dispose_from_old_map(void);
@@ -51,17 +49,17 @@ void halo_vita_ui_game_data_function_invoke(
     struct widget_instance *widget,
     word function)
 {
-    if (widget && (short)function >= 0 &&
-        function < NUMBEROF(game_data_input_function_list))
+    if (function == 40)
     {
-        vita_log("[VITA UI DATA] original function index=%u", (unsigned int)function);
-        game_data_input_function_list[(short)function](widget);
+        vita_log("[VITA UI DATA] original function index=40 dim_if_no_system_link_cable");
+        dim_if_no_system_link_cable(widget);
         return;
     }
 
-    vita_log("MAIN MENU BLOCKED: invalid original game-data function index=%u widget=%p",
-        (unsigned int)function, (void *)widget);
-    vita_fatal("invalid original UI game-data handler on Vita");
+    /* Preserve the already validated Vita shell whitelist for every other
+     * callback. Expanding one callback at a time keeps linker dependencies
+     * explicit instead of dragging dormant networking/world code into ui.map. */
+    ui_widget_game_data_function_invoke(widget, function);
 }
 
 static void halo_vita_log_deferred_world_resume(char const *operation)
