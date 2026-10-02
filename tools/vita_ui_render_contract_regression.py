@@ -111,6 +111,24 @@ require("glTexImage2D(target, level, GL_RGBA8" in vita_gl_compat and
         "GL_BGRA, GL_UNSIGNED_BYTE, pixels" in vita_gl_compat,
         "DXT1 must be decoded to ordinary BGRA before vitaGL sampling")
 
+# The current NV2A fragment translator never reads the legacy B0/B1 vertex
+# outputs. Vita has a tight varying budget, so the compiler boundary removes
+# only the exact generated xB declarations/assignments while leaving the NV2A
+# oB0/oB1 register arithmetic intact. This keeps the active interface at
+# D0/D1 + T0..T3 + Fog instead of spending two vectors on dead data.
+require("#define glShaderSource halo_vita_glShaderSource" in vita_gl,
+        "Vita generated shaders must pass through the varying compaction boundary")
+for exact_line in (
+    '"varying vec4 xB0;\\n"',
+    '"varying vec4 xB1;\\n"',
+    '"\\txB0 = clamp(oB0, 0.0, 1.0);\\n"',
+    '"\\txB1 = clamp(oB1, 0.0, 1.0);\\n"',
+):
+    require(exact_line in vita_gl_compat,
+            f"Vita dead-varying compaction lost exact source contract: {exact_line}")
+require("fragment interface is D0/D1 + T0..T3 + Fog" in vita_gl_compat,
+        "Vita dead-varying compaction must remain observable in hardware logs")
+
 # Vita resource uploads can mutate GL bindings/state behind the device's state
 # cache. On Vita, the full raster contract must be applied after textures have
 # been resolved/uploaded, immediately before the draw state is consumed.
@@ -133,5 +151,5 @@ require("code that\nchanges GL state behind it" in xgpu,
 
 print("PASS: Vita UI renderer contracts: 640x480 game target, fan topology, "
       "viewport transform, Xbox/GL blend enums, texture-stage selection, "
-      "DXT1-to-BGRA boundary, post-resource raster restore and GL shadow "
-      "invalidation")
+      "DXT1-to-BGRA boundary, compact NV2A varyings, post-resource raster "
+      "restore and GL shadow invalidation")
