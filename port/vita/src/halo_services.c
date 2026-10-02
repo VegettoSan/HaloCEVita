@@ -25,6 +25,24 @@ boolean input_has_gamepad(short index)
     return index == 0 && vita_read_gamepad(&sample);
 }
 
+/* ui.map asks Halo's original game-data callbacks whether an Xbox-style
+ * system-link transport exists.  HaloCEVita does not yet initialize the
+ * networking transport, so expose that real platform capability as false.
+ * This is intentionally not a fake-success networking stub: the original UI
+ * uses this answer to dim/disable system-link affordances while the offline
+ * Main Menu, profiles, settings and Campaign remain usable.  When the native
+ * transport is implemented this owner must move to that subsystem. */
+boolean transport_network_available(void)
+{
+    static int logged;
+    if (!logged)
+    {
+        logged = 1;
+        vita_log("[VITA NETWORK] system-link transport unavailable; original UI will keep network-only affordances disabled");
+    }
+    return FALSE;
+}
+
 unsigned long system_milliseconds(void) { return (unsigned long)(vita_time_us() / 1000u); }
 void *system_malloc(long size) { return size > 0 ? malloc((size_t)size) : NULL; }
 void *system_realloc(void *pointer, long size)
