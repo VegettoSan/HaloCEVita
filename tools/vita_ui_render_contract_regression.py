@@ -28,15 +28,15 @@ vita_graphics = VITA_GRAPHICS.read_text(encoding="utf-8")
 vita_gl = VITA_GL.read_text(encoding="utf-8")
 vita_gl_compat = VITA_GL_COMPAT.read_text(encoding="utf-8")
 
-# Halo keeps the original Xbox 640x480 author coordinate space, while Vita
-# intentionally rasterizes screen-sized targets at half resolution (320x240).
-# The final presentation stretches that completed target to the native panel;
-# widget/tag coordinates therefore remain untouched by the resolution policy.
+# This comparison build keeps both Halo's original Xbox 640x480 author space
+# and the Vita screen-sized render target at 640x480. The final presentation
+# still stretches that completed target to the native panel; widget/tag
+# coordinates remain untouched by the resolution policy.
 for declaration in (
     "#define HALO_VITA_GAME_WIDTH 640",
     "#define HALO_VITA_GAME_HEIGHT 480",
-    "#define HALO_VITA_RENDER_WIDTH 320",
-    "#define HALO_VITA_RENDER_HEIGHT 240",
+    "#define HALO_VITA_RENDER_WIDTH 640",
+    "#define HALO_VITA_RENDER_HEIGHT 480",
 ):
     require(declaration in vita_graphics,
             f"Vita logical/internal render contract changed: {declaration}")
@@ -150,7 +150,7 @@ require("void xgpu_gl_state_invalidate(void);" in xgpu,
 require("code that\nchanges GL state behind it" in xgpu,
         "xgpu invalidation contract must remain documented")
 
-print("PASS: Vita UI renderer contracts: 640x480 author space into 320x240 target, "
+print("PASS: Vita UI renderer contracts: 640x480 author space into 640x480 target, "
       "fan topology, viewport transform, Xbox/GL blend enums, texture-stage "
       "selection, DXT1-to-BGRA boundary, compact NV2A varyings, post-resource "
       "raster restore and GL shadow invalidation")
