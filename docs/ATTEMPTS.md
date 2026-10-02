@@ -1192,3 +1192,16 @@ are copied into this source tree. Published workflow commit `68aa25e`.
 Reference CI run and a real-Vita test are pending; do not call it our port.
 The exact provided `ui.map` SHA-256 remains
 `35e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833`.
+
+
+## 2026-10-02 — A106 — Renderer source audit and native 00.33 comparison package
+
+**Goal:** identify a source-level cause of cold white UI panels/misplaced widgets without changing retail map data or substituting another port's executable.
+
+**References inspected:** current main ae3bf0d570eddd9ae38e7cb96408448dcb18b87b; cybersecurity/halo-ce-universal native D3D8/GL and texture decoder; BirchWoodGod/halo-ce-vita main 309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2 GXM renderer/texture backend; vitaGL texture upload implementation; provided ui.map remains read-only.
+
+**Findings:** BirchWoodGod renders through its own d3d8_gxm.c/vita_textures.c and native GXM pipeline. Its VPK or renderer cannot validate or replace our d3d8_gl.c -> vitaGL conversion. The upstream UI draw path retains authored 640x480 geometry, and current main uses a 640x480 logical and render target with a presentation letterbox. The Vita texture bridge decodes DXT1/3/5 into ordinary BGRA; the vitaGL GL_BGRA internal format/GL_BGRA unsigned-byte path is source-confirmed as a direct U8U8U8U8_ARGB upload. This audit does not establish the cause of the white rectangles or prove alpha, ordering or positioning on hardware.
+
+**Full UI lifecycle limit:** HALO_VITA_MENU_UPDATE_PROBE is OFF in the normal package. The optional original process_ui_widgets link probe in Vita Build209 fails with 131 distinct missing symbols spanning world, map loading, network and HUD owners. The staged original-widget shell frame runs, but this is not full ui.map/main-loop execution. Do not make it link with fake-success stubs or package the donor GXM executable.
+
+**Build evidence:** Vita Build209 on ae3bf0d succeeded for the native menu renderer, host menu/audio contracts, package verifier and pre-release. Its optional full original UI/world closure failed as above. Artifact ZIP SHA-256 3e8bc272f0a0633223f7d9c6beb3be6c6dce7f680562ef065279605b7b17d557; VPK 1678071 bytes SHA-256 31cdbc91ad530d07976ab1f2d9d8df9f7c7ada7def1920b9ac7a928ba170c83d, containing eboot.bin and sce_sys only. Release vita-build-209. No new source patch in this audit; no hardware result for 00.33. The user's white panel/coordinate complaint remains open. The next acceptance evidence is first cold Main Menu, repeated D-pad/keyboard frames and debug.txt from this exact package. Only then choose a concrete renderer-boundary change.
