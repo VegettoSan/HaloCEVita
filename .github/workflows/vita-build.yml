@@ -113,7 +113,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Configure full original per-frame UI update probe
-        run: cmake -S port/vita -B build/vita-full-ui-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON
+        run: cmake -S port/vita -B build/vita-full-ui-probe -G Ninja -DHALO_VITA_MENU_RENDER_PROBE=ON -DHALO_VITA_MENU_UPDATE_PROBE=ON -DHALO_VITA_ORIGINAL_RUNTIME=ON
       - name: Link full original UI/world dependency closure
         id: full_ui_link
         shell: bash
@@ -130,3 +130,14 @@ jobs:
             build/vita-full-ui-probe/HaloCE.elf.map
           if-no-files-found: warn
           retention-days: 14
+
+      - name: Retain exact native dependency sysroot for local closure builds
+        if: always()
+        run: tar -czf build/vita-full-ui-probe/native-sysroot.tar.gz -C /usr/local/vitasdk arm-vita-eabi/include arm-vita-eabi/lib
+      - name: Upload native dependency sysroot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-dependencies-${{ github.sha }}
+          path: build/vita-full-ui-probe/native-sysroot.tar.gz
+          retention-days: 2

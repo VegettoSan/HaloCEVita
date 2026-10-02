@@ -6,6 +6,7 @@ set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPA
 project(HaloCEVita C)
 set(VITA_APP_VERSION "00.35")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
+option(HALO_VITA_ORIGINAL_RUNTIME "Integrate original UI/world source closure" OFF)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
 option(HALO_VITA_MENU_RENDER_PROBE "Link original render_ui_widgets closure and rasterizer" ON)
 option(HALO_VITA_MENU_AUDIO "Link original menu sound manager/cache and SDL mixer" ON)
@@ -124,6 +125,29 @@ if(HALO_VITA_MENU_RENDER_PROBE)
     ${ROOT}/source/game/player_control.c
     ${ROOT}/source/bitmaps/bitmap_utilities.c)
 endif()
+# Reintegrate the configured decomp units instead of synthesizing missing
+# UI/world owners. The existing narrow target is retained as a recovery build
+# while this original dependency closure is compiled and linked.
+if(HALO_VITA_ORIGINAL_RUNTIME)
+  file(READ "${ROOT}/config/config.json" ORIGINAL_CONFIG)
+  string(JSON ORIGINAL_COUNT LENGTH "${ORIGINAL_CONFIG}" projects 0 objects)
+  math(EXPR ORIGINAL_LAST "${ORIGINAL_COUNT}-1")
+  get_target_property(EXISTING_CORE_SOURCES halo_core SOURCES)
+  foreach(I RANGE 0 ${ORIGINAL_LAST})
+    string(JSON ORIGINAL_SOURCE GET "${ORIGINAL_CONFIG}" projects 0 objects ${I} name)
+    string(JSON ORIGINAL_STATUS GET "${ORIGINAL_CONFIG}" projects 0 objects ${I} status)
+    if(ORIGINAL_SOURCE MATCHES "\\.c$" AND NOT ORIGINAL_STATUS STREQUAL "MISSING"
+        AND NOT ORIGINAL_SOURCE MATCHES "source/interface/(ui_widget|event_manager|ui_widget_event_handler_functions)\\.c$")
+      if(NOT "${ROOT}/${ORIGINAL_SOURCE}" IN_LIST EXISTING_CORE_SOURCES)
+        target_sources(halo_core PRIVATE "${ROOT}/${ORIGINAL_SOURCE}")
+      endif()
+    endif()
+  endforeach()
+  target_compile_definitions(halo_core PRIVATE HALO_VITA_ORIGINAL_RUNTIME=1)
+  set_source_files_properties(${ROOT}/source/shell/shell_xbox.c
+    PROPERTIES COMPILE_DEFINITIONS main=halo_original_main)
+endif()
+
 if(HALO_VITA_MENU_AUDIO)
   target_sources(halo_core PRIVATE
     src/halo_menu_audio.c src/halo_menu_audio_guard.c
