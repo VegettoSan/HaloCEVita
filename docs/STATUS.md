@@ -2,12 +2,12 @@
 
 Last updated: 2026-10-02
 
-2026-10-02 A104–A105: Native Y/Triangle reaches the original menu/keyboard
-action bridge; actual shell/input host contracts PASS, Vita Build192 is the
-native acceptance gate. A separate pinned BirchWoodGod v1.0 GXM reference
-build is queued for full-UI comparison. It is not the HaloCEVita vitaGL
-renderer and does not establish this repository's full menu or scenario.
-See `FULL_UI_REFERENCE.md`. Real-Vita tests of the current source remain pending.
+2026-10-02 scope correction: removed the external BirchWoodGod full-UI reference
+workflow and its donor-only atomic bridge. HaloCEVita build outputs remain this
+repository's native ARM32 vitaGL port only. External Halo Vita projects may be
+inspected for code, behavior and implementation ideas, but their VPK/eboot or
+GXM backend must not be packaged or presented as HaloCEVita. Real-Vita tests
+of the current source remain pending.
 
 Source00.32 shell integration (A097–A102): original profiles, generic event effects, keyboard queue and per-frame completion connected. Required native Vita Build174/run36940875373 on75d5893b64e1797051572d518918726fca39cece now PASS, including the profile filesystem/retail editor/shell return dependencies that failed Build173 (A101). Host relocation/input/effects/shell/storage contracts PASS. Standing GitHub/main authorization is recorded in AGENTS.md; exact-tree fast-forward publication and local synchronization completed. Start confirms keyboard; Select exits staged build. All-window/hardware acceptance remains unverified.
 
@@ -42,10 +42,9 @@ Historical demonstrated state: **DIAGNOSTIC RENDERS** (diagnostic + synthetic NV
 Historical menu-root package **00.11: BOOTS** (A031) first confirmed original root creation and handlers86/23. New00.18 evidence A049 confirms that root again after original shell/decal owners, then reaches first-frame/window initialization and fails at depth allocation. A058 now reaches original draw; visible output remains unverified. [Original call graph](MAIN_MENU_CALL_GRAPH.md).
 
 Historical source package **00.13: LINKS** (A034). Vita CI built and linked 00.13, retained the VPK/ELF/map artifact, and the 00.12 splash handoff remains in source; a real-Vita log is required before a BOOTS claim. The 00.12 user reports the vitaGL logo remains, with no matching console log supplied. In source, the root-creation path still does not call original UI render/D3D8 present, so a visible Main Menu is blocked independently of cache pixel reads. No retail bitmap request or GL texture upload has been observed on hardware. The isolated original UI renderer probe (A035) compiles its original UI/render units but still has 42 unique unresolved link symbols after the Vita-only observed game-data callback selection; it is not enabled in the VPK.\n\nHardware-tested **00.10: BOOTS** (A027–A029). The inspectable full-run log is `docs/runtime/2026-09-29-00.10-start-exit-debug.txt`, SHA-256 `5d6bd171081e24bead791401d48db2711581658473345ca5fe7a98e011e51a15` (A029): 024, Cross remount, two 023/020 teardowns and Start clean exit. A028's separate partial rerun is also retained; the original A027 log was read/hashed but deleted before archival. Preserved VPK SHA-256 `82822ae873908bf82fee45a464d6b116481a8cb2cad8f59da8c5751c98f29686`; package association uses the version banner/latest delivered artifact, without a device-side digest.
-
 Hardware-tested **00.09: BOOTS** (A024). The real Vita log SHA-256 `ea86ea8e183e919c69e8d936f28bfbce866433d108060f6aa997aedd64d032f3` confirms 023 widget-pool free before both Cross recheck and Start unmount, 020 CRC `e22586e4` restoration twice, 021 remount and 022 reinitialization, and clean exit at 43.050s. The user reports no new `heap_dump.txt`; original `debug_dump_memory_for_file` opens it only when a guarded allocation remains, and 00.08 proved this path wrote the prior dump. This supports resolution of the observed 16 KiB leak for this run, not repeated-run STABLE.
 
-Hardware-tested **00.08: BOOTS** (A022). User log SHA-256 `11481d1e15adba4c6bdf4a285e42386af2412168d26dc7fd6134fde3eeb22847` confirms 021 persistent mount and 022 original widget globals/pool, two full UI reads after Cross, both CRC `e22586e4` restorations, and Start clean exit. Heap dump SHA-256 `da8d81d57f7d93dabacdbbfcc3cb9fe2abcd6bf301917b97810f2847f048e4f6` identifies one 16,384-byte allocation at original `ui_widget.c:117` left allocated at exit. No root widget, original render or gameplay was entered.
+Hardware-tested **00.08: BOOTS** (A022). User log SHA-256 `11481d1e15adba4c6bdf4a285e42386af2412168d26dc7fd6134fde3eeb22847` confirms 021 persistent mount and original widget globals/pool, two full UI reads after Cross, both CRC `e22586e4` restorations, and Start clean exit. Heap dump SHA-256 `da8d81d57f7d93dabacdbbfcc3cb9fe2abcd6bf301917b97810f2847f048e4f6` identifies one 16,384-byte allocation at original `ui_widget.c:117` left allocated at exit. No root widget, original render or gameplay was entered.
 
 Hardware-tested **00.07: BOOTS** (A020). User-supplied log SHA-256 `fb0f77a2553e6da501bdf768d765d352195f0b8143f90cb967aeb4b8f3f4c321` confirms native typed relocation017 (3362 pointers), actual Main Menu tag018 (datum `e285010f`, 9 reachable widgets), original bitmap/Unicode/font accessors019 (195/122/4), rollback020 (CRC `e22586e4`), and clean exit. No widget runtime or GPU resource activation occurred in that run.
 
