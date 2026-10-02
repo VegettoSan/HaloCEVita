@@ -12,7 +12,7 @@
  * switch so the staged shipping shell remains on its narrower verified path
  * until the full dependency closure is proven on Vita. */
 void process_ui_widgets(void);
-static int halo_vita_menu_update_checkpoint(void)
+int halo_vita_menu_update_checkpoint(void)
 {
 	vita_log("[VITA UI UPDATE] original process_ui_widgets begin");
 	process_ui_widgets();
