@@ -77,8 +77,8 @@ int main(void) {
  for(int i=0;i<10;i++) {
   assert(halo_vita_ui_process_menu_action(actions[i]));assert(posted_index==buttons[i]);
  }
- assert(posts==10&&processed==10&&flushed==10&&!moves&&!dispatches);
- halo_vita_ui_process_shell_frame();assert(processed==11&&!updates);
+ assert(posts==10&&processed==0&&flushed==0&&!moves&&!dispatches);
+ halo_vita_ui_process_shell_frame();assert(processed==1&&flushed==1&&!updates);
  keyboard=0;
  for(int i=0;i<10;i++) {
   assert(halo_vita_ui_process_menu_action(actions[i]));assert(dispatched_index==buttons[i]);
@@ -90,7 +90,7 @@ int main(void) {
  assert(widget_globals.active_widgets[0]==&restored&&!widget_globals.widget_stack[0]);
  we_are_at_the_main_menu=0;halo_vita_ui_process_shell_frame();assert(updates==2);
  assert(!halo_vita_ui_process_menu_action(1));
- puts("PASS actual Vita shell: ten keyboard inputs, keyboard exclusivity, original null update and history/focus restoration");
+ puts("PASS actual Vita shell: keyboard input queues before one frame update, keyboard exclusivity, original null update and history/focus restoration");
 }
 '''
 with tempfile.TemporaryDirectory(prefix='halo-vita-shell-') as temporary:
