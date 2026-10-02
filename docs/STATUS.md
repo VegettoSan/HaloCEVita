@@ -2,6 +2,14 @@
 
 Last updated: 2026-10-02
 
+Source00.34 comparison (A107): native Vita presentation now swaps the original
+D3D8 aspect-preserving blit once. Removed its obsolete second full-panel blit
+and the redundant blend-only texture lookup wrapper; original raster state is
+applied after resource binding. The original 640x480 UI/map data is unchanged.
+Vita Build216 and first real-console cold/warm UI evidence are pending; this is
+not a verified fix for white panels or complete ui.map execution. The optional
+full original UI/world closure still has unresolved dependencies (A106).
+
 2026-10-02 scope correction: removed the external BirchWoodGod full-UI reference
 workflow and its donor-only atomic bridge. HaloCEVita build outputs remain this
 repository's native ARM32 vitaGL port only. External Halo Vita projects may be
