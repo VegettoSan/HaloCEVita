@@ -52,6 +52,9 @@ jobs:
                      if line.startswith('build build/vita/halo.elf: vita_link ')]
           assert len(matches) == 1
           i = matches[0]
+          while lines[i].rstrip().endswith('$'):
+              i += 1
+          assert lines[i].strip().endswith('port/linux/src/posix_files.o')
           lines[i] = lines[i].rstrip('\n') + ' build/vita/atomic_halfword.o\n'
           path.write_text(''.join(lines))
           PY
