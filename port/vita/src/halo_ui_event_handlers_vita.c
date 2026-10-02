@@ -8,8 +8,11 @@
  * does not recreate menu behavior.
  *
  * System Link availability is reported truthfully by the Vita platform layer.
- * The split-screen entry path is allowed to prove exactly which original local
- * network-game owners are required; socket/system-link handlers stay blocked.
+ * Local player-join/list cleanup may run in the shell, but the original
+ * split-screen session-creation handler (21) stays behind the network/world
+ * boundary: retaining it pulls network_game_client/server creation and then
+ * the broader world/main closure. Enable it only when those original owners
+ * are integrated rather than replacing them with success stubs.
  */
 #define ui_widget_event_handler_function_invoke halo_vita_staged_event_handler_function_invoke
 #include "../../../source/interface/ui_widget_event_handler_functions.c"
@@ -41,10 +44,6 @@ boolean ui_widget_event_handler_function_invoke(
     case 18:
         vita_log("[VITA UI HANDLER] original function index=18 dispose server list");
         result = network_server_list_dispose(widget, event, widget_deleted);
-        break;
-    case 21:
-        vita_log("[VITA UI HANDLER] original function index=21 initialize split-screen local game");
-        result = split_screen_game_initialize(widget, event, widget_deleted);
         break;
     case 73:
         vita_log("[VITA UI HANDLER] original function index=73 main menu switch to solo game");
