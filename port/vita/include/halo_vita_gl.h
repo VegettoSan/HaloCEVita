@@ -22,6 +22,14 @@
 #endif
 
 #ifdef HALO_VITA
+/* The translated pixel path never consumes NV2A back-color outputs oB0/oB1.
+ * Strip only those exact generated varyings before ShaccCg sees the source,
+ * preserving the original register computation while keeping the linked Vita
+ * interface inside its tight varying budget. */
+void halo_vita_glShaderSource(GLuint shader, GLsizei count,
+	const GLchar *const *strings, const GLint *lengths);
+#define glShaderSource halo_vita_glShaderSource
+
 /* Xbox cache DXT blocks and the Vita GPU's compressed texture layout do not
  * share a portable storage contract. DXT3/DXT5 are already decoded by the
  * shared texture path; route the remaining compressed call (DXT1) through a
