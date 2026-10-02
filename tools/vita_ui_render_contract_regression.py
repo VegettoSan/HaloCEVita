@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RENDERER = ROOT / "port/linux/src/d3d8_gl.c"
 XGPU = ROOT / "port/linux/src/xgpu.h"
 XDK_PDB = ROOT / "port/include/xdk/xdk_pdb.h"
+VITA_GRAPHICS = ROOT / "port/vita/include/halo_vita_graphics.h"
 
 
 def require(condition, message):
@@ -21,6 +22,25 @@ def require(condition, message):
 renderer = RENDERER.read_text(encoding="utf-8")
 xgpu = XGPU.read_text(encoding="utf-8")
 xdk_pdb = XDK_PDB.read_text(encoding="utf-8")
+vita_graphics = VITA_GRAPHICS.read_text(encoding="utf-8")
+
+# Halo UI/rasterizer author space remains the original Xbox 640x480 even when
+# Vita renders screen-sized targets at a lower resolution.  Mixing these two
+# spaces is a direct route to oversized/misplaced widgets.
+for declaration in (
+    "#define HALO_VITA_GAME_WIDTH 640",
+    "#define HALO_VITA_GAME_HEIGHT 480",
+    "#define HALO_VITA_RENDER_WIDTH 320",
+    "#define HALO_VITA_RENDER_HEIGHT 240",
+):
+    require(declaration in vita_graphics,
+            f"Vita logical/render resolution contract changed: {declaration}")
+require("*width = HALO_VITA_GAME_WIDTH;" in renderer,
+        "Vita screen mode must expose Halo's logical 640-wide author space")
+require("(float)HALO_VITA_RENDER_WIDTH / (float)HALO_VITA_GAME_WIDTH" in renderer,
+        "Vita X scaling must happen at the render-target boundary")
+require("(float)HALO_VITA_RENDER_HEIGHT / (float)SCREEN_HEIGHT" in renderer,
+        "Vita Y scaling must happen at the render-target boundary")
 
 # UI widgets from the retail cache legitimately submit triangle fans.  Losing
 # this mapping silently turns four-vertex widget quads into the wrong topology.
@@ -93,6 +113,6 @@ require("void xgpu_gl_state_invalidate(void);" in xgpu,
 require("code that\nchanges GL state behind it" in xgpu,
         "xgpu invalidation contract must remain documented")
 
-print("PASS: Vita UI renderer contracts: fan topology, viewport transform, "
-      "Xbox/GL blend enums, texture-stage selection, post-resource raster "
-      "restore and GL shadow invalidation")
+print("PASS: Vita UI renderer contracts: logical/render resolution, fan "
+      "topology, viewport transform, Xbox/GL blend enums, texture-stage "
+      "selection, post-resource raster restore and GL shadow invalidation")
