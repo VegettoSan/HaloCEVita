@@ -5,12 +5,94 @@
 #include <vitaGL.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #ifndef GL_COMPRESSED_RGBA_S3TC_DXT1_EXT
 #define GL_COMPRESSED_RGBA_S3TC_DXT1_EXT 0x83F1
 #define GL_COMPRESSED_RGBA_S3TC_DXT3_EXT 0x83F2
 #define GL_COMPRESSED_RGBA_S3TC_DXT5_EXT 0x83F3
 #endif
+
+/* Halo's current NV2A pixel translator consumes xD0/xD1, xT0..xT3 and xFog,
+ * but never consumes the vertex shader's legacy xB0/xB1 back-color outputs.
+ * Keeping those two varyings in the Vita GLSL pair spends two of the SGX/GXM
+ * varying vectors for data that cannot affect the translated fragment result.
+ *
+ * Keep the original NV2A oB0/oB1 register computation untouched and adapt only
+ * the generated Vita compiler interface.  The exact lines below are authored
+ * by nv2a_vsh.c/nv2a_psh.c under HALO_VITA; if that source contract changes,
+ * this adapter stops matching instead of deleting arbitrary shader text. */
+static int vita_shader_remove_exact_line(char *source, size_t *source_length,
+	const char *line)
+{
+	size_t line_length = strlen(line);
+	char *match;
+	int removed = 0;
+
+	while ((match = strstr(source, line)) != NULL) {
+		size_t offset = (size_t)(match - source);
+		if (offset + line_length > *source_length)
+			vita_fatal("Vita shader varying compaction exceeded source bounds");
+		memmove(match, match + line_length,
+			*source_length - offset - line_length + 1u);
+		*source_length -= line_length;
+		removed = 1;
+	}
+	return removed;
+}
+
+void halo_vita_glShaderSource(GLuint shader, GLsizei count,
+	const GLchar *const *strings, const GLint *lengths)
+{
+	const size_t source_limit = 512u * 1024u;
+	char *source;
+	size_t total = 0, offset = 0;
+	GLsizei index;
+	int compacted = 0;
+	static int first_compaction_log;
+
+	if (count <= 0 || !strings)
+		vita_fatal("Invalid Vita GLSL source array");
+	for (index = 0; index < count; ++index) {
+		size_t part;
+		if (!strings[index])
+			vita_fatal("NULL Vita GLSL source string");
+		part = lengths && lengths[index] >= 0 ?
+			(size_t)lengths[index] : strlen(strings[index]);
+		if (part > source_limit || total > source_limit - part)
+			vita_fatal("Vita GLSL source exceeds bounded compaction buffer");
+		total += part;
+	}
+	source = (char *)malloc(total + 1u);
+	if (!source)
+		vita_fatal("Vita GLSL compaction allocation failed");
+	for (index = 0; index < count; ++index) {
+		size_t part = lengths && lengths[index] >= 0 ?
+			(size_t)lengths[index] : strlen(strings[index]);
+		memcpy(source + offset, strings[index], part);
+		offset += part;
+	}
+	source[total] = 0;
+
+	compacted |= vita_shader_remove_exact_line(source, &total,
+		"varying vec4 xB0;\n");
+	compacted |= vita_shader_remove_exact_line(source, &total,
+		"varying vec4 xB1;\n");
+	compacted |= vita_shader_remove_exact_line(source, &total,
+		"\txB0 = clamp(oB0, 0.0, 1.0);\n");
+	compacted |= vita_shader_remove_exact_line(source, &total,
+		"\txB1 = clamp(oB1, 0.0, 1.0);\n");
+
+	if (compacted && !first_compaction_log) {
+		first_compaction_log = 1;
+		vita_log("[VITA SHADER] unused xB0/xB1 varyings removed; fragment interface is D0/D1 + T0..T3 + Fog");
+	}
+	{
+		const GLchar *single = (const GLchar *)source;
+		glShaderSource(shader, 1, &single, NULL);
+	}
+	free(source);
+}
 
 static uint32_t vita_dxt1_rgb565(uint16_t value)
 {
