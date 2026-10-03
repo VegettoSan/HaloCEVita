@@ -1,14 +1,12 @@
-/* Vita keeps Halo's cache-file API and original scenario/game callers, but the
- * Xbox HDD cache implementation is not a valid storage backend here. Retail
- * copies DVD maps into fixed z:\\cacheNNN.map slots before scenario_tags_load;
- * Vita user maps can already be compressed Xbox-v5 files and are exposed as a
- * checked logical stream by vita_cache_read.c.
+/* Vita keeps Halo's cache-file API and original scenario/game callers. The
+ * retail storage contract is preserved: source maps live under d:\\maps while
+ * cache_file_open/read consume an already prepared, uncompressed z:\\cacheNNN
+ * image. Vita adapts only those volumes to ux0:data/HaloCE/maps/<name>.map and
+ * ux0:data/HaloCE/cacheNNN.map; it does not reinterpret map payload bytes.
  *
- * Compile the original unit so its GPU registration helpers and implementation
- * remain available for comparison, but rename the retail cache lifecycle and
- * request entry points. Public callers below keep the exact Halo API while
- * adapting only the storage boundary to ux0:data/HaloCE/maps/<name>.map.
- */
+ * The original Windows unit remains compiled below for its GPU helpers and as
+ * the reference implementation, while the public storage entry points are
+ * redirected to the synchronous Vita file boundary. */
 #include "vita_runtime.h"
 #include "halo_vita_cache.h"
 #include "halo_vita_memory.h"
@@ -159,6 +157,7 @@ static boolean vita_direct_cache_open;
 static uint32_t vita_direct_cache_tag_size;
 static char vita_direct_cache_name[32];
 static char vita_direct_cache_path[320];
+static short vita_direct_cache_slot = NONE;
 
 static boolean vita_direct_cache_header(
     const char *scenario_name,
@@ -172,36 +171,36 @@ static boolean vita_direct_cache_header(
     int name_terminated, build_terminated;
 
     if (!scenario_name || !header || !path || !path_capacity) {
-        vita_log("[VITA MAP] direct-map validation rejected invalid arguments: scenario=%p header=%p path=%p capacity=%lu",
+        vita_log("[VITA MAP] source-map validation rejected invalid arguments: scenario=%p header=%p path=%p capacity=%lu",
             scenario_name, header, path, (unsigned long)path_capacity);
         return FALSE;
     }
     map_name = tag_name_strip_path(scenario_name);
     if (!map_name || !map_name[0] || csstrlen(map_name) >= 32) {
-        vita_log("[VITA MAP] direct-map validation rejected scenario name: %s",
+        vita_log("[VITA MAP] source-map validation rejected scenario name: %s",
             scenario_name ? scenario_name : "<null>");
         return FALSE;
     }
     if (_snprintf(map_file, sizeof(map_file), "%s.map", map_name) < 0) {
-        vita_log("[VITA MAP] direct-map filename formatting failed: scenario=%s name=%s",
+        vita_log("[VITA MAP] source-map filename formatting failed: scenario=%s name=%s",
             scenario_name, map_name);
         return FALSE;
     }
     map_file[sizeof(map_file) - 1] = 0;
     if (!vita_map_path(map_file, path, path_capacity)) {
-        vita_log("[VITA MAP] direct-map file not found: scenario=%s expected=%s root=" HALO_VITA_DATA_ROOT "maps/",
+        vita_log("[VITA MAP] source map not found: scenario=%s expected=%s root=" HALO_VITA_DATA_ROOT "maps/",
             scenario_name, map_file);
         return FALSE;
     }
 
     file = fopen(path, "rb");
     if (!file) {
-        vita_log("[VITA MAP] direct-map fopen failed: scenario=%s path=%s", scenario_name, path);
+        vita_log("[VITA MAP] source-map fopen failed: scenario=%s path=%s", scenario_name, path);
         return FALSE;
     }
     if (fread(header, 1, sizeof(*header), file) != sizeof(*header)) {
         fclose(file);
-        vita_log("[VITA MAP] direct-map short header: scenario=%s path=%s expected=%lu",
+        vita_log("[VITA MAP] source-map short header: scenario=%s path=%s expected=%lu",
             scenario_name, path, (unsigned long)sizeof(*header));
         return FALSE;
     }
@@ -209,12 +208,6 @@ static boolean vita_direct_cache_header(
 
     name_terminated = memchr(header->name, 0, sizeof(header->name)) != NULL;
     build_terminated = memchr(header->build, 0, sizeof(header->build)) != NULL;
-
-    /* The original Xbox executable rejects cache files whose build string is
-     * not its January beta identifier. Native ports intentionally accept other
-     * Xbox-v5 builds after checking the actual format contract. The user's
-     * retail maps are 01.10.12.2276, so do not reject them merely for that
-     * informational string; keep all structural/version/range checks. */
     if (header->header_signature != 'head' || header->footer_signature != 'foot' ||
         header->version != 5 || header->file_length < 0 ||
         header->file_length > 0x11600000 || header->tag_data_offset < 0x800 ||
@@ -222,7 +215,7 @@ static boolean vita_direct_cache_header(
         header->tag_data_offset > header->file_length ||
         header->tag_data_size > header->file_length - header->tag_data_offset ||
         !name_terminated || !build_terminated) {
-        vita_log("[VITA MAP] direct-map header rejected: scenario=%s path=%s head=%08lx foot=%08lx version=%ld logical=%ld tag_off=%ld tag_bytes=%ld tag_cap=%lu name_term=%d build_term=%d header_name=%.*s build=%.*s",
+        vita_log("[VITA MAP] source-map header rejected: scenario=%s path=%s head=%08lx foot=%08lx version=%ld logical=%ld tag_off=%ld tag_bytes=%ld tag_cap=%lu name_term=%d build_term=%d header_name=%.*s build=%.*s",
             scenario_name, path,
             (unsigned long)header->header_signature,
             (unsigned long)header->footer_signature,
@@ -235,15 +228,60 @@ static boolean vita_direct_cache_header(
         return FALSE;
     }
     if (_stricmp(header->name, map_name)) {
-        vita_log("[VITA MAP] cache identity mismatch requested=%s header=%s path=%s",
+        vita_log("[VITA MAP] source identity mismatch requested=%s header=%s path=%s",
             map_name, header->name, path);
         return FALSE;
     }
-    vita_log("[VITA MAP] direct-map header PASS: scenario=%s path=%s name=%s build=%s logical=%ld tag_off=%ld tag_bytes=%ld type=%d",
+    vita_log("[VITA MAP] source-map header PASS: scenario=%s path=%s name=%s build=%s logical=%ld checksum=%08lx tag_off=%ld tag_bytes=%ld type=%d",
         scenario_name, path, header->name, header->build,
-        header->file_length, header->tag_data_offset, header->tag_data_size,
-        (int)header->scenario_type);
+        header->file_length, (unsigned long)header->checksum,
+        header->tag_data_offset, header->tag_data_size, (int)header->scenario_type);
     return TRUE;
+}
+
+static int vita_cache_slot_range(short scenario_type, unsigned *first, unsigned *last)
+{
+    switch (scenario_type) {
+    case _scenario_type_solo:
+        *first = 0; *last = 1; return 1;
+    case _scenario_type_multiplayer:
+        *first = 3; *last = 5; return 1;
+    case _scenario_type_main_menu:
+        *first = 2; *last = 2; return 1;
+    default:
+        return 0;
+    }
+}
+
+static boolean vita_find_prepared_slot(const char *source_path, short scenario_type,
+    char *cache_path, size_t cache_path_capacity, short *slot_index)
+{
+    unsigned first, last, slot;
+    char error[160];
+    if (!vita_cache_slot_range(scenario_type, &first, &last))
+        return FALSE;
+    for (slot = first; slot <= last; ++slot) {
+        error[0] = 0;
+        if (vita_cache_slot_valid(source_path, slot, cache_path, cache_path_capacity,
+            error, sizeof(error))) {
+            if (slot_index) *slot_index = (short)slot;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static short vita_choose_cache_slot(short scenario_type)
+{
+    unsigned first, last, slot;
+    if (!vita_cache_slot_range(scenario_type, &first, &last))
+        return NONE;
+    /* Preserve the retail reason for two solo/three multiplayer slots: never
+     * overwrite the slot that cache_file_open currently owns. */
+    for (slot = first; slot <= last; ++slot)
+        if (!vita_direct_cache_open || vita_direct_cache_slot != (short)slot)
+            return (short)slot;
+    return NONE;
 }
 
 size_t halo_vita_cache_direct_tag_size(void)
@@ -253,11 +291,19 @@ size_t halo_vita_cache_direct_tag_size(void)
 
 void cache_files_initialize(void)
 {
+    char ui_path[320], legacy[360];
     vita_direct_cache_open = FALSE;
     vita_direct_cache_tag_size = 0;
     vita_direct_cache_name[0] = 0;
     vita_direct_cache_path[0] = 0;
-    vita_log("[VITA MAP] original cache API uses direct logical-map backend; Xbox z:\\cacheNNN.map disabled");
+    vita_direct_cache_slot = NONE;
+    /* Retire scratch names used by builds before the upstream cache audit.
+     * They are never considered map/cache candidates by this implementation. */
+    remove(HALO_VITA_DATA_ROOT "cache0.vita-logical.tmp");
+    if (vita_map_path("ui.map", ui_path, sizeof(ui_path)) &&
+        _snprintf(legacy, sizeof(legacy), "%s.vita-logical.tmp", ui_path) > 0)
+        remove(legacy);
+    vita_log("[VITA MAP] cache API preserves retail layout: maps/ source + persistent cache000..005.map; decompression occurs only during precache");
 }
 
 void cache_files_dispose(void)
@@ -268,6 +314,8 @@ void cache_files_dispose(void)
 
 void cache_files_precache_set_priority(boolean blocking)
 {
+    /* The Vita adapter performs the copy synchronously, so there is no worker
+     * priority to change. Storage ownership and commit ordering remain retail. */
     (void)blocking;
 }
 
@@ -285,22 +333,47 @@ boolean cache_files_precache_is_copying_map(const char *map_name)
 boolean cache_files_precache_map_loaded(const char *map_name)
 {
     struct cache_file_header header;
-    char path[320];
-    return vita_direct_cache_header(map_name, &header, path, sizeof(path));
+    char source_path[320], cache_path[320];
+    return vita_direct_cache_header(map_name, &header, source_path, sizeof(source_path)) &&
+        vita_find_prepared_slot(source_path, header.scenario_type,
+            cache_path, sizeof(cache_path), NULL);
 }
 
 boolean cache_files_precache_map_begin(const char *map_name, boolean copy_map)
 {
     struct cache_file_header header;
-    char path[320];
-    boolean available = vita_direct_cache_header(map_name, &header, path, sizeof(path));
+    char source_path[320], cache_path[320], error[160] = {0};
+    short slot;
+    int reused = 0;
     (void)copy_map;
-    if (available)
-        vita_log("[VITA MAP] original precache request satisfied by direct map: %s logical_bytes=%ld",
-            path, header.file_length);
-    else
-        vita_log("[VITA MAP] original precache request missing/invalid: %s", map_name ? map_name : "<null>");
-    return available;
+
+    if (!vita_direct_cache_header(map_name, &header, source_path, sizeof(source_path))) {
+        vita_log("[VITA MAP] precache source missing/invalid: %s", map_name ? map_name : "<null>");
+        return FALSE;
+    }
+    if (vita_find_prepared_slot(source_path, header.scenario_type,
+        cache_path, sizeof(cache_path), &slot)) {
+        vita_log("[VITA MAP] precache cache%03d already valid for %s checksum=%08lx",
+            (int)slot, header.name, (unsigned long)header.checksum);
+        return TRUE;
+    }
+    slot = vita_choose_cache_slot(header.scenario_type);
+    if (slot == NONE) {
+        vita_log("[VITA MAP] precache has no free retail slot for %s type=%d",
+            header.name, (int)header.scenario_type);
+        return FALSE;
+    }
+    vita_log("[VITA MAP] precache begin: source=%s -> cache%03d.map logical=%ld checksum=%08lx",
+        source_path, (int)slot, header.file_length, (unsigned long)header.checksum);
+    if (!vita_cache_prepare_slot(source_path, (unsigned)slot,
+        cache_path, sizeof(cache_path), &reused, NULL, NULL, error, sizeof(error))) {
+        vita_log("[VITA MAP] precache cache%03d FAILED for %s: %s",
+            (int)slot, header.name, error);
+        return FALSE;
+    }
+    vita_log("[VITA MAP] precache cache%03d %s: map=%s path=%s header committed after payload",
+        (int)slot, reused ? "REUSED" : "COMMITTED", header.name, cache_path);
+    return TRUE;
 }
 
 short cache_files_precache_map_status(real *progress)
@@ -312,6 +385,8 @@ short cache_files_precache_map_status(real *progress)
 
 void cache_files_precache_map_end(void)
 {
+    /* Synchronous Vita copy has already waited for payload flush and committed
+     * the header before cache_files_precache_map_begin returns. */
 }
 
 void cache_files_precache_map_queue_end(void)
@@ -321,25 +396,35 @@ void cache_files_precache_map_queue_end(void)
 boolean cache_file_open(const char *scenario_name, struct cache_file_header *header)
 {
     struct cache_file_header candidate;
-    char path[320];
+    char source_path[320], cache_path[320];
     const char *map_name;
+    short slot = NONE;
 
     match_assert("c:\\halo\\SOURCE\\cache\\cache_files_windows.c", 223, !vita_direct_cache_open);
-    if (!vita_direct_cache_header(scenario_name, &candidate, path, sizeof(path))) {
-        vita_log("[VITA MAP] cache_file_open failed validation: %s", scenario_name ? scenario_name : "<null>");
+    if (!vita_direct_cache_header(scenario_name, &candidate, source_path, sizeof(source_path))) {
+        vita_log("[VITA MAP] cache_file_open source validation failed: %s",
+            scenario_name ? scenario_name : "<null>");
         return FALSE;
     }
-    if (!vita_cache_resource_bind(path, (uint32_t)candidate.file_length)) {
-        vita_log("[VITA MAP] cache_file_open logical bind failed: %s: %s", path, vita_cache_resource_error());
+    if (!vita_find_prepared_slot(source_path, candidate.scenario_type,
+        cache_path, sizeof(cache_path), &slot)) {
+        vita_log("[VITA MAP] cache_file_open rejected unprecached map: %s; source=%s",
+            scenario_name, source_path);
+        return FALSE;
+    }
+    if (!vita_cache_resource_bind(cache_path, (uint32_t)candidate.file_length)) {
+        vita_log("[VITA MAP] cache_file_open cache%03d bind failed: %s: %s",
+            (int)slot, cache_path, vita_cache_resource_error());
         return FALSE;
     }
 
     *header = candidate;
-    /* cache_files.c retains the original executable's build-string assertion.
-     * Normalize only this in-memory compatibility field after the Vita boundary
-     * has already validated the real v5 header; source map bytes stay untouched. */
+    /* Our imported cache_files.c predates upstream's current native-build
+     * acceptance and still checks 01.01.14.2342 unless HALO_LINUX. Keep this
+     * compatibility view in RAM only. cacheNNN.map retains the exact retail
+     * source header (e.g. 01.10.12.2276) byte-for-byte. */
     if (csstrcmp(header->build, "01.01.14.2342")) {
-        vita_log("[VITA MAP] native v5 build accepted: %s (compatibility view=01.01.14.2342)",
+        vita_log("[VITA MAP] retail cache header kept on disk build=%s; imported engine compatibility view=01.01.14.2342",
             header->build);
         csstrncpy(header->build, "01.01.14.2342", sizeof(header->build) - 1);
         header->build[sizeof(header->build) - 1] = 0;
@@ -347,12 +432,13 @@ boolean cache_file_open(const char *scenario_name, struct cache_file_header *hea
     map_name = tag_name_strip_path(scenario_name);
     csstrncpy(vita_direct_cache_name, map_name, sizeof(vita_direct_cache_name) - 1);
     vita_direct_cache_name[sizeof(vita_direct_cache_name) - 1] = 0;
-    csstrncpy(vita_direct_cache_path, path, sizeof(vita_direct_cache_path) - 1);
+    csstrncpy(vita_direct_cache_path, cache_path, sizeof(vita_direct_cache_path) - 1);
     vita_direct_cache_path[sizeof(vita_direct_cache_path) - 1] = 0;
     vita_direct_cache_tag_size = (uint32_t)candidate.tag_data_size;
+    vita_direct_cache_slot = slot;
     vita_direct_cache_open = TRUE;
-    vita_log("[VITA MAP] original cache_file_open direct PASS: name=%s path=%s logical_bytes=%ld tag_bytes=%u type=%d",
-        vita_direct_cache_name, vita_direct_cache_path, candidate.file_length,
+    vita_log("[VITA MAP] original cache_file_open slot PASS: name=%s cache%03d=%s logical_bytes=%ld tag_bytes=%u type=%d",
+        vita_direct_cache_name, (int)slot, vita_direct_cache_path, candidate.file_length,
         vita_direct_cache_tag_size, (int)candidate.scenario_type);
     return TRUE;
 }
@@ -361,10 +447,12 @@ void cache_file_close(void)
 {
     if (!vita_direct_cache_open)
         return;
-    vita_log("[VITA MAP] original cache_file_close direct: name=%s", vita_direct_cache_name);
+    vita_log("[VITA MAP] original cache_file_close: name=%s cache%03d retained on disk",
+        vita_direct_cache_name, (int)vita_direct_cache_slot);
     vita_cache_resource_unbind();
     vita_direct_cache_open = FALSE;
     vita_direct_cache_tag_size = 0;
     vita_direct_cache_name[0] = 0;
     vita_direct_cache_path[0] = 0;
+    vita_direct_cache_slot = NONE;
 }
