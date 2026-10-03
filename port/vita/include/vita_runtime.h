@@ -24,6 +24,7 @@ int vita_graphics_initialize(void);
 int vita_graphics_handoff_frame(void);
 int vita_graphics_shader_probe(const char *vertex, const char *fragment);
 void vita_graphics_halo_shader_begin(const char *stage, const char *source);
+void vita_graphics_halo_shader_native_source(uint32_t shader, const char *source);
 int vita_graphics_halo_shader_result(uint32_t shader, const char *stage);
 int vita_graphics_copy_probe(void);
 void vita_graphics_frame(int maps_valid, int core_valid, int shader_valid);

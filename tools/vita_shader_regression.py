@@ -26,6 +26,7 @@ typedef int GLint, GLsizei, shark_log_level;
 #define GL_LINK_STATUS 5
 #define GL_ARRAY_BUFFER 6
 #define GL_STATIC_DRAW 7
+#define GL_SHADER_TYPE 8
 #define HALO_VITA_DATA_ROOT "./"
 static GLuint probe_program, probe_vbo;
 static int compiler_available;
@@ -48,7 +49,8 @@ static void glCompileShader(GLuint s) {
 }
 static void glGetShaderiv(GLuint s, GLenum field, GLint *out) {
     assert(s==1 || s==2);
-    if(field==GL_COMPILE_STATUS) *out=passed[s];
+    if(field==GL_SHADER_TYPE) *out=s==1?GL_VERTEX_SHADER:GL_FRAGMENT_SHADER;
+    else if(field==GL_COMPILE_STATUS) *out=passed[s];
     else { assert(field==GL_SHADER_SOURCE_LENGTH); *out=15; }
 }
 static void glGetShaderInfoLog(GLuint s, GLsizei cap, GLsizei *len, char *out) {
@@ -83,6 +85,11 @@ static void glBufferData(GLenum kind, size_t bytes, const void *data, GLenum usa
 SUFFIX = r'''
 int main(int argc,char **argv) {
     assert(argc==2); scenario=atoi(argv[1]); compiler_available=scenario!=4;
+    vita_graphics_halo_shader_native_source(1, "effective vertex source");
+    FILE *effective=fopen("halo_vertex_native_00.glsl","rb");
+    char effective_bytes[24]={0};
+    assert(effective && fread(effective_bytes,1,23,effective)==23);
+    assert(!strcmp(effective_bytes,"effective vertex source")); fclose(effective);
     assert(vita_graphics_shader_probe("mock vertex", "mock fragment")== (scenario==0));
     assert(compiles==(scenario>=4 && scenario<=6 ? 0 : 2));
     assert(attaches==(scenario==0 || scenario==8 ? 2 : 0));

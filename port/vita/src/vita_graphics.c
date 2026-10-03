@@ -185,6 +185,33 @@ void vita_graphics_halo_shader_begin(const char *stage, const char *source)
 		++*ordinal;
 	}
 }
+/* Keep both upstream and effective sources: the GL adapter changes only
+ * compiler representation, but the compile failure must be tied to the exact
+ * source given to vitaGL rather than to its pre-adaptation input. */
+void vita_graphics_halo_shader_native_source(uint32_t shader, const char *source)
+{
+	GLint type = 0;
+	const char *stage;
+	char path[128];
+	FILE *file;
+	static unsigned vertex_sources, pixel_sources;
+	unsigned *ordinal;
+	glGetShaderiv((GLuint)shader, GL_SHADER_TYPE, &type);
+	stage = type == GL_VERTEX_SHADER ? "vertex" : "pixel";
+	ordinal = type == GL_VERTEX_SHADER ? &vertex_sources : &pixel_sources;
+	snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s_native.glsl", stage);
+	file = fopen(path, "wb");
+	if (file) { fputs(source, file); fclose(file); }
+	if (*ordinal < 4) {
+		snprintf(path, sizeof(path), HALO_VITA_DATA_ROOT "halo_%s_native_%02u.glsl", stage, *ordinal);
+		file = fopen(path, "wb");
+		if (file) { fputs(source, file); fclose(file); }
+		vita_log("[VITA SHADER ABI] effective %s shader=%u ordinal=%u source_bytes=%u saved=%s",
+			stage, shader, *ordinal, (unsigned)strlen(source), file ? path : "NO");
+		++*ordinal;
+	}
+}
+
 int vita_graphics_halo_shader_result(uint32_t shader, const char *stage)
 {
 	GLint status = shader_log((GLuint)shader, stage);

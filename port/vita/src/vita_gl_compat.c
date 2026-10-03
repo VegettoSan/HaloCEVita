@@ -89,6 +89,7 @@ void halo_vita_glShaderSource(GLuint shader, GLsizei count,
 	}
 	{
 		const GLchar *single = (const GLchar *)source;
+		vita_graphics_halo_shader_native_source(shader, source);
 		glShaderSource(shader, 1, &single, NULL);
 	}
 	free(source);

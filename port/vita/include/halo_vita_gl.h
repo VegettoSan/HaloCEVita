@@ -55,16 +55,38 @@ static inline unsigned halo_vita_shader_reference_span(const char *source,
 	if (!decl)
 		return 0;
 	scan = decl + strlen(declaration);
-	while ((scan = strstr(scan, token)) != NULL) {
+	while (*scan) {
+		/* The upstream vertex epilogue documents c[-38]/c[-37] in a
+		 * comment. Comments are not register reads or dynamic addressing. */
+		if (scan[0] == '/' && scan[1] == '*') {
+			const char *end = strstr(scan + 2, "*/");
+			if (!end) vita_fatal("Unterminated generated GLSL comment");
+			scan = end + 2;
+			continue;
+		}
+		if (scan[0] == '/' && scan[1] == '/') {
+			while (*scan && *scan != '\n') scan++;
+			continue;
+		}
+		if (strncmp(scan, token, strlen(token))) {
+			scan++;
+			continue;
+		}
 		const char *p = scan + strlen(token);
 		unsigned value = 0;
 		int digits = 0;
+		while (*p == ' ' || *p == '\t') p++;
 		while (*p >= '0' && *p <= '9') {
+			if (value > 192u)
+				vita_fatal("Vita GLSL uniform register index exceeds Xbox capacity");
 			value = value * 10u + (unsigned)(*p - '0');
 			p++;
 			digits = 1;
 		}
-		if (digits && *p == ']' && value + 1u > span)
+		while (*p == ' ' || *p == '\t') p++;
+		if (!digits || *p != ']')
+			vita_fatal("Vita GLSL uniform adapter requires fixed original register indices");
+		if (value + 1u > span)
 			span = value + 1u;
 		scan = p;
 	}
@@ -109,6 +131,24 @@ static inline void halo_vita_shader_patch_one_digit_span(char *source,
 	digit[1] = (char)('0' + span);
 }
 
+/* Unreferenced declarations carry no Halo value. Remove only the exact
+ * generated declaration so dead arrays need no backend register allocation. */
+static inline void halo_vita_shader_patch_array(char *source,
+	const char *declaration, unsigned span, unsigned capacity)
+{
+	char *decl = strstr(source, declaration);
+	if (!decl || span > capacity)
+		vita_fatal("Vita GLSL array exceeds original register capacity");
+	if (!span) {
+		memset(decl, ' ', strlen(declaration));
+		return;
+	}
+	if (capacity > 9u)
+		halo_vita_shader_patch_three_digit_span(source, declaration, span);
+	else
+		halo_vita_shader_patch_one_digit_span(source, declaration, span);
+}
+
 static inline char *halo_vita_shader_join_source(GLsizei count,
 	const GLchar *const *strings, const GLint *lengths)
 {
@@ -150,7 +190,7 @@ static inline void halo_vita_glShaderSourceBounded(GLuint shader, GLsizei count,
 	static unsigned logged_vertex, logged_fragment;
 
 	if (strstr(source, "uniform vec4 c[192];")) {
-		unsigned span;
+		unsigned span, active_vectors;
 		/* Relative addressing can select any Xbox c[] entry and therefore
 		 * cannot be prefix-compacted without additional shader metadata. Fail
 		 * loudly rather than silently changing NV2A register semantics. */
@@ -160,19 +200,25 @@ static inline void halo_vita_glShaderSourceBounded(GLuint shader, GLsizei count,
 		}
 		span = halo_vita_shader_reference_span(source,
 			"uniform vec4 c[192];", "c[");
-		if (!span)
-			span = 1;
+		active_vectors = span;
+		active_vectors += halo_vita_shader_reference_after(source,
+			"uniform vec4 viewport_scale;", "viewport_scale") ? 1u : 0u;
+		active_vectors += halo_vita_shader_reference_after(source,
+			"uniform vec4 viewport_offset;", "viewport_offset") ? 1u : 0u;
+		active_vectors += halo_vita_shader_reference_after(source,
+			"uniform float point_size;", "point_size") ? 1u : 0u;
+		active_vectors += halo_vita_shader_reference_after(source,
+			"uniform float screen_offset;", "screen_offset") ? 1u : 0u;
 		glGetIntegerv(GL_MAX_VERTEX_UNIFORM_VECTORS, &vertex_limit);
-		if (vertex_limit > 0 && span > (unsigned)vertex_limit) {
+		if (vertex_limit <= 0 || active_vectors > (unsigned)vertex_limit) {
 			free(source);
 			vita_fatal("Vita NV2A vertex constants exceed vitaGL hardware uniform budget");
 		}
-		halo_vita_shader_patch_three_digit_span(source,
-			"uniform vec4 c[192];", span);
+		halo_vita_shader_patch_array(source, "uniform vec4 c[192];", span, 192);
 		if (logged_vertex < 8u) {
 			logged_vertex++;
-			vita_log("[VITA SHADER ABI] upstream vertex c[] prefix=%u/192 vitaGL_limit=%d; register indices unchanged",
-				span, vertex_limit);
+			vita_log("[VITA SHADER ABI] upstream vertex c[] prefix=%u/192 active_vec4<=%u vitaGL_limit=%d; register indices unchanged",
+				span, active_vectors, vertex_limit);
 		}
 	}
 
@@ -203,21 +249,16 @@ static inline void halo_vita_glShaderSourceBounded(GLuint shader, GLsizei count,
 			"uniform float alpha_reference;", "alpha_reference") ? 1u : 0u;
 
 		glGetIntegerv(GL_MAX_FRAGMENT_UNIFORM_VECTORS, &fragment_limit);
-		if (fragment_limit > 0 && active_vectors > (unsigned)fragment_limit) {
+		if (fragment_limit <= 0 || active_vectors > (unsigned)fragment_limit) {
 			free(source);
 			vita_fatal("Vita NV2A pixel shader exceeds vitaGL hardware uniform budget after exact prefix compaction");
 		}
 
-		halo_vita_shader_patch_one_digit_span(source,
-			"uniform vec4 ps_c0[8];", c0 ? c0 : 1u);
-		halo_vita_shader_patch_one_digit_span(source,
-			"uniform vec4 ps_c1[8];", c1 ? c1 : 1u);
-		halo_vita_shader_patch_one_digit_span(source,
-			"uniform vec4 bump_matrix[4];", bump ? bump : 1u);
-		halo_vita_shader_patch_one_digit_span(source,
-			"uniform vec4 bump_luminance[4];", luminance ? luminance : 1u);
-		halo_vita_shader_patch_one_digit_span(source,
-			"uniform vec4 texture_scale[4];", texture ? texture : 1u);
+		halo_vita_shader_patch_array(source, "uniform vec4 ps_c0[8];", c0, 8);
+		halo_vita_shader_patch_array(source, "uniform vec4 ps_c1[8];", c1, 8);
+		halo_vita_shader_patch_array(source, "uniform vec4 bump_matrix[4];", bump, 4);
+		halo_vita_shader_patch_array(source, "uniform vec4 bump_luminance[4];", luminance, 4);
+		halo_vita_shader_patch_array(source, "uniform vec4 texture_scale[4];", texture, 4);
 
 		if (logged_fragment < 8u) {
 			logged_fragment++;
