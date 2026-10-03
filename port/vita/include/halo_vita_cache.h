@@ -11,9 +11,9 @@ struct vita_cache_info {
 	uint32_t tag_crc;
 	int compressed;
 };
-/* Read-only streaming: no full-map allocation, conversion or decompressed
- * cache file. Tag reads and resource reads share the same checked logical
- * address-space reader. */
+/* Checked Xbox-v5 reader. It can inspect either a compressed source map or an
+ * already prepared logical cache without changing serialized tag/resource
+ * bytes. */
 int vita_cache_read(FILE *file, void *tags, size_t capacity, struct vita_cache_info *info,
 	vita_cache_progress progress, void *context, char *error, size_t error_size);
 int vita_cache_validate_index(const void *tags, size_t length, struct vita_cache_info *info,
@@ -21,9 +21,22 @@ int vita_cache_validate_index(const void *tags, size_t length, struct vita_cache
 int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
 	uint32_t logical_offset, void *destination, size_t bytes,
 	vita_cache_progress progress, void *context, char *error, size_t error_size);
-/* Bind the resource reader to the same validated map whose tag image is
- * mounted. This is the backing for the Vita cache_file_read bridge, not a
- * manual asset registry or decoded-texture cache. */
+
+/* Retail Halo precaches d:\\maps\\<name>.map into persistent z:\\cacheNNN.map
+ * slots before cache_file_open. Vita preserves that ownership split with
+ * ux0:data/HaloCE/cache000.map ... cache005.map. A slot is published only after
+ * the complete payload has been copied/inflated and validated; the real 0x800
+ * source header is written last, matching cache_files_decompress_windows.c's
+ * commit protocol. The source map is never modified. */
+int vita_cache_slot_valid(const char *source_path, unsigned slot_index,
+	char *slot_path, size_t slot_path_size, char *error, size_t error_size);
+int vita_cache_prepare_slot(const char *source_path, unsigned slot_index,
+	char *slot_path, size_t slot_path_size, int *reused,
+	vita_cache_progress progress, void *context, char *error, size_t error_size);
+
+/* Bind cache_file_read to an already prepared, uncompressed logical cache
+ * slot. Binding a compressed source map is deliberately rejected: decompression
+ * belongs to the precache phase, never cache_file_open/resource reads. */
 int vita_cache_resource_bind(const char *path, uint32_t logical_size);
 const char *vita_cache_resource_error(void);
 void vita_cache_resource_unbind(void);
@@ -32,7 +45,7 @@ int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes);
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size);
 /* Nonzero only while the original cache_file_open/scenario_tags_load lifetime
- * owns a direct Vita map. The manual ui.map bring-up mount intentionally does
+ * owns a Vita cache slot. The manual ui.map bring-up mount intentionally does
  * not claim this lifetime. */
 size_t halo_vita_cache_direct_tag_size(void);
 /* Original cache tag blocks/data/references retain serialized Xbox addresses
