@@ -177,7 +177,11 @@ cleanup:
     if (!root_active) halo_vita_renderer_dispose_before_root();
 #endif
 	if (root_active) {
-		vita_log("UI root/cache/arena retained until process exit; active-widget teardown not yet linked");
+		#ifdef HALO_VITA_ORIGINAL_RUNTIME
+        vita_log("[VITA ORIGINAL] test shell exits with active lifetime owners; native process releases retained cache/arena");
+#else
+        vita_log("UI root/cache/arena retained until process exit; active-widget teardown not yet linked");
+#endif
 		ui_disposed = 0;
 	} else ui_disposed = halo_vita_ui_runtime_dispose();
 	if (ui_disposed) {

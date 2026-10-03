@@ -260,3 +260,9 @@ A101: profile/keyboard/event updates reach original main_screen_shell_load throu
 ## D041 — Preserve original D3D8 presentation ownership on Vita
 
 A107: D3DDevice_Present already composes Halo's 640x480 target with its aspect-preserving destination and original top-left orientation. Vita's platform_video_swap must only call vglSwapBuffers; its second full-panel blit distorted that finished frame. For the same reason, a cold texture lookup does not own blend state separately after prepare_draw was reordered to apply the entire original raster state after bind_textures. Keep both contracts at those single owner boundaries. This is source-confirmed geometry/state ownership, not proof that white panels or full UI behavior are fixed on hardware.
+
+## D061 — V5 original UI runtime is the default; native cache remains an adapter
+
+Date: 2026-10-02
+
+Use `game_initialize`, original UI/event tables and `process_ui_widgets` with original pregame rendering. Keep the00.35 staged selector available only as recovery. Restore subsystem lifetime before tags/root and preserve original modal/timeouts/deferred filesystem processing. Keep the proven Vita map reader instead of running retail DVD/HDD precaching, which creates fixed Xbox cache files and does not understand the supplied compressed maps. This does not stand in for complete original scenario/BSP new-map activation. Source reuse for native networking/ARM CRT is attributed in docs/UPSTREAM.md and licensed with retained GPL-3.0 terms; no external executable or renderer is packaged.

@@ -10,6 +10,7 @@
 #include "input/input.h"
 #include <stdarg.h>
 #include <sched.h>
+#include <time.h>
 
 #undef malloc
 #undef free
@@ -46,6 +47,11 @@ boolean transport_network_available(void)
 
 #endif
 
+unsigned long system_seconds(void) { return (unsigned long)time(NULL); }
+void stack_walk_initialize(void)
+{
+    vita_log("[VITA PLATFORM] x86 stack/symbol walker unavailable; ARM crash dumps use the matching ELF");
+}
 unsigned long system_milliseconds(void) { return (unsigned long)(vita_time_us() / 1000u); }
 void *system_malloc(long size) { return size > 0 ? malloc((size_t)size) : NULL; }
 void *system_realloc(void *pointer, long size)

@@ -2,6 +2,19 @@
 
 Last updated: 2026-10-02
 
+V5 source00.36 (A111–A113): default target now selects original
+`game_initialize`, complete UI callback tables, original XInput/event collection,
+`process_ui_widgets`, `main_screen_shell_load` and
+`main_pregame_render`/`render_frame_present`. The prior focus/history substitute
+and deferred world-resume aliases remain only in the explicitly selected
+recovery build. Native logical-range map reading, typed relocation, vitaGL/NV2A
+and original 2D menu sound/cache adaptations are reused.
+All21 host regression commands pass locally after adapting their presentation
+check to both original/recovery callers. First complete native CI package and
+Vita runtime acceptance are pending; no BOOTS/menu/gameplay claim for00.36.
+Scenario/BSP/camera world activation remains a separate unaccepted boundary.
+The matching original source closure must link/package before delivery.
+
 Source00.35 (A108/A109): repaired the obsolete package-symbol gate and restore
 the original D3D color/depth target after Vita resource preparation, before
 raster state. A stateful host execution reproduces the historical destination

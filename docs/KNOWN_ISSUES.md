@@ -309,3 +309,7 @@ A097–A099 pending local00.32: keyboard/event queue and per-frame original null
 
 
 A102 supersedes the pending authorization/native-closure state above: user explicitly reaffirmed standing main push authorization (AGENTS.md), and00.32 native Build174 plus required host contracts/package verification PASS on75d5893. Original profile/event/keyboard/frame owners are now linked. KI-038 remains open until real-Vita generated lists, keyboard/profile persistence and repeated window transitions pass; full world/network handlers stay guarded. Latest hardware is00.31 with partial menu navigation. White backgrounds remain deferred; Start confirms keyboard and Select exits00.32.
+
+## KI-068 — V5 original runtime requires first hardware acceptance
+
+00.36 restores full UI and game lifetime source owners, but console evidence is required for first frame, fonts/colors, complete widget/keyboard/profile transitions and performance. Linked callbacks are not sufficient proof. The native mounted `ui.map` does not yet perform full original scenario/BSP/camera/new-map loading; Campaign/gameplay are not accepted. Desktop Internet invite overlay and Bink decoding have no Vita backend; native LAN/loopback is a real platform adapter but untested. The native test shell retains active owners until process exit.

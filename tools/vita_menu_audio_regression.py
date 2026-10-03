@@ -10,7 +10,11 @@ refresh=s[s.index('boolean halo_vita_sound_menu_refresh('):s.rindex('#endif')]
 s=(root/'port/vita/src/halo_menu_audio_guard.c').read_text()
 guard=s[s.index('long __wrap_sound_render_time('):s.index('void __wrap_compute_sound_obstruction(')]
 renderer=(root/'port/vita/src/halo_renderer_runtime.c').read_text()
-assert renderer.index('rasterizer_present(NULL, NULL);') < renderer.index('halo_vita_menu_audio_frame();')
+# Check presentation ordering independently for the original and recovery callers.
+original = renderer[renderer.index('#ifdef HALO_VITA_ORIGINAL_RUNTIME\nint halo_vita_renderer_render_menu_frame'):]
+original, recovery = original.split('\n#else\nint halo_vita_renderer_render_menu_frame', 1)
+assert original.index('render_frame_present(NULL, NULL);') < original.index('halo_vita_menu_audio_frame();')
+assert recovery.index('rasterizer_present(NULL, NULL);') < recovery.index('halo_vita_menu_audio_frame();')
 code=r'''
 #include <assert.h>
 #include <stdint.h>

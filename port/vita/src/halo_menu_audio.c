@@ -98,7 +98,9 @@ void halo_vita_menu_audio_frame(void)
             _looping_sound_refresh_loop : _looping_sound_refresh_start);
         music_started = TRUE;
     }
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
     sound_render();
+#endif /* main_pregame_render already renders sound once per original frame. */
 }
 void halo_vita_menu_audio_feedback_probe(void)
 {

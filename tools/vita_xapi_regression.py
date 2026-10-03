@@ -227,6 +227,17 @@ def main():
         count = C.c_ulong()
         assert xapi.WriteFile(handle, C.create_string_buffer(b'abcdef'), 6, C.byref(count), None)
         assert count.value == 6
+        # An OVERLAPPED offset read must not move the sequential cursor.
+        xapi.vita_xapi_read_at.argtypes = [C.c_void_p,C.c_void_p,C.c_uint32,C.c_uint64,C.POINTER(C.c_uint32)]
+        assert xapi.SetFilePointer(handle, 3, None, 0) == 3
+        offset_bytes = C.create_string_buffer(4)
+        offset_count = C.c_uint32()
+        assert xapi.vita_xapi_read_at(handle,offset_bytes,4,0,C.byref(offset_count))
+        assert offset_count.value == 4 and offset_bytes.raw == b'abcd'
+        assert xapi.SetFilePointer(handle, 0, None, 1) == 3
+        assert xapi.vita_xapi_read_at(handle,offset_bytes,4,999,C.byref(offset_count))
+        assert offset_count.value == 0
+        assert xapi.SetFilePointer(handle, 0, None, 1) == 3
         assert xapi.SetFilePointer(handle, 2, None, 0) == 2
         assert xapi.WriteFile(handle, C.create_string_buffer(b'XY'), 2, C.byref(count), None)
         assert xapi.SetFilePointer(handle, 0, None, 0) == 0

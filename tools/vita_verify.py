@@ -27,6 +27,7 @@ def git_metadata(*args):
     # this exact checkout for these read-only provenance queries.
     return subprocess.run(['git', '-c', f'safe.directory={root}', *args],
                           stdout=subprocess.PIPE, text=True, check=True).stdout.strip()
+original_runtime = 'HALO_VITA_ORIGINAL_RUNTIME:BOOL=ON' in (build / 'CMakeCache.txt').read_text()
 elf = build / 'HaloCE.elf'
 self_file = build / 'eboot.bin'
 assert self_file.read_bytes()[:4] == b'SCE\0', 'Not a Sony SELF'
@@ -67,6 +68,21 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
 required += ['halo_vita_ui_process_menu_action', 'halo_vita_ui_activate_main_menu_state',
              'xgpu_texture_get', 'xgpu_gl_state_invalidate',
              'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']
+if original_runtime:
+    recovery_only = {'halo_vita_menu_root_load', 'halo_vita_ui_process_menu_action',
+                     'halo_vita_ui_render_clock_update', '__wrap_sound_render_time', '__wrap_sound_idle'}
+    required = [name for name in required if name not in recovery_only]
+    required += ['game_initialize', 'process_ui_widgets', 'main_screen_shell_load',
+                 'event_manager_update', 'input_initialize', 'input_update',
+                 'input_abstraction_update', 'main_pregame_render', 'render_frame_pregame',
+                 'render_frame_present', 'scenario_get', 'scenario_get_game_globals',
+                 'halo_vita_original_game_initialize', 'halo_vita_ui_process_shell_frame',
+                 'XGetDeviceChanges', 'XInputDebugGetKeystroke']
+    forbidden = ['halo_vita_menu_deferred_', 'halo_vita_move_menu_focus',
+                 'halo_vita_dispatch_focused_button', '__wrap_compute_sound_obstruction',
+                 '__wrap_observer_get_camera']
+    for name in forbidden:
+        assert not re.search(r'\b[TtW]\s+' + re.escape(name), symbols), f'Recovery substitute in original target: {name}'
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
 undefined = run('nm', '-u', elf)
@@ -161,7 +177,9 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
             'rendering_scope': 'prior00.27/00.30 original logo/bitmap labels visible, white rectangles unresolved; current GPU alpha isolation requires console evidence (A087/A089/A091)',
             'audio_scope': 'prior00.26 continuous title1/Square feedback and reported29-30FPS (A083); current package audibility/performance untested',
-            'navigation_scope': 'original staged widget/list/history bridge; host routing/lifetime contracts pass (A089/A090), console acceptance and saved-profile/world handlers pending',
+            'navigation_scope': ('complete original UI update and callback tables, original input/events, native save I/O; console acceptance pending' if original_runtime else 'recovery staged widget/list/history bridge; console acceptance pending'),
+            'runtime_route': 'original game_initialize/process_ui_widgets/main_pregame_render' if original_runtime else 'recovery staged UI',
+            'world_scope': 'scenario/BSP world loading and campaign not yet accepted; compiled source closure is not runtime evidence',
             'alpha_probe_scope': 'up to2 first-frame copies of exact original bitmap shader draws; native storage/output readback, no authored alpha mutation (A091)',
             'prior_hardware_evidence': 'docs/ATTEMPTS.md A083/A087/A089: continuous audio, partial original bitmap UI; current source is not hardware-verified',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
