@@ -19,7 +19,7 @@ static int cache_progress(uint32_t position, void *context)
 		state->previous_frame = now;
 	}
 	if (now - state->previous_log >= 1000000) {
-		vita_log("cache %s streaming logical position=%u (tags only retained)", state->name, position);
+		vita_log("cache %s precache/logical position=%u", state->name, position);
 		state->previous_log = now;
 	}
 	return 1;
@@ -39,35 +39,59 @@ int vita_cache_probe(int graphics, int core, int shaders)
 	vita_cache_resource_unbind();
 	vita_graphics_cache_status(-1);
 	for (i = 0; i < 1; ++i) {
-		char path[320], error[160] = {0};
+		char source_path[320], cache_path[320], error[160] = {0};
 		FILE *file;
 		struct vita_cache_info info;
 		struct progress_state state = { graphics, core, shaders, 0, 0, 0, names[i] };
 		uint64_t start = vita_time_us();
-		if (!vita_map_path(names[i], path, sizeof(path))) { vita_log("cache %s missing", names[i]); continue; }
-		vita_log("[VITA 015] cache %s tag read begin; capacity22MiB, inflate scratch64KiB, maps unchanged", names[i]);
-		file = fopen(path, "rb");
-		if (!file) { vita_log("cache %s open failed: %s", names[i], strerror(errno)); continue; }
-		if (vita_cache_read(file, tags, HALO_VITA_TAG_CAPACITY, &info, cache_progress, &state, error, sizeof(error))) {
-			vita_log("cache %s loaded bytes=%u compressed=%d tags=%u vertex_buffers=%u index_buffers=%u tag_crc32=%08x time_us=%llu",
+		int reused = 0;
+		if (!vita_map_path(names[i], source_path, sizeof(source_path))) {
+			vita_log("cache %s missing", names[i]);
+			continue;
+		}
+		vita_log("[VITA 015] cache %s upstream-style precache begin; source=%s slot=cache002.map header commits last",
+			names[i], source_path);
+		/* Xbox reserves slot 2 for _scenario_type_main_menu. Build/reuse the
+		 * committed logical cache before any tag or resource consumer sees it. */
+		if (!vita_cache_prepare_slot(source_path, 2, cache_path, sizeof(cache_path), &reused,
+			cache_progress, &state, error, sizeof(error))) {
+			vita_log("MAIN MENU BLOCKED: cache002.map prepare failed: %s", error);
+			if (state.cancelled) {
+				vita_graphics_cache_status(0);
+				return -1;
+			}
+			continue;
+		}
+		vita_log("[VITA CACHE] main-menu cache slot %s: source=%s slot=%s",
+			reused ? "REUSED" : "REBUILT", source_path, cache_path);
+		file = fopen(cache_path, "rb");
+		if (!file) {
+			vita_log("cache %s committed slot open failed: %s", names[i], strerror(errno));
+			continue;
+		}
+		if (vita_cache_read(file, tags, HALO_VITA_TAG_CAPACITY, &info,
+			cache_progress, &state, error, sizeof(error))) {
+			vita_log("cache %s loaded from committed slot bytes=%u compressed=%d tags=%u vertex_buffers=%u index_buffers=%u tag_crc32=%08x time_us=%llu",
 				names[i], info.tag_size, info.compressed, info.tag_count, info.vertices, info.indices, info.tag_crc,
 				(unsigned long long)(vita_time_us() - start));
-			if (!vita_cache_resource_bind(path, info.logical_size)) {
-				vita_log("MAIN MENU BLOCKED: could not bind validated %s to logical resource reader: %s", names[i], vita_cache_resource_error());
+			if (info.compressed) {
+				vita_log("MAIN MENU BLOCKED: cache002.map unexpectedly remained compressed");
+			} else if (!vita_cache_resource_bind(cache_path, info.logical_size)) {
+				vita_log("MAIN MENU BLOCKED: could not bind committed cache002.map: %s", vita_cache_resource_error());
 			} else if (halo_vita_cache_mount_menu(tags, info.tag_size)) {
-				vita_log("cache %s resource reader bound: logical_size=%u seekable logical resource backend ready",
+				vita_log("cache %s tag/resource consumers share committed cache002.map logical_size=%u",
 					names[i], info.logical_size);
 				if (halo_vita_cache_validate_menu() && halo_vita_ui_runtime_initialize()) passed++;
 				else {
 					vita_log("MAIN MENU BLOCKED: original tag/accessor validation failed");
-					if (!halo_vita_ui_runtime_dispose()) return -1;
+					if (!halo_vita_ui_runtime_dispose()) { fclose(file); return -1; }
 					halo_vita_cache_unmount_menu();
 					vita_cache_resource_unbind();
 				}
 			} else {
 				vita_cache_resource_unbind();
 			}
-		} else vita_log("cache %s FAILED: %s", names[i], error);
+		} else vita_log("cache %s FAILED from committed slot: %s", names[i], error);
 		fclose(file);
 		if (state.cancelled) {
 			if (!halo_vita_ui_runtime_dispose()) return -1;
@@ -77,7 +101,7 @@ int vita_cache_probe(int graphics, int core, int shaders)
 		}
 	}
 	if (passed != 1) vita_cache_resource_unbind();
-	vita_log("[VITA 016] real UI menu-tag checkpoint=%d/1; persistent mount=%s; resource logical-range backend=%s; root/events/BSP/GPU not activated",
+	vita_log("[VITA 016] real UI menu-tag checkpoint=%d/1; persistent mount=%s; upstream-style cache002 backend=%s; root/events/BSP/GPU not activated",
 		passed, passed ? "YES" : "NO", passed ? "BOUND" : "NO");
 	vita_graphics_cache_status(passed == 1);
 	return passed == 1;
