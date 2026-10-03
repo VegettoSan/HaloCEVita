@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.42")
+set(VITA_APP_VERSION "00.43")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_ORIGINAL_RUNTIME "Run original UI/game lifetime and frame callers" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
@@ -248,7 +248,7 @@ set_source_files_properties(${ROOT}/port/linux/src/xbox_textures.c
 set_source_files_properties(src/halo_menu_tags.c PROPERTIES COMPILE_OPTIONS
   "-Werror=implicit-function-declaration;-Werror=incompatible-pointer-types;-Werror=int-conversion;-Werror=return-type")
 
-add_executable(HaloCE.elf src/main.c src/vita_platform.c src/vita_graphics.c src/vita_video_backend.c src/vita_gl_compat.c
+add_executable(HaloCE.elf src/main.c src/vita_bootstrap.c src/vita_platform.c src/vita_graphics.c src/vita_video_backend.c src/vita_gl_compat.c
   src/vita_renderer_platform.c src/vita_memory.c src/vita_cache_read.c src/vita_menu_relocate.c src/vita_cache_probe.c src/vita_xapi_files.c)
 target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_VERSION}")
 if(HALO_VITA_MENU_BRINGUP)

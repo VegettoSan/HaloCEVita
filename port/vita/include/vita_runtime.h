@@ -33,6 +33,8 @@ int vita_maps_verify(void);
 int vita_map_path(const char *name, char *path, size_t capacity);
 void vita_graphics_cache_status(int status);
 int vita_platform_initialize(void);
+int vita_run_engine(int platform);
+int halo_vita_run(int platform);
 int vita_controls_poll(void);
 void vita_platform_shutdown(void);
 int vita_services_probe(void);

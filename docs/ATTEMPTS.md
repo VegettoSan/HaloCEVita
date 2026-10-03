@@ -1607,3 +1607,25 @@ covers it. Native gates and final package remain pending; no console acceptance.
 - BUILD.md records next original main_menu_load/root/frame/input/profile/
   keyboard/music/warm/log/photo/dump checks. Original640x480 render policy,
   white panels/full menu/stability/main_loop/Campaign/world limitations remain.
+
+
+### A132 — Reuse native engine-thread bootstrap (2026-10-03)
+
+- Current clean main9439745/00.42 inspected; remote main matches. Compared
+  original shell/main/cache/tag code at upstream23b5426 and donor309b9de.
+- HECHO COMPROBADO: donor runs original Halo on a dedicated16MiB thread and
+  reports an AI stack overflow as its reason. Our entry previously executed
+  recursive original UI/engine code on the unconfigured SDK startup stack.
+  No00.42 hardware stack-overflow diagnosis is made.
+- Adapted the donor bootstrap under retained GPL terms, keeping native GL and
+  all engine owners on one thread. Check create/start/join/delete; propagate
+  status; no unsafe small-stack fallback or live-thread deletion on wait failure.
+  Platform/controls/log initialize on the process owner before the thread starts.
+- Host C compilation and actual-function lifecycle/failure cases PASS via
+  python3 tools/vita_bootstrap_regression.py. Original UI lifecycle gate PASS.
+  CI now runs the new contract; actual ARM ELF must retain both native entry
+  owners.00.43 native build and real-console acceptance pending. Additional
+  user-memory cost16MiB; arena base may change, so no save compatibility claim.
+- Renderer/NV2A/equations/cache/widget graph remain unchanged. Donor complete
+  typed relocation differs from our existing accessor translation; no wholesale
+  schema import or value-based pointer scan was made.

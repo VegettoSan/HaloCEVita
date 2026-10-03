@@ -10,16 +10,15 @@
 int halo_vita_menu_update_checkpoint(void);
 #endif
 
-int main(void)
+int halo_vita_run(int platform)
 {
-	int platform, core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
+	int core, maps, services, graphics, shaders = 0, command, arena = 0, memory = 0, menu_cache = 0;
 	int root_active = 0, scenario_active = 0, ui_disposed, renderer = 0;
 	int menu_input_sample_valid = 0;
 	char *vertex, *fragment;
 	char menu_map_path[320];
 	uint32_t user, cdram, phycont;
 	struct vita_gamepad_sample previous_menu_pad = {0};
-	platform = vita_platform_initialize();
 	vita_free_memory(&user, &cdram, &phycont);
 	vita_log("free memory user=%u cdram=%u phycont=%u; newlib heap cap=64MiB", user, cdram, phycont);
 	vita_log("[VITA 007] Halo memory init begin");
@@ -238,6 +237,12 @@ cleanup:
 	if (graphics) vita_graphics_shutdown();
 	if (ui_disposed && core) halo_vita_core_dispose();
 	vita_platform_shutdown();
-	sceKernelExitProcess(0);
 	return 0;
+}
+
+int main(void)
+{
+	int status = vita_run_engine(vita_platform_initialize());
+	sceKernelExitProcess(status);
+	return status;
 }

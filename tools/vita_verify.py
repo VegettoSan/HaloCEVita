@@ -65,6 +65,7 @@ required = ['glGetActiveUniform', 'halo_vita_texture_transfer_finish', 'glMapBuf
             'halo_vita_menu_audio_frame', 'halo_vita_menu_audio_start',
             'halo_vita_menu_audio_dispose', 'halo_vita_audio_mixer_shutdown',
             'halo_vita_sound_menu_refresh', '__wrap_sound_render_time', '__wrap_sound_idle']
+required += ['vita_run_engine', 'halo_vita_run']
 required += ['halo_vita_ui_process_menu_action', 'halo_vita_ui_activate_main_menu_state',
              'xgpu_texture_get', 'xgpu_gl_state_invalidate',
              'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']

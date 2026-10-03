@@ -22,6 +22,7 @@ jobs:
           fetch-depth: 0
       - name: Check original texture and 2D sound contracts
         run: |
+          python3 tools/vita_bootstrap_regression.py
           python3 tools/vita_texture_stage_regression.py
           python3 tools/vita_texture_upload_regression.py
           python3 tools/vita_dxt_mask_regression.py

@@ -112,3 +112,17 @@ actual C byte comparisons and all A/B/C/D systems. Current upstream still has
 newer distributed-network/interpolation/random-seed/widescreen desktop changes;
 these are explicitly open drift, not silently imported. No Android loader or
 external port executable/renderer/assets introduced.
+
+
+## Additional native bootstrap reference (2026-10-03,00.43)
+
+BirchWoodGod/halo-ce-vita at `309b9de` (`port/vita/host/vita_main.c`)
+provides the dedicated 16MiB engine-thread pattern. Adapted in
+`port/vita/src/vita_bootstrap.c` under its existing GPL-3.0-only notice.
+Our checked create/start/join/delete path fails rather than silently falling
+back to the default stack; affinity remains unrestricted. All Halo/vitaGL
+initialization and teardown run on the engine thread. No donor binary, UI,
+GXM renderer, shaders, settings or assets were imported. This reserves16MiB
+of additional user memory; the first real-console logs must establish the
+remaining budget. It addresses a platform prerequisite, not an observed00.42
+stack crash or a complete original main_loop.
