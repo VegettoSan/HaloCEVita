@@ -2,15 +2,17 @@
 
 Last updated: 2026-10-03
 
-Current source **00.43 / A132–A133: HOST VERIFIED; FINAL NATIVE BUILD PENDING**.
+Current source **00.43 / A132–A134: LINKS; HOST VERIFIED; FINAL PACKAGE GATE PENDING**.
 Dedicated16MiB engine-thread bootstrap adapted from the working Vita source
 passed CI286 on cdd23ce. Combined source restores original clock/widgets/input/
 render/Present ordering and adds the remaining inline sound mouth-data accessor.
 All33 required host commands and read-only original-worker checks of both
 attached maps PASS. [A/B/C platform audit](DECOMP_VITA_PLATFORM_AUDIT_00.43.md)
 records reuse choices and remaining original main_loop/world/teardown boundary.
-Matching final native package and real-console root/frame/menu acceptance are
-pending; prior00.42 has no fresh hardware evidence in this turn.
+Combined CI287 passes all33 host commands and native ELF/SELF/VPK creation,
+then rejects an inlined/GC'd helper requirement. A134 verifies actual original
+consumers in the retained frame owner instead. Matching final native package
+gate and real-console root/frame/menu acceptance are pending; prior00.42 has no fresh hardware evidence in this turn.
 
 
 Current source **00.42 / A129–A131: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.

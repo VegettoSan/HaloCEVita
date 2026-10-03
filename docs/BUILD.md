@@ -1,6 +1,7 @@
 # Current00.43 test build (A132–A133)
 
-Final combined CI package is pending. Use only the new run whose source includes
+Final combined CI package gate is pending (A134). CI287 linked and created the
+VPK but rejected the obsolete out-of-line shell helper; it was not published. Use only the new run whose source includes
 both the dedicated engine-thread bootstrap and original frame/mouth-data fixes;
 CI286 covers the first component only. No hardware acceptance is claimed.
 

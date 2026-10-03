@@ -387,3 +387,9 @@ Final combined native build and root/draw/navigation/audio hardware acceptance
 remain separate. No supplied00.42 hardware trace proves another fault, and
 full main_loop/Campaign/world/teardown remains unaccepted. See the complete
 A/B/C audit in DECOMP_VITA_PLATFORM_AUDIT_00.43.md.
+
+A134: combined CI287 all33 host commands and native ELF/SELF/VPK creation pass;
+publication is blocked by a verifier requiring an inlined/GC'd shell helper.
+The corrected gate checks actual retained original frame consumers; package
+acceptance remains pending that run. No executable behavior was changed for
+this verifier failure.

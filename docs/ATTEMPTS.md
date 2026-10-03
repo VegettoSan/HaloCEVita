@@ -1660,3 +1660,25 @@ covers it. Native gates and final package remain pending; no console acceptance.
   placement, performance or new crash fix claim.00.42 had no fresh console
   evidence in this turn. Full original main_loop/world/save/teardown, complete
   pointer/GPU capability coverage and real menu acceptance remain open.
+
+
+### A134 — Native combined build links; verifier must follow the retained frame owner (2026-10-03)
+
+- Source8ef9c31 CI287/run37153915971: all33 host contracts PASS; actual native
+  compilation/link/ELF LOAD inspection/SELF/SFO00.43/VPK creation PASS.
+  Package verification rejects Missing real core symbol
+  halo_vita_ui_process_shell_frame. Publication/artifact upload correctly skip.
+- The original renderer entry now calls that helper in the same translation
+  unit, so GCC-O2 can inline it and --gc-sections discard the unused out-of-line
+  copy. Source review identifies this expected retention change; it is not
+  evidence that process_ui_widgets or input is missing. Do not force noinline
+  or add a fake exported function just to satisfy the old gate.
+- Remove only the obsolete independent-helper requirement in the original
+  route. Require retained original input_frame_begin/end and disassemble the
+  retained halo_vita_original_render_menu_frame for all nine actual original
+  input/event/clock/widget/render/Present/end calls. Original host transaction
+  order/failure test remains mandatory. Native acceptance is pending this new
+  gate; A133 sound-data and previous text/widget/resource gates remain enabled.
+- Manifest now records16MiB engine-stack/frame route and the actual latest
+  hardware00.41 child-pointer abort, preserving separate historical partial
+  UI/audio evidence. No game behavior changed by this verification correction.

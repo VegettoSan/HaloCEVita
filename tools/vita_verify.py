@@ -95,7 +95,7 @@ if original_runtime:
                  'event_manager_update', 'input_initialize', 'input_update',
                  'input_abstraction_update', 'main_pregame_render', 'render_frame_pregame',
                  'render_frame_present', 'global_scenario_get', 'scenario_get_game_globals',
-                 'halo_vita_original_game_initialize', 'halo_vita_ui_process_shell_frame',
+                 'halo_vita_original_game_initialize', 'input_frame_begin', 'input_frame_end',
                  'halo_vita_original_main_menu_load', 'halo_vita_original_render_menu_frame',
                  'main_menu_load', 'main_load_ui_scenario',
                  'game_load', 'game_initialize_for_new_map', 'scenario_tags_load',
@@ -124,6 +124,16 @@ if original_runtime:
     for obsolete in ('vita_cache_prepare_slot', 'vita_cache_resource_bind', 'vita_cache_resource_read',
                      'halo_vita_main_pump_deferred_map_change'):
         assert not re.search(r'\b[Tt]\s+' + obsolete + r'$', symbols, re.M), 'recovery owner linked: ' + obsolete
+    # A134: the same-TU shell helper is inlined/GC'd after the frame owner
+    # takes over. Verify its real retained original consumers in that owner.
+    frame_code = run('objdump', '-d', '--disassemble=halo_vita_original_render_menu_frame', elf)
+    for consumer in ('input_frame_begin', 'input_update', 'input_abstraction_update',
+                     'event_manager_update', 'halo_vita_main_render_time_update',
+                     'process_ui_widgets', 'main_pregame_render', 'render_frame_present',
+                     'input_frame_end'):
+        assert re.search(r'\bblx?\b.*<' + re.escape(consumer) + '>', frame_code), (
+            'original native frame owner bypasses ' + consumer)
+    print('PASS: ARM native frame retains original input/event/clock/widget/render/Present/end consumers')
     # A126: verify the shipping ARM consumers cross the typed data boundary.
     # The software bitmap text path is covered by host execution but is GC'd
     # from this target; the hardware font cache is the retained renderer owner.
@@ -244,7 +254,7 @@ files = ['HaloCE.vpk', 'eboot.bin', 'HaloCE.elf', 'HaloCE.elf.map']
 tested_package = digest(build / 'HaloCE.vpk') == '7f634c28e8ea851f7fded25503bd0f39c5d269a43087f4761c5fd20952120c88'
 manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_test': ('00.11 real Vita: original root and creation handlers86/23 PASS (A031)'
-                             if tested_package else 'current package untested on Vita; prior00.30 partial UI with remaining rectangles (A089)'),
+                             if tested_package else 'current package untested on Vita; prior00.41 passes cache/BSP/localization and aborts on serialized widget children (A129)'),
             'runtime_package_association': 'latest delivered package/banner; user did not independently supply package digest',
             'title_id': sfo['TITLE_ID'], 'project_max_demonstrated_state': 'partial HALO DRAW RENDERS',
             'rendering_scope': 'prior00.27/00.30 original logo/bitmap labels visible, white rectangles unresolved; current GPU alpha isolation requires console evidence (A087/A089/A091)',
@@ -253,9 +263,11 @@ manifest = {'state': 'BOOTS' if tested_package else 'LINKS',
             'runtime_route': 'original game_initialize/process_ui_widgets/main_pregame_render' if original_runtime else 'recovery staged UI',
             'world_scope': 'scenario/BSP world loading and campaign not yet accepted; compiled source closure is not runtime evidence',
             'alpha_probe_scope': 'up to2 first-frame copies of exact original bitmap shader draws; native storage/output readback, no authored alpha mutation (A091)',
-            'prior_hardware_evidence': 'docs/ATTEMPTS.md A083/A087/A089: continuous audio, partial original bitmap UI; current source is not hardware-verified',
+            'prior_hardware_evidence': 'docs/ATTEMPTS.md A083/A087/A089 historical partial UI/audio; A126/A129 exact00.40/00.41 cache/BSP/localization and pointer aborts; current source is not hardware-verified',
             'installation_test': ('00.11 installed and booted on user Vita (A031)' if tested_package else
                                   'current package installation/runtime pending; prior00.30 BOOTS/partial original UI (A089)'),
+            'engine_stack_bytes': 16 * 1024 * 1024,
+            'frame_route': 'original input/events -> clock -> widgets -> pregame draw/Present -> input end' if original_runtime else 'recovery staged UI',
             'app_version': sfo['APP_VER'], 'livearea_images': images,
             'source_commit': git_metadata('rev-parse', 'HEAD'),
             'source_has_uncommitted_changes': bool(git_metadata(
