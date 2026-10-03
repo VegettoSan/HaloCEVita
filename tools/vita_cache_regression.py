@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the actual portable Vita cache reader on synthetic/error cases.
+"""Exercise the actual portable Vita Xbox-v5 reader/cache-slot boundary.
 
 Optional map paths are read in place; report metadata only, never save tag
 payloads or modified maps. This does not execute ARM/game code or the GPU.
@@ -40,6 +40,8 @@ def fixture(compressed=False):
     struct.pack_into('<6I', header, 0, 0x68656164, 5, LOGICAL_SIZE, 0, TAG_OFFSET, len(tags))
     header[32:38] = b'probe\0'
     header[64:78] = b'01.10.12.2276\0'
+    struct.pack_into('<h', header, 0x60, 2)
+    struct.pack_into('<I', header, 0x64, 0x1234ABCD)
     struct.pack_into('<I', header, 2044, 0x666f6f74)
     payload = bytearray(LOGICAL_SIZE - 2048)
     payload[RESOURCE_OFFSET - 2048:RESOURCE_OFFSET - 2048 + len(RESOURCE_BYTES)] = RESOURCE_BYTES
@@ -71,6 +73,13 @@ def main():
     reader.vita_cache_read_logical_range.argtypes = [
         C.c_void_p, C.c_uint32, C.c_uint32, C.c_void_p, C.c_size_t,
         callback_type, C.c_void_p, C.c_char_p, C.c_size_t]
+    reader.vita_cache_slot_valid.argtypes = [
+        C.c_char_p, C.c_uint, C.c_char_p, C.c_size_t, C.c_char_p, C.c_size_t]
+    reader.vita_cache_slot_valid.restype = C.c_int
+    reader.vita_cache_prepare_slot.argtypes = [
+        C.c_char_p, C.c_uint, C.c_char_p, C.c_size_t, C.POINTER(C.c_int),
+        callback_type, C.c_void_p, C.c_char_p, C.c_size_t]
+    reader.vita_cache_prepare_slot.restype = C.c_int
     reader.vita_cache_resource_bind.argtypes = [C.c_char_p, C.c_uint32]
     reader.vita_cache_resource_bind.restype = C.c_int
     reader.vita_cache_resource_unbind.argtypes = []
@@ -121,9 +130,29 @@ def main():
         assert positions == sorted(positions), 'range progress went backwards'
         return result, error.value.decode(), buffer.raw[:size]
 
+    def prepare(path, slot=2, cancelled=False):
+        slot_path = C.create_string_buffer(320)
+        error = C.create_string_buffer(160)
+        reused = C.c_int(-1)
+        positions = []
+
+        def progress(position, _context):
+            positions.append(position)
+            return not cancelled
+
+        callback = callback_type(progress)
+        result = reader.vita_cache_prepare_slot(os.fsencode(path), slot,
+                                                slot_path, len(slot_path), C.byref(reused),
+                                                callback, None, error, len(error))
+        assert positions == sorted(positions), 'slot progress went backwards'
+        return result, error.value.decode(), Path(os.fsdecode(slot_path.value)), reused.value
+
     count = 0
     with tempfile.TemporaryDirectory(dir=build) as temporary:
-        path = Path(temporary) / 'probe.map'
+        root = Path(temporary)
+        maps = root / 'maps'
+        maps.mkdir()
+        path = maps / 'probe.map'
         for compressed in (False, True):
             data, expected, logical = fixture(compressed)
             path.write_bytes(data)
@@ -160,7 +189,28 @@ def main():
             assert not result and error == 'logical range outside cache'
             count += 1
 
-            assert reader.vita_cache_resource_bind(os.fsencode(path), LOGICAL_SIZE)
+            cache = root / 'cache002.map'
+            cache.unlink(missing_ok=True)
+            result, error, cache_path, reused = prepare(path)
+            assert result, error
+            assert cache_path == cache and not reused
+            assert cache.read_bytes() == logical, 'committed cache bytes differ from logical map'
+            assert path.read_bytes() == data, 'precache modified source map'
+            count += 4
+
+            # A second precache must reuse the committed slot without rewriting it.
+            before = cache.stat().st_mtime_ns
+            result, error, cache_path, reused = prepare(path)
+            assert result, error
+            assert reused == 1 and cache_path == cache and cache.stat().st_mtime_ns == before
+            valid_path, valid_error = C.create_string_buffer(320), C.create_string_buffer(160)
+            assert reader.vita_cache_slot_valid(os.fsencode(path), 2, valid_path, len(valid_path),
+                                                valid_error, len(valid_error)), valid_error.value
+            assert Path(os.fsdecode(valid_path.value)) == cache
+            count += 3
+
+            # Resource reads bind the committed uncompressed slot, never inflate live.
+            assert reader.vita_cache_resource_bind(os.fsencode(cache), LOGICAL_SIZE)
             for offset, size, valid in [
                 (RESOURCE_OFFSET, len(RESOURCE_BYTES), True),
                 (LOGICAL_SIZE - 1, 1, True), (LOGICAL_SIZE, 1, False),
@@ -175,20 +225,39 @@ def main():
                                                    bound_error, len(bound_error)), bound_error.value
             assert bound.raw == RESOURCE_BYTES
             reader.vita_cache_resource_unbind()
+            assert cache.exists(), 'cache_file_close/unbind must retain persistent slot'
             assert not reader.vita_cache_resource_range_valid(RESOURCE_OFFSET, 1)
-            count += 1
+            count += 2
             assert not reader.vita_cache_resource_read(RESOURCE_OFFSET, bound, len(RESOURCE_BYTES),
                                                        bound_error, len(bound_error))
             count += 2
 
             if compressed:
+                # A compressed source is not a cache_file_read backing anymore.
+                assert not reader.vita_cache_resource_bind(os.fsencode(path), LOGICAL_SIZE)
+                count += 1
                 damaged = bytearray(data)
                 damaged[-1] ^= 1
                 path.write_bytes(damaged)
                 result, error, _ = read_range(path, LOGICAL_SIZE, RESOURCE_OFFSET, len(RESOURCE_BYTES))
                 assert not result and ('zlib' in error or 'length' in error), error
                 count += 1
+                cache.unlink(missing_ok=True)
+                result, error, _, _ = prepare(path)
+                assert not result and not cache.exists()
+                count += 1
                 path.write_bytes(data)
+
+            # Header/source identity changes invalidate the persistent slot.
+            changed = bytearray(data)
+            changed[0x64] ^= 1
+            path.write_bytes(changed)
+            valid_path, valid_error = C.create_string_buffer(320), C.create_string_buffer(160)
+            assert not reader.vita_cache_slot_valid(os.fsencode(path), 2, valid_path, len(valid_path),
+                                                    valid_error, len(valid_error))
+            count += 1
+            path.write_bytes(data)
+            cache.unlink(missing_ok=True)
 
         plain, _, _ = fixture()
         mutations = [
@@ -218,7 +287,7 @@ def main():
             result, error, _, _ = read(path)
             assert not result, 'accepted truncated/corrupt stream'
             count += 1
-    print(f'PASS: actual C reader {count} synthetic tag/range/bind/corruption cases')
+    print(f'PASS: actual C reader/cache-slot boundary {count} synthetic cases')
     for path in args.maps:
         result, error, info, _ = read(path)
         report = {'file': path.name, 'PASS': bool(result), 'error': error,
