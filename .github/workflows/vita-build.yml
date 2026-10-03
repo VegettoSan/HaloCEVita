@@ -43,6 +43,7 @@ jobs:
           python3 tools/vita_nv2a_position_regression.py
           python3 tools/vita_draw_target_regression.py
           python3 tools/vita_ui_render_contract_regression.py
+          python3 tools/vita_original_ui_lifecycle_regression.py
 
   vita:
     name: Vita menu renderer build
