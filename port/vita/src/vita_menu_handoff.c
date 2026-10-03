@@ -108,20 +108,26 @@ int halo_vita_main_pump_deferred_map_change(void)
         return 0;
 
     /* Validation is intentionally one-shot per rejected map name. The staged
-     * shell pumps this function every frame; repeating full header diagnostics
-     * at 30 Hz would hide the first useful failure in debug.txt. A new map
-     * selection is validated normally. */
+     * shell pumps this function every frame; repeating full source/cache
+     * diagnostics at 30 Hz would hide the first useful failure in debug.txt. */
     if (!csstrcmp(missing_map, requested))
         return 0;
 
-    /* Check the direct Vita map before tearing down a working menu. Missing
-     * a10 therefore remains a recoverable data/setup condition, not a black
-     * screen caused by releasing ui.map too early. */
+    /* Retail does not open the compressed DVD/source map as the active cache.
+     * First ensure the scenario has a committed z:\\cacheNNN equivalent. Vita's
+     * precache is synchronous, but preserves slot selection, source identity,
+     * full zlib validation and header-last publication. Only then may the menu
+     * be released and scenario_tags_load consume the logical cache. */
     if (!cache_files_precache_map_loaded(requested)) {
-        csstrncpy(missing_map, requested, NUMBEROF(missing_map) - 1);
-        missing_map[NUMBEROF(missing_map) - 1] = 0;
-        vita_log("[VITA MAP] Campaign request waiting for valid map: %s", requested);
-        return 0;
+        vita_log("[VITA MAP] Campaign source selected; precache required before handoff: %s", requested);
+        if (!cache_files_precache_map_begin(requested, TRUE) ||
+            !cache_files_precache_map_loaded(requested)) {
+            csstrncpy(missing_map, requested, NUMBEROF(missing_map) - 1);
+            missing_map[NUMBEROF(missing_map) - 1] = 0;
+            vita_log("[VITA MAP] Campaign precache FAILED/not committed: %s", requested);
+            return 0;
+        }
+        vita_log("[VITA MAP] Campaign precache committed and validated: %s", requested);
     }
     missing_map[0] = 0;
 
