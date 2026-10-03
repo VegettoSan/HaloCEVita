@@ -69,14 +69,34 @@ required += ['halo_vita_ui_process_menu_action', 'halo_vita_ui_activate_main_men
              'xgpu_texture_get', 'xgpu_gl_state_invalidate',
              'glReadPixels', 'glGetIntegerv', 'glGetFloatv', 'glIsEnabled']
 if original_runtime:
-    recovery_only = {'halo_vita_menu_root_load', 'halo_vita_ui_process_menu_action',
-                     'halo_vita_ui_render_clock_update', '__wrap_sound_render_time', '__wrap_sound_idle'}
+    # main_menu_load now owns the entire new-map lifetime. The staged mount,
+    # root construction and partial cleanup functions are correctly discarded
+    # by --gc-sections; requiring them would reject the original implementation.
+    recovery_only = {
+        'game_state_free_buffer', 'halo_vita_cache_mount_menu',
+        'halo_vita_cache_validate_menu', 'halo_vita_cache_unmount_menu',
+        'vita_cache_read', 'vita_cache_resource_bind',
+        'halo_vita_ui_runtime_initialize', 'halo_vita_ui_runtime_dispose',
+        'halo_vita_menu_root_checkpoint', 'halo_vita_menu_root_load',
+        'halo_vita_ui_widgets_dispose_checkpoint', 'halo_vita_menu_tags_probe',
+        'halo_vita_renderer_initialize', 'halo_vita_renderer_render_menu_frame',
+        'halo_vita_renderer_dispose_before_root', 'halo_vita_menu_bitmap_resources_activate',
+        'halo_vita_menu_audio_initialize', 'halo_vita_menu_audio_frame',
+        'halo_vita_menu_audio_start', 'halo_vita_menu_audio_dispose',
+        'halo_vita_sound_menu_refresh', 'halo_vita_ui_process_menu_action',
+        'halo_vita_ui_activate_main_menu_state', 'halo_vita_ui_render_clock_update',
+        '__wrap_sound_render_time', '__wrap_sound_idle',
+    }
     required = [name for name in required if name not in recovery_only]
     required += ['game_initialize', 'process_ui_widgets', 'main_screen_shell_load',
                  'event_manager_update', 'input_initialize', 'input_update',
                  'input_abstraction_update', 'main_pregame_render', 'render_frame_pregame',
                  'render_frame_present', 'global_scenario_get', 'scenario_get_game_globals',
                  'halo_vita_original_game_initialize', 'halo_vita_ui_process_shell_frame',
+                 'halo_vita_original_main_menu_load', 'halo_vita_original_render_menu_frame',
+                 'main_menu_load', 'main_load_ui_scenario', 'main_new_map',
+                 'game_load', 'game_initialize_for_new_map', 'scenario_tags_load',
+                 'cache_files_initialize', 'cache_file_open', 'tag_files_open',
                  'XGetDeviceChanges', 'XInputDebugGetKeystroke']
     forbidden = ['halo_vita_menu_deferred_', 'halo_vita_move_menu_focus',
                  'halo_vita_dispatch_focused_button', '__wrap_compute_sound_obstruction',
