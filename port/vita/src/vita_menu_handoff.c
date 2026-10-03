@@ -6,17 +6,35 @@
  * systems alive, then release the manual tag/resource mount before a10 is read.
  */
 #include "cseries/cseries.h"
+#include "cache/cache_files.h"
 #include "cache/texture_cache.h"
 #include "effects/decals.h"
 #include "cutscene/cinematics.h"
 #include "game/game.h"
 #include "interface/ui_widget.h"
+#include "main/main.h"
 #include "scenario/scenario.h"
+#include "scenario/scenario_definitions.h"
 #include "halo_vita_cache.h"
 #include "vita_runtime.h"
 
 void texture_cache_close(void);
 void players_dispose_from_old_map(void);
+
+/* main.c keeps this retail ABI structure private. The Vita transition boundary
+ * needs the same public game_options_new/game_load contract without copying
+ * main_new_map or inventing gameplay state. Keep the layout assertion beside
+ * the local declaration so divergence is a build failure. */
+struct vita_game_options
+{
+    unsigned long flags;
+    short code_version;
+    short difficulty;
+    unsigned long random_seed;
+    char map_name[256];
+};
+typedef char vita_game_options_size_assert[
+    sizeof(struct vita_game_options) == 0x10C ? 1 : -1];
 
 int halo_vita_ui_runtime_release_staged_map(void)
 {
@@ -71,5 +89,71 @@ int halo_vita_ui_runtime_release_staged_map(void)
     vita_cache_resource_unbind();
     ui_widgets_inhibit_processing(FALSE);
     vita_log("[VITA MAP] staged ui.map ownership released; original scenario loader may reuse tag arena");
+    return 1;
+}
+
+int halo_vita_main_pump_deferred_map_change(void)
+{
+    static char missing_map[256];
+    const char *requested = main_get_map_name();
+    struct vita_game_options options;
+    struct scenario *scenario;
+
+    /* The staged shell starts with main_globals.soloplayer_map_name empty.
+     * Original UI handlers populate it through main_set_map_name only when a
+     * real solo map has been selected. Do not reinterpret arbitrary strings as
+     * a transition request. */
+    if (game_in_progress() || !requested || !requested[0] ||
+        main_get_current_solo_level() == NONE)
+        return 0;
+
+    /* Check the direct Vita map before tearing down a working menu. Missing
+     * a10 therefore remains a recoverable data/setup condition, not a black
+     * screen caused by releasing ui.map too early. */
+    if (!cache_files_precache_map_loaded(requested)) {
+        if (csstrcmp(missing_map, requested)) {
+            csstrncpy(missing_map, requested, NUMBEROF(missing_map) - 1);
+            missing_map[NUMBEROF(missing_map) - 1] = 0;
+            vita_log("[VITA MAP] Campaign request waiting for valid map: %s", requested);
+        }
+        return 0;
+    }
+
+    game_options_new((struct game_options *)&options);
+    csstrncpy(options.map_name, requested, NUMBEROF(options.map_name) - 1);
+    options.map_name[NUMBEROF(options.map_name) - 1] = 0;
+    options.difficulty = main_get_difficulty();
+    vita_log("[VITA MAP] original solo scenario activation begin: map=%s difficulty=%d",
+        options.map_name, (int)options.difficulty);
+
+    if (!halo_vita_ui_runtime_release_staged_map())
+        return -1;
+
+    game_connection_set(_game_connection_local);
+    game_precache_new_map(options.map_name, TRUE);
+    game_unload();
+
+    /* This checkpoint intentionally stops at the original game_load boundary:
+     * scenario_load -> scenario_tags_load -> first structure BSP. The next
+     * milestone will call game_initialize_for_new_map and create the local
+     * player through main_new_map-equivalent original ownership. */
+    if (!game_load((struct game_options *)&options)) {
+        vita_log("[VITA MAP] original game_load FAILED for %s", options.map_name);
+        return -1;
+    }
+
+    scenario = global_scenario_try_and_get();
+    if (!scenario || global_structure_bsp_index == NONE ||
+        scenario->structure_bsp_references.count <= 0) {
+        vita_log("[VITA MAP] game_load returned without active scenario/BSP: scenario=%p bsp=%d refs=%ld",
+            scenario, (int)global_structure_bsp_index,
+            scenario ? scenario->structure_bsp_references.count : -1L);
+        return -1;
+    }
+
+    vita_log("[VITA MAP] ORIGINAL SCENARIO ACTIVE: datum=%08lx type=%d BSP=%d/%ld map=%s",
+        (unsigned long)global_scenario_index, (int)scenario->type,
+        (int)global_structure_bsp_index, scenario->structure_bsp_references.count,
+        options.map_name);
     return 1;
 }
