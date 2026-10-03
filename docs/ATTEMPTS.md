@@ -1398,3 +1398,15 @@ consumer, status/byte count before event notification and callback precedence
 when both are supplied. PASS; required xapi event contracts also PASS. The staged
 world/audio guards are already unselected in the default original runtime.
 No audio-selection/volume/trigger logic changed; console audio acceptance pending.
+
+
+### A124 — Retain native tag-buffer safeguards at original header owner (2026-10-03)
+
+Removing the parallel cache owner also removed its pre-read tag-span and bounded
+header-string checks. Kept those necessary native memory safeguards in the
+original cache_file_header_verify before csstrlen or I/O: tag bytes fit the
+22MiB arena window and logical file; strings terminate within their fixed fields.
+No second reader/slot owner. Actual original verification regression accepts
+retail v5 and rejects oversized/negative/out-of-file tag spans, unterminated
+name/build and v7. PASS; host-only evidence. Native builds279 already passed the
+original cache closure/package,280/281 remain in progress at this checkpoint.

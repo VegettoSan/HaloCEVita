@@ -570,6 +570,21 @@ boolean cache_file_header_verify(
 	char const *scenario_name,
 	boolean fatal)
 {
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    /* The original owner still verifies identity/version. Preserve the native
+     * arena and bounded-string contract before any read or csstrlen. */
+    if (!memchr(header->name, 0, sizeof(header->name)) ||
+        !memchr(header->build, 0, sizeof(header->build)) ||
+        header->file_length < 0x800 || header->tag_data_offset < 0x800 ||
+        header->tag_data_size < 36 || header->tag_data_size > HALO_VITA_TAG_CAPACITY ||
+        header->tag_data_offset > header->file_length ||
+        header->tag_data_size > header->file_length - header->tag_data_offset)
+    {
+        vita_log("[VITA ORIGINAL CACHE] header rejected: logical=%ld tag_offset=%ld tag_bytes=%ld capacity=%lu", header->file_length, header->tag_data_offset, header->tag_data_size, (unsigned long)HALO_VITA_TAG_CAPACITY);
+        if (fatal) vita_fatal("original cache header exceeds native arena/logical file contract");
+        return FALSE;
+    }
+#endif
 	if (header->header_signature != CACHE_FILE_HEADER_SIGNATURE ||
 		header->footer_signature != CACHE_FILE_FOOTER_SIGNATURE ||
 		header->file_length < 0 ||

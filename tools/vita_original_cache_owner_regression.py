@@ -51,6 +51,11 @@ typedef struct { DWORD Internal,InternalHigh,Offset,OffsetHigh; HANDLE hEvent; }
 #define FILE_FLAG_OVERLAPPED 16
 #define INVALID_SET_FILE_POINTER -1
 #define FILE_BEGIN 0
+#define CACHE_FILE_HEADER_SIGNATURE 0x68656164
+#define CACHE_FILE_FOOTER_SIGNATURE 0x666f6f74
+#define HALO_VITA_TAG_CAPACITY 0x01600000
+#define csstrlen strlen
+#define csstrcmp strcmp
 #define CACHE_FILE_BUILD_STRING "01.01.14.2342"
 #define INVALID_HANDLE_VALUE ((void *)-1)
 #define _stricmp strcasecmp
@@ -60,7 +65,7 @@ enum { NUMBER_OF_CACHED_MAP_FILES=6, MAXIMUM_SIMULTANEOUS_CACHE_REQUESTS=512,
  CACHE_FILE_SECTOR_SIZE=512, SOLO_CACHE_FILE_MAXIMUM_SIZE=0x11600000,
  MAIN_MENU_CACHE_FILE_MAXIMUM_SIZE=0x02300000, MULTIPLAYER_CACHE_FILE_MAXIMUM_SIZE=0x02F00000,
  _scenario_type_solo=0,_scenario_type_multiplayer=1,_scenario_type_main_menu=2 };
-struct cache_file_header {long file_length,tag_data_size; char name[32],build[32];unsigned checksum;};
+struct cache_file_header {unsigned long header_signature,footer_signature;long version,file_length,tag_data_offset,tag_data_size; char name[32],build[32];unsigned checksum;};
 '''
     a = source.index('struct cached_map_file\n')
     b = source.index('typedef BOOL', a)
@@ -71,6 +76,7 @@ struct cache_file_header {long file_length,tag_data_size; char name[32],build[32
     helpers = r'''
 static int wakes;
 static void vita_log(const char *format,...){(void)format;}
+static void vita_fatal(const char *message){(void)message;abort();}
 static long CompareFileTime(const FILETIME *a,const FILETIME *b){return (*a>*b)-(*a<*b);}
 static void cache_file_windows_thread_wake(void){++wakes;}
 static short cache_request_next_free_index(void){return 0;}
@@ -97,6 +103,7 @@ static void cached_map_block_on_async_request(volatile boolean *done){assert(*do
              'cache_file_open', 'cache_file_read', 'cache_file_read_io_completion_routine',
              'cache_files_open_cache_files']
     functions = ''.join(definition(source, name) for name in names)
+    functions += definition((ROOT / 'source/cache/cache_files.c').read_text(), 'cache_file_header_verify')
     test = r'''
 int main(void){
  struct cache_file_request requests[512];struct cache_file_header header;
@@ -126,6 +133,19 @@ int main(void){
  assert(cache_file_open("UI",&header));
  assert(header.checksum==0xabcdef && !strcmp(header.build,"01.10.12.2276"));
  assert(cache_file_globals.open_map_file_index==2);
+ if(WARM_ALLOWED){
+  struct cache_file_header valid={0},bad;
+  valid.header_signature=CACHE_FILE_HEADER_SIGNATURE;valid.footer_signature=CACHE_FILE_FOOTER_SIGNATURE;valid.version=5;
+  valid.file_length=0x800+4096;valid.tag_data_offset=0x800;valid.tag_data_size=4096;
+  strcpy(valid.name,"ui");strcpy(valid.build,"01.10.12.2276");
+  assert(cache_file_header_verify(&valid,"UI",FALSE));
+  bad=valid;bad.tag_data_size=HALO_VITA_TAG_CAPACITY+1;assert(!cache_file_header_verify(&bad,"UI",FALSE));
+  bad=valid;bad.tag_data_offset=bad.file_length;assert(!cache_file_header_verify(&bad,"UI",FALSE));
+  bad=valid;bad.tag_data_size=-1;assert(!cache_file_header_verify(&bad,"UI",FALSE));
+  bad=valid;memset(bad.name,'x',sizeof(bad.name));assert(!cache_file_header_verify(&bad,"UI",FALSE));
+  bad=valid;memset(bad.build,'x',sizeof(bad.build));assert(!cache_file_header_verify(&bad,"UI",FALSE));
+  bad=valid;bad.version=7;assert(!cache_file_header_verify(&bad,"UI",FALSE));
+ }
  byte bytes[1024];boolean complete=TRUE;
  assert(cache_file_read(NONE,2048,513,bytes,&complete,FALSE)==0);
  assert(!complete && wakes==1 && requests[0].pending && !requests[0].running);
@@ -145,7 +165,7 @@ int main(void){
             if native: flags.append('-DHALO_VITA_ORIGINAL_RUNTIME')
             subprocess.run(['gcc', '-std=c11', '-Wno-unused-parameter', *flags, str(work / 'test.c'), '-o', str(work / 'test')], check=True)
             subprocess.run([str(work / 'test')], check=True, timeout=10)
-    print('PASS: actual Halo six-slot/LRU policy, active-slot protection, native header preservation, native warm-slot recovery/checksum rejection, original request queue/sector rounding and completion ownership')
+    print('PASS: actual Halo six-slot/LRU policy, active-slot protection, native header preservation, native warm-slot recovery/checksum rejection and header arena/string bounds, original request queue/sector rounding and completion ownership')
 
 
 if __name__ == '__main__':
