@@ -1,11 +1,29 @@
-# Fuentes de la nueva implementación
+# Procedencia de la nueva base
 
-Registro iniciado el 2026-10-03. Ningún archivo de código del HaloCEVita anterior
-es una fuente permitida. La importación debe registrar SHA, ruta y hash.
+Importación directa del 2026-10-03:
 
-- Engine: cybersecurity/halo-ce-universal, obtenido directamente por git.
-- Plataforma Vita: BirchWoodGod/halo-ce-vita, obtenido directamente por git.
-- Backend final: vitaGL; no importar el renderer GXM como backend final.
+- Decomp: https://github.com/cybersecurity/halo-ce-universal
+  SHA `933aac61754eb5de2c8496dbe9b8278f033e4c1f`.
+- Donante Vita revisado: https://github.com/BirchWoodGod/halo-ce-vita
+  SHA `309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2`; su código se importará
+  separadamente con atribución y licencia.
+- vitaGL revisado directamente: https://github.com/Rinnegatamante/vitaGL
+  SHA `1ae86f65718675b797d3cd8ffc021ad2527096cb`.
 
-SHAs de importación y licencias se fijarán al importar las fuentes. El historial
-anterior conserva únicamente evidencia histórica, no una dependencia del build.
+`tools/origins.json` registra los 1490 archivos importados del decomp con ruta,
+commit, blob Git, SHA-256 y modo. Los 967 archivos de source/ están inicialmente
+intactos. La copia se obtuvo del checkout original, no de HaloCEVita.
+
+Exclusiones explícitas: assets gráficos/fonts/menús del port, PGO, workflow
+multiplataforma y ports Windows/Android excepto cabeceras ARM de Android. No
+se incluyen datos retail ni paquetes ajenos. Las exclusiones completas constan
+en el manifiesto. Se conserva LICENSE.md y licencias de terceros importados.
+
+La ausencia de assets de menús/HUD mantiene esos overrides fuera del paquete;
+el nuevo host deberá seleccionar explícitamente los tags Xbox originales.
+El decomp reciente incorpora menús PC y cambia el generador de build respecto
+al donante: hay que adaptar el generador Vita a su port.json actual.
+
+El código del renderer, helpers y tests antiguos se ha retirado. El nuevo
+verificador compara importaciones con el checkout original y rechaza código
+sin procedencia registrada, además de los módulos descartados conocidos.

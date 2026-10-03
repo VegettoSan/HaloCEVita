@@ -25,12 +25,6 @@ Conventions carried over from the Xbox:
 #include "sdl_platform.h"
 #include "halo_ui_pointer.h"
 #include "port_config.h"
-#ifdef HALO_VITA
-#include "../../vita/include/vita_runtime.h"
-#include "../../vita/include/halo_vita_program.h"
-#include "../../vita/include/halo_vita_graphics.h"
-#include "../../vita/include/halo_vita_vertex.h"
-#endif
 
 #include <math.h>
 #include <stdio.h>
@@ -104,13 +98,6 @@ static void screen_mode_choose(long *width, float scale[2])
 		*width = 1600;
 	*width &= ~1L;
 	scale[0] = scale[1] = 1.0f;
-#elif defined(HALO_VITA)
-	/* Halo's authored UI and original rasterizer use 640x480. Reuse the
-	 * backend's target/viewport/clear scaling instead of shrinking the
-	 * game's coordinate system or rendering at panel resolution. */
-	*width = HALO_VITA_GAME_WIDTH;
-	scale[0] = (float)HALO_VITA_RENDER_WIDTH / (float)HALO_VITA_GAME_WIDTH;
-	scale[1] = (float)HALO_VITA_RENDER_HEIGHT / (float)SCREEN_HEIGHT;
 #else
 	long display_width, display_height;
 
@@ -140,6 +127,13 @@ long halo_screen_width(void)
 			screen_width * screen_scale[0], SCREEN_HEIGHT * screen_scale[1]);
 	}
 	return screen_width;
+}
+
+/* the display's pixels for each of the 480 lines (text_hires.c) */
+float halo_screen_pixel_scale(void)
+{
+	halo_screen_width();
+	return screen_scale[1];
 }
 
 void halo_screen_ui_offset(unsigned char centered)
@@ -189,11 +183,6 @@ struct fragment_entry
 	unsigned long hash;
 	struct nv2a_pixel_shader_key key;
 	GLuint shader;
-#ifdef HALO_VITA
-	unsigned long vertex_program_id, packed_mask;
-	BOOL immediate;
-	struct program_entry *paired_program;
-#endif
 };
 
 /* the uniforms a draw sets besides the vertex constants */
@@ -223,11 +212,6 @@ struct program_entry
 	GLuint fragment_shader;
 	GLuint program;
 	GLint constants;
-#ifdef HALO_VITA
-	struct halo_vita_uniform_array constant_array;
-	struct halo_vita_uniform_array ps_c0_array, ps_c1_array;
-	struct halo_vita_uniform_array bump_matrix_array, bump_luminance_array, texture_scale_array;
-#endif
 	GLint viewport_scale;
 	GLint viewport_offset;
 	GLint point_size;
@@ -263,11 +247,6 @@ struct render_target_entry
 	/* the next with the same address bucket (render_target_bucket) */
 	struct render_target_entry *next_in_bucket;
 	struct xgpu_render_target target;
-#ifdef HALO_VITA
-	/* vitaGL depth/stencil is requested through a renderbuffer, not a
-	 * sampleable packed-depth texture. Keep the GL namespaces separate. */
-	GLuint depth_buffer;
-#endif
 	unsigned long last_rendered;
 };
 
@@ -295,11 +274,7 @@ static struct framebuffer_entry *framebuffers;
 
 /* ---------- the device */
 
-#if defined(HALO_VITA)
-#define STREAM_BUFFER_SIZE HALO_VITA_STREAM_SIZE
-#define INDEX_BUFFER_SIZE HALO_VITA_INDEX_SIZE
-#define STREAM_BUFFER_RING HALO_VITA_STREAM_RING
-#elif defined(HALO_ANDROID)
+#ifdef HALO_ANDROID
 /* Mobile drivers (Mali) keep every orphaned copy of a buffer until the GPU
 is done with it, so a large buffer orphaned each frame costs its size per
 frame in flight and more. Instead each frame streams into the next of a few
@@ -348,7 +323,7 @@ struct gl_device
 	} streams[16];
 	/* SetIndices' base vertex: added to every index of an indexed draw (the
 	dynamic vertex buffers keep each buffer's vertices at an offset into one
-	vertex buffer, and their triangles count from 0: contrails, lightning). */
+	vertex buffer, and their triangles count from 0: contrails, lightning) */
 	UINT base_vertex_index;
 
 	/* the current value of each input register (SetVertexData) */
@@ -392,6 +367,9 @@ struct gl_device
 	had caught up */
 	GLuint visibility_results_buffer;
 	volatile GLuint *visibility_results;
+	/* a pipeline flush every flush_every draws (draw_flush), 0 never */
+	unsigned long flush_every;
+	unsigned long flush_draws;
 #endif
 
 	unsigned long frame;
@@ -539,10 +517,6 @@ static void state_framebuffer(GLuint framebuffer)
 static void state_texture(int unit, GLenum target, GLuint texture)
 {
 	int slot = target == GL_TEXTURE_CUBE_MAP ? 1 : target == GL_TEXTURE_3D ? 2 : 0;
-#ifdef HALO_VITA
-	if (target == GL_TEXTURE_3D)
-		vita_fatal("D3D8 3D texture binding requires a vitaGL fallback");
-#endif
 
 	if (gl_state.textures[unit][slot] == texture)
 		return;
@@ -600,13 +574,7 @@ static void state_attribute_pointer(GLuint index, GLuint buffer, GLint size, GLe
 	}
 	state_array_buffer(buffer);
 	if (integer)
-	{
-#ifdef HALO_VITA
-		vita_fatal("D3D8 packed integer vertex attribute requires CPU conversion on Vita");
-#else
 		glVertexAttribIPointer(index, size, type, stride, (const void *)offset);
-#endif
-	}
 	else
 		glVertexAttribPointer(index, size, type, normalized, stride, (const void *)offset);
 	pointer->buffer = buffer;
@@ -662,12 +630,7 @@ static void *vertical_blank_thread(void *unused)
 	struct timespec next;
 
 	(void)unused;
-#ifdef HALO_VITA
-	if (clock_gettime(CLOCK_MONOTONIC, &next) != 0)
-		vita_fatal("Cannot read the original presentation clock");
-#else
 	clock_gettime(CLOCK_MONOTONIC, &next);
-#endif
 	for (;;)
 	{
 		D3DCALLBACK callback;
@@ -678,13 +641,7 @@ static void *vertical_blank_thread(void *unused)
 			next.tv_nsec -= 1000000000L;
 			next.tv_sec++;
 		}
-#ifdef HALO_VITA
-		if (!halo_vita_wait_monotonic_deadline(
-			(uint64_t)next.tv_sec * 1000000000ULL + (uint64_t)next.tv_nsec))
-			vita_fatal("Original presentation deadline wait failed");
-#else
 		clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &next, NULL);
-#endif
 
 		pthread_mutex_lock(&vertical_blank_lock);
 		vertical_blank_count++;
@@ -715,16 +672,10 @@ static void vertical_blank_start(void)
 		{
 			pthread_detach(thread);
 			vertical_blank_thread_started = TRUE;
-#ifdef HALO_VITA
-			vita_log("[VITA VBLANK] original 60Hz presentation worker started");
-#endif
 		}
 		else
 		{
 			platform_log("cannot start the vertical blank thread");
-#ifdef HALO_VITA
-			vita_fatal("Cannot start the original presentation worker; refusing an unserviceable flip queue");
-#endif
 		}
 	}
 	pthread_mutex_unlock(&vertical_blank_lock);
@@ -761,24 +712,12 @@ void WINAPI D3DDevice_BlockUntilVerticalBlank(void)
 
 static GLuint compile_shader(GLenum type, const char *source, const char *what)
 {
-	GLuint shader;
+	GLuint shader = glCreateShader(type);
 	GLint status = 0;
-	if (!source) {
-		platform_log("cannot generate the %s shader", what);
-		return 0;
-	}
-	shader = glCreateShader(type);
-	if (!shader) return 0;
-#ifdef HALO_VITA
-	vita_graphics_halo_shader_begin(what, source);
-#endif
+
 	glShaderSource(shader, 1, &source, NULL);
 	glCompileShader(shader);
-#ifdef HALO_VITA
-	status = vita_graphics_halo_shader_result(shader, what);
-#else
 	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-#endif
 	if (!status)
 	{
 		char log[4096];
@@ -791,7 +730,7 @@ static GLuint compile_shader(GLenum type, const char *source, const char *what)
 	return shader;
 }
 
-#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
+#ifndef HALO_ANDROID
 static void GLAPIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity,
 	GLsizei length, const GLchar *message, const void *user)
 {
@@ -843,9 +782,6 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 		}
 	}
 	entry = calloc(1, sizeof(*entry));
-#ifdef HALO_VITA
-	if (!entry) vita_fatal("D3D8 render target metadata allocation failed");
-#endif
 	entry->target.data = surface->Data;
 	entry->target.width = width;
 	entry->target.height = height;
@@ -854,52 +790,15 @@ static struct render_target_entry *render_target_get(const D3DSurface *surface)
 	entry->target.scale[1] = scale[1];
 	entry->target.gl_width = (unsigned long)(width * scale[0] + 0.5f);
 	entry->target.gl_height = (unsigned long)(height * scale[1] + 0.5f);
-#ifdef HALO_VITA
+	glGenTextures(1, &entry->target.texture);
+	glBindTexture(GL_TEXTURE_2D, entry->target.texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	if (depth)
-	{
-		glGenRenderbuffers(1, &entry->depth_buffer);
-		if (!entry->depth_buffer)
-			vita_fatal("vitaGL could not create the original D3D8 depth renderbuffer");
-		glBindRenderbuffer(GL_RENDERBUFFER, entry->depth_buffer);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-			(GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0);
-	}
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)entry->target.gl_width,
+			(GLsizei)entry->target.gl_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
 	else
-#endif
-	{
-		glGenTextures(1, &entry->target.texture);
-		glBindTexture(GL_TEXTURE_2D, entry->target.texture);
-#ifndef HALO_VITA
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-		if (depth)
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8, (GLsizei)entry->target.gl_width,
-				(GLsizei)entry->target.gl_height, 0, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, NULL);
-		else
-#endif
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height,
-				0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-	}
-#ifdef HALO_VITA
-	{
-		GLenum error = glGetError();
-		GLuint object = depth ? entry->depth_buffer : entry->target.texture;
-		if (!object || error != GL_NO_ERROR)
-		{
-			vita_log("D3D8 render target allocation failed depth=%d object=%u size=%lux%lu GL error=0x%x",
-				depth, object, entry->target.gl_width, entry->target.gl_height, error);
-			if (depth) glDeleteRenderbuffers(1, &entry->depth_buffer);
-			else glDeleteTextures(1, &entry->target.texture);
-			free(entry);
-			vita_fatal("original D3D8 render target could not be allocated on vitaGL");
-		}
-		vita_log("D3D8 render target request PASS data=%08lx depth=%d texture=%u renderbuffer=%u size=%lux%lu",
-			entry->target.data, depth, entry->target.texture, entry->depth_buffer,
-			entry->target.gl_width, entry->target.gl_height);
-		/* Storage requests are checked here; vitaGL allocates the physical
-		 * GXM depth/stencil surface lazily when the owning FBO starts a scene. */
-	}
-#endif
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, (GLsizei)entry->target.gl_width, (GLsizei)entry->target.gl_height,
+			0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
 	xgpu_gl_state_invalidate();
 	entry->next = render_targets;
 	render_targets = entry;
@@ -923,82 +822,25 @@ struct xgpu_render_target *xgpu_render_target_find(unsigned long data)
 static GLuint framebuffer_get(GLuint color, GLuint depth)
 {
 	struct framebuffer_entry *entry;
-	#ifndef HALO_VITA
 	GLenum draw_buffer = color ? GL_COLOR_ATTACHMENT0 : GL_NONE;
-	#else
-	if (!color) vita_fatal("D3D8 depth-only framebuffer needs draw-buffer selection unavailable in vitaGL");
-	#endif
 
 	for (entry = framebuffers; entry; entry = entry->next)
 	{
-#ifdef HALO_VITA
-		/* vitaGL owns hidden depth/stencil per FBO. The same renderbuffer on
-		 * two FBOs would create unrelated surfaces. Retain the depth's FBO
-		 * and replace only its equal-size color attachment. bind_targets
-		 * verifies sizes before entering here. Never reattach the renderbuffer
-		 * on a cache hit: that discards vitaGL's existing hidden depth. */
-		if (depth && entry->depth == depth)
-		{
-			if (entry->color != color)
-			{
-				glBindFramebuffer(GL_FRAMEBUFFER, entry->framebuffer);
-				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
-				GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-				GLenum error = glGetError();
-				if (status != GL_FRAMEBUFFER_COMPLETE || error != GL_NO_ERROR)
-				{
-					vita_log("D3D8 FBO color switch failed color=%u depth=%u status=0x%x error=0x%x",
-						color, depth, status, error);
-					vita_fatal("vitaGL rejected the original D3D8 framebuffer color switch");
-				}
-				entry->color = color;
-				xgpu_gl_state_invalidate();
-			}
-			return entry->framebuffer;
-		}
-#endif
 		if (entry->color == color && entry->depth == depth)
 			return entry->framebuffer;
 	}
 	entry = calloc(1, sizeof(*entry));
-#ifdef HALO_VITA
-	if (!entry) vita_fatal("D3D8 framebuffer metadata allocation failed");
-#endif
 	entry->color = color;
 	entry->depth = depth;
 	glGenFramebuffers(1, &entry->framebuffer);
-#ifdef HALO_VITA
-	if (!entry->framebuffer) vita_fatal("vitaGL could not create the original D3D8 framebuffer");
-#endif
 	glBindFramebuffer(GL_FRAMEBUFFER, entry->framebuffer);
 	if (color)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
 	if (depth)
-#ifdef HALO_VITA
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
-#else
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, depth, 0);
-#endif
-	#ifdef HALO_VITA
-	{
-		GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-		GLenum error = glGetError();
-		if (status != GL_FRAMEBUFFER_COMPLETE || error != GL_NO_ERROR)
-		{
-			vita_log("D3D8 FBO attachment failed color=%u depth=%u FBO=%u status=0x%x error=0x%x",
-				color, depth, entry->framebuffer, status, error);
-			glDeleteFramebuffers(1, &entry->framebuffer);
-			free(entry);
-			vita_fatal("vitaGL rejected the original D3D8 framebuffer attachments");
-		}
-		vita_log("D3D8 FBO attachment PASS color=%u depth_renderbuffer=%u FBO=%u status=0x%x GL error=0x%x",
-			color, depth, entry->framebuffer, status, error);
-	}
-	#else
 	glDrawBuffers(1, &draw_buffer);
 	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		platform_log("framebuffer %u/%u is incomplete", color, depth);
-	#endif
 	xgpu_gl_state_invalidate();
 	entry->next = framebuffers;
 	framebuffers = entry;
@@ -1030,14 +872,7 @@ static BOOL bind_targets(BOOL *has_depth)
 	/* viewports and clears are in the targets' units (render_target_get) */
 	target_scale[0] = color ? color->target.scale[0] : depth->target.scale[0];
 	target_scale[1] = color ? color->target.scale[1] : depth->target.scale[1];
-#ifdef HALO_VITA
-	if (color && depth && (color->target.gl_width != depth->target.gl_width ||
-		color->target.gl_height != depth->target.gl_height))
-		vita_fatal("vitaGL D3D8 color/depth size mismatch is unsupported");
-	state_framebuffer(framebuffer_get(color ? color->target.texture : 0, depth ? depth->depth_buffer : 0));
-#else
 	state_framebuffer(framebuffer_get(color ? color->target.texture : 0, depth ? depth->target.texture : 0));
-#endif
 	*has_depth = depth != NULL;
 	return TRUE;
 }
@@ -1078,10 +913,6 @@ static void gl_initialize(void)
 			(int)major, (int)minor, xgpu_capabilities.copy_image, xgpu_capabilities.border_clamp,
 			xgpu_capabilities.anisotropy, xgpu_capabilities.s3tc, xgpu_capabilities.atomic_counters);
 	}
-#elif defined(HALO_VITA)
-	/* Vita's NV2A vertex translator applies the clip-space Y/Z conversion;
-	 * vitaGL has no glClipControl. Diagnostics use vita_log/platform_log. */
-	platform_log("vitaGL D3D8: using shader clip-space conversion and direct visibility queries");
 #else
 	if (config_boolean("debug.gl_debug"))
 	{
@@ -1121,7 +952,7 @@ static void gl_initialize(void)
 #endif
 	glGenSamplers(D3DTSS_MAXSTAGES, device.samplers);
 	glGenQueries(VISIBILITY_TEST_SLOTS, device.queries);
-#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
+#ifndef HALO_ANDROID
 	glGenBuffers(1, &device.visibility_results_buffer);
 	glBindBuffer(GL_QUERY_BUFFER, device.visibility_results_buffer);
 	glBufferStorage(GL_QUERY_BUFFER, VISIBILITY_TEST_SLOTS * sizeof(GLuint), NULL,
@@ -1130,6 +961,18 @@ static void gl_initialize(void)
 		GL_MAP_READ_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT);
 	if (!device.visibility_results)
 		platform_log("cannot map the visibility test results; tests wait for the GPU");
+	{
+		long every = config_integer("debug.gpu_flush_draws");
+		const char *renderer = (const char *)glGetString(GL_RENDERER);
+
+		if (every < 0)
+			every = renderer && strstr(renderer, "Mesa Intel") ? 3 : 0;
+		if (every > 0)
+		{
+			device.flush_every = (unsigned long)every;
+			platform_log("GPU: a pipeline flush every %ld draws", every);
+		}
+	}
 #endif
 #ifdef HALO_ANDROID
 	if (xgpu_capabilities.atomic_counters)
@@ -1150,14 +993,6 @@ static void gl_initialize(void)
 	debug_settings.dump_shaders = *config_string("debug.gpu_dump_shaders") ?
 		config_string("debug.gpu_dump_shaders") : NULL;
 	debug_settings.statistics = config_boolean("debug.gpu_stats");
-#ifdef HALO_VITA
-	{ GLenum error = glGetError();
-		vita_log("[VITA STREAM] initial vertex=%u bytes=%u index=%u bytes=%u gl_error=%x",
-			device.stream_buffer, (unsigned)STREAM_BUFFER_SIZE, device.index_buffer,
-			(unsigned)INDEX_BUFFER_SIZE, (unsigned)error);
-		if (error != GL_NO_ERROR) vita_fatal("Vita D3D8 initial resource allocation failed");
-	}
-#endif
 	xgpu_gl_state_invalidate();
 	device.gl_ready = TRUE;
 }
@@ -1319,8 +1154,8 @@ HRESULT WINAPI Direct3D_CreateDevice(UINT adapter, D3DDEVTYPE device_type, void 
 #ifdef HALO_ANDROID
 int halo_ui_pointer_update(int menus_active, struct halo_ui_pointer *pointer)
 {
-	(void)menus_active;
 	(void)pointer;
+	platform_menus_set_active(menus_active != 0);
 	return 0;
 }
 #else
@@ -1359,6 +1194,7 @@ int halo_ui_pointer_update(int menus_active, struct halo_ui_pointer *pointer)
 {
 	struct platform_ui_pointer state;
 
+	platform_menus_set_active(menus_active != 0);
 	platform_ui_pointer_set_active(menus_active != 0);
 	if (!menus_active || !device.gl_ready || !platform_ui_pointer_read(&state))
 		return 0;
@@ -1581,7 +1417,7 @@ HRESULT WINAPI D3DDevice_EndVisibilityTest(DWORD index)
 	device.queries[0] = device.queries[index];
 	device.queries[index] = scratch;
 	device.query_pending[index] = TRUE;
-#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
+#ifndef HALO_ANDROID
 	if (device.visibility_results)
 	{
 		/* the GPU writes the count into the slot once it is known */
@@ -1629,7 +1465,7 @@ HRESULT WINAPI D3DDevice_GetVisibilityTestResult(DWORD index, UINT *result, ULON
 		return S_OK;
 	}
 #endif
-#if !defined(HALO_ANDROID) && !defined(HALO_VITA)
+#ifndef HALO_ANDROID
 	if (device.visibility_results)
 	{
 		/* the latest count the GPU has written: from this test, or while
@@ -2074,7 +1910,6 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 		}
 	}
 	entry = calloc(1, sizeof(*entry));
-	if (!entry) return NULL;
 	entry->vertex_shader = vertex_shader;
 	entry->fragment_shader = fragment_shader;
 	memset(&entry->uniforms, 0xff, sizeof(entry->uniforms));
@@ -2084,36 +1919,20 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 		return NULL;
 
 	entry->program = glCreateProgram();
-	if (!entry->program) return NULL;
 	glAttachShader(entry->program, vertex_shader);
 	glAttachShader(entry->program, fragment_shader);
-#ifdef HALO_VITA
-	halo_vita_bind_vertex_inputs(entry->program);
-#endif
 	glLinkProgram(entry->program);
 	glGetProgramiv(entry->program, GL_LINK_STATUS, &status);
-#ifdef HALO_VITA
-	vita_log("[VITA SHADER] original program=%u link status=%d", entry->program, status);
-#endif
 	if (!status)
 	{
 		char log[4096];
 
 		glGetProgramInfoLog(entry->program, sizeof(log), NULL, log);
 		platform_log("cannot link a shader program: %s", log);
-		glDeleteProgram(entry->program);
 		entry->program = 0;
 		return NULL;
 	}
 	state_program(entry->program);
-#ifdef HALO_VITA
-	halo_vita_find_vertex_constants(entry->program, &entry->constant_array);
-	halo_vita_find_uniform_array(entry->program, "ps_c0", &entry->ps_c0_array, 8);
-	halo_vita_find_uniform_array(entry->program, "ps_c1", &entry->ps_c1_array, 8);
-	halo_vita_find_uniform_array(entry->program, "bump_matrix", &entry->bump_matrix_array, 4);
-	halo_vita_find_uniform_array(entry->program, "bump_luminance", &entry->bump_luminance_array, 4);
-	halo_vita_find_uniform_array(entry->program, "texture_scale", &entry->texture_scale_array, 4);
-#else
 	entry->constants = glGetUniformLocation(entry->program, "c");
 	entry->constant_count = XGPU_VERTEX_CONSTANT_COUNT;
 	if (entry->constants >= 0)
@@ -2143,7 +1962,6 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 			}
 		}
 	}
-#endif
 	entry->viewport_scale = glGetUniformLocation(entry->program, "viewport_scale");
 	entry->viewport_offset = glGetUniformLocation(entry->program, "viewport_offset");
 	entry->point_size = glGetUniformLocation(entry->program, "point_size");
@@ -2170,53 +1988,6 @@ static struct program_entry *program_get(GLuint vertex_shader, GLuint fragment_s
 	return entry;
 }
 
-
-#ifdef HALO_VITA
-/* vitaGL's SHADER_PAIR translator alternates a shared varying-semantic pool
- * on each actual compilation. Independent VS/PS cache misses (and C argument
- * evaluation order) cannot honor that contract. Cache the original NV2A pair
- * by the original vertex-program ID/declaration and complete pixel state. */
-static struct program_entry *vita_program_pair_get(struct vertex_shader_object *program,
-    BOOL immediate, const struct nv2a_pixel_shader_key *key)
-{
-    unsigned long packed = immediate ? 0 : device.vertex_shader->packed_mask;
-    unsigned long hash = hash_words(key, sizeof(*key)) ^ (program->id * 2654435761UL) ^ packed ^ immediate;
-    struct fragment_entry **bucket = &fragment_buckets[hash % FRAGMENT_BUCKETS];
-    struct fragment_entry *entry;
-    char *vertex_source, *pixel_source;
-    GLuint vertex_shader, pixel_shader;
-    for (entry = *bucket; entry; entry = entry->next)
-        if (entry->hash == hash && entry->vertex_program_id == program->id &&
-            entry->packed_mask == packed && entry->immediate == immediate &&
-            !memcmp(&entry->key, key, sizeof(*key)))
-            return entry->paired_program;
-    entry = calloc(1, sizeof(*entry));
-    if (!entry) return NULL;
-    entry->hash = hash;
-    entry->key = *key;
-    entry->vertex_program_id = program->id;
-    entry->packed_mask = packed;
-    entry->immediate = immediate;
-    entry->next = *bucket;
-    *bucket = entry;
-    vertex_source = nv2a_vertex_shader_to_glsl(program->instructions, program->instruction_count, packed);
-    pixel_source = nv2a_pixel_shader_to_glsl(key);
-    /* Always finish the compiler pair, including a vertex rejection. Never
-     * attach/link rejected stages; cache failure so it cannot recompile each
-     * frame. The caller reports the blocked draw rather than a fake success. */
-    vertex_shader = compile_shader(GL_VERTEX_SHADER, vertex_source, "vertex");
-    pixel_shader = compile_shader(GL_FRAGMENT_SHADER, pixel_source, "pixel");
-    free(vertex_source);
-    free(pixel_source);
-    if (vertex_shader && pixel_shader)
-        entry->paired_program = program_get(vertex_shader, pixel_shader);
-    /* Attached successful shaders remain alive via the program's references. */
-    if (vertex_shader) glDeleteShader(vertex_shader);
-    if (pixel_shader) glDeleteShader(pixel_shader);
-    return entry->paired_program;
-}
-#endif
-
 /* ---------- per-draw state */
 
 static unsigned long stage_texture_mode(int stage)
@@ -2230,11 +2001,7 @@ static GLenum address_mode(DWORD mode)
 	{
 	case D3DTADDRESS_MIRROR: return GL_MIRRORED_REPEAT;
 	case D3DTADDRESS_CLAMP: return GL_CLAMP_TO_EDGE;
-#ifdef HALO_VITA
-	case D3DTADDRESS_BORDER:
-		/* Closest available addressing; border color is not exposed. */
-		return GL_CLAMP_TO_EDGE;
-#elif defined(HALO_ANDROID)
+#ifdef HALO_ANDROID
 	case D3DTADDRESS_BORDER: return xgpu_capabilities.border_clamp ? GL_CLAMP_TO_BORDER : GL_CLAMP_TO_EDGE;
 #else
 	case D3DTADDRESS_BORDER: return GL_CLAMP_TO_BORDER;
@@ -2244,29 +2011,36 @@ static GLenum address_mode(DWORD mode)
 	}
 }
 
-static void configure_sampler(int stage, BOOL mipmapped)
+/* hires: a high-res HUD texture (hud_hires.h), drawn smaller than it is, so
+filtered and from its mip levels whatever the game asks: the HUD's meters are
+point sampled for one player, to keep the Xbox bitmaps' texels sharp */
+static void configure_sampler(int stage, BOOL mipmapped, BOOL hires)
 {
 	/* the texture stage state each sampler was last configured from */
-	static DWORD configured[D3DTSS_MAXSTAGES][10];
+	static DWORD configured[D3DTSS_MAXSTAGES][11];
 	static BOOL configured_valid[D3DTSS_MAXSTAGES];
 	GLuint sampler = device.samplers[stage];
 	DWORD *state = D3D__TextureState[stage];
-	DWORD min_filter = state[D3DTSS_MINFILTER];
-	DWORD mip_filter = mipmapped ? state[D3DTSS_MIPFILTER] : D3DTEXF_NONE;
+	DWORD min_filter = hires ? D3DTEXF_LINEAR : state[D3DTSS_MINFILTER];
+	DWORD mip_filter = hires ? D3DTEXF_LINEAR : mipmapped ? state[D3DTSS_MIPFILTER] : D3DTEXF_NONE;
+	DWORD mag_filter = hires ? D3DTEXF_LINEAR : state[D3DTSS_MAGFILTER];
+	DWORD maximum_mip_level = hires ? 0 : state[D3DTSS_MAXMIPLEVEL];
+	DWORD lod_bias = hires ? 0 : state[D3DTSS_MIPMAPLODBIAS];
 	GLenum minification;
 	float border[4];
-	DWORD inputs[10];
+	DWORD inputs[11];
 
 	inputs[0] = min_filter;
 	inputs[1] = mip_filter;
-	inputs[2] = state[D3DTSS_MAGFILTER];
+	inputs[2] = mag_filter;
 	inputs[3] = state[D3DTSS_ADDRESSU];
 	inputs[4] = state[D3DTSS_ADDRESSV];
 	inputs[5] = state[D3DTSS_ADDRESSW];
-	inputs[6] = state[D3DTSS_MIPMAPLODBIAS];
-	inputs[7] = state[D3DTSS_MAXMIPLEVEL];
+	inputs[6] = lod_bias;
+	inputs[7] = maximum_mip_level;
 	inputs[8] = state[D3DTSS_MAXANISOTROPY];
 	inputs[9] = state[D3DTSS_BORDERCOLOR];
+	inputs[10] = hires;
 	if (configured_valid[stage] && !memcmp(configured[stage], inputs, sizeof(inputs)))
 		return;
 	memcpy(configured[stage], inputs, sizeof(inputs));
@@ -2279,16 +2053,14 @@ static void configure_sampler(int stage, BOOL mipmapped)
 		minification = mip_filter == D3DTEXF_NONE ? GL_LINEAR :
 			mip_filter == D3DTEXF_POINT ? GL_LINEAR_MIPMAP_NEAREST : GL_LINEAR_MIPMAP_LINEAR;
 	glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, (GLint)minification);
-	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, state[D3DTSS_MAGFILTER] == D3DTEXF_POINT ? GL_NEAREST : GL_LINEAR);
+	glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, mag_filter == D3DTEXF_POINT ? GL_NEAREST : GL_LINEAR);
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, (GLint)address_mode(state[D3DTSS_ADDRESSU]));
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, (GLint)address_mode(state[D3DTSS_ADDRESSV]));
-	#ifndef HALO_VITA
 	glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, (GLint)address_mode(state[D3DTSS_ADDRESSW]));
-	#endif
 #ifdef HALO_ANDROID
 	/* ES has no sampler LOD bias; the pixel shader applies it
 	(texture_lod_bias) */
-	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)state[D3DTSS_MAXMIPLEVEL]);
+	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)maximum_mip_level);
 	if (xgpu_capabilities.anisotropy)
 		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT,
 			(min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1) ? (float)state[D3DTSS_MAXANISOTROPY] : 1.0f);
@@ -2297,14 +2069,9 @@ static void configure_sampler(int stage, BOOL mipmapped)
 		color_to_vec4(state[D3DTSS_BORDERCOLOR], border);
 		glSamplerParameterfv(sampler, GL_TEXTURE_BORDER_COLOR, border);
 	}
-#elif defined(HALO_VITA)
-	if (state[D3DTSS_MIPMAPLODBIAS] || state[D3DTSS_MAXMIPLEVEL])
-		vita_fatal("D3D8 non-default LOD bias/min level needs a Vita shader fallback");
-	if (min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1)
-		glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY_EXT, (float)state[D3DTSS_MAXANISOTROPY]);
 #else
-	glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, dword_to_float(state[D3DTSS_MIPMAPLODBIAS]));
-	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)state[D3DTSS_MAXMIPLEVEL]);
+	glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, dword_to_float(lod_bias));
+	glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, (float)maximum_mip_level);
 	glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY,
 		(min_filter == D3DTEXF_ANISOTROPIC && state[D3DTSS_MAXANISOTROPY] > 1) ? (float)state[D3DTSS_MAXANISOTROPY] : 1.0f);
 	color_to_vec4(state[D3DTSS_BORDERCOLOR], border);
@@ -2329,7 +2096,7 @@ struct mip_composite
 
 static struct mip_composite *mip_composites;
 
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 static GLuint framebuffer_get(GLuint color, GLuint depth);
 
 /* glCopyImageSubData for ES 3.0/3.1 contexts without the extension */
@@ -2344,16 +2111,6 @@ static void copy_level_by_blit(GLuint source, GLuint destination, GLint level, G
 	glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, destination, level);
 	glDisable(GL_SCISSOR_TEST);
 	glBlitFramebuffer(0, 0, width, height, 0, 0, width, height, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-#ifdef HALO_VITA
-	{
-		GLenum error = glGetError();
-		if (error != GL_NO_ERROR)
-		{
-			vita_log("D3D8 mip FBO blit failed GL error=0x%x level=%d size=%dx%d", error, level, width, height);
-			vita_fatal("original D3D8 mip copy failed on vitaGL");
-		}
-	}
-#endif
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 	/* the blit bypasses the cached state, so the next draw must re-apply it */
 	xgpu_gl_state_invalidate();
@@ -2362,10 +2119,6 @@ static void copy_level_by_blit(GLuint source, GLuint destination, GLint level, G
 
 static GLuint mip_composite_get(const struct xgpu_texture_description *description, unsigned long data)
 {
-#ifdef HALO_VITA
-	if (description->levels != 1)
-		vita_fatal("D3D8 multi-level render-target composition requires Vita base/max-level support");
-#endif
 	struct mip_composite *composite;
 	unsigned long level, rendered_levels = 0;
 
@@ -2386,10 +2139,8 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 		composite->levels = description->levels;
 		glGenTextures(1, &composite->texture);
 		glBindTexture(GL_TEXTURE_2D, composite->texture);
-#ifndef HALO_VITA
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, (GLint)description->levels - 1);
-#endif
 		for (level = 0; level < description->levels; level++)
 		{
 			GLsizei width = (GLsizei)(description->width >> level ? description->width >> level : 1);
@@ -2410,9 +2161,6 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 		if (!target || target->width != width || target->height != height ||
 			target->gl_width != width || target->gl_height != height)
 			break;
-#ifdef HALO_VITA
-		copy_level_by_blit(target->texture, composite->texture, (GLint)level, (GLsizei)width, (GLsizei)height);
-#else
 #ifdef HALO_ANDROID
 		if (!xgpu_capabilities.copy_image)
 		{
@@ -2422,18 +2170,15 @@ static GLuint mip_composite_get(const struct xgpu_texture_description *descripti
 #endif
 		glCopyImageSubData(target->texture, GL_TEXTURE_2D, 0, 0, 0, 0,
 			composite->texture, GL_TEXTURE_2D, (GLint)level, 0, 0, 0, (GLsizei)width, (GLsizei)height, 1);
-#endif
 		rendered_levels++;
 	}
 	glBindTexture(GL_TEXTURE_2D, composite->texture);
 	/* levels the game did not render come from the ones it did */
 	if (rendered_levels < description->levels)
 	{
-#ifndef HALO_VITA
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, rendered_levels ? (GLint)rendered_levels - 1 : 0);
 		glGenerateMipmap(GL_TEXTURE_2D);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-#endif
 	}
 	xgpu_gl_state_invalidate();
 	return composite->texture;
@@ -2461,17 +2206,6 @@ static void bind_textures(struct nv2a_pixel_shader_key *key, float texture_scale
 			struct xgpu_texture_description description;
 			GLenum gl_target;
 			GLuint gl_texture;
-
-#ifdef HALO_VITA
-			/* Uploads and mip composition bind on the active GL unit. Select
-			 * their destination before they can overwrite an earlier stage.
-			 * A cache hit in state_texture() alone need not select that unit. */
-			if (gl_state.active_texture != GL_TEXTURE0 + (GLenum)stage)
-			{
-				gl_state.active_texture = GL_TEXTURE0 + (GLenum)stage;
-				glActiveTexture(gl_state.active_texture);
-			}
-#endif
 
 			if (target)
 			{
@@ -2503,7 +2237,9 @@ static void bind_textures(struct nv2a_pixel_shader_key *key, float texture_scale
 			}
 			state_texture(stage, gl_target, gl_texture);
 			state_sampler(stage, device.samplers[stage]);
-			configure_sampler(stage, description.levels > 1);
+			configure_sampler(stage, description.levels > 1, description.hires);
+			if (stage == 0)
+				key->coverage_alpha = description.hires_coverage != FALSE;
 			key->sampler_type[stage] = gl_target == GL_TEXTURE_CUBE_MAP ? _xgpu_sampler_cube :
 				gl_target == GL_TEXTURE_3D ? _xgpu_sampler_3d : _xgpu_sampler_2d;
 		}
@@ -2635,21 +2371,11 @@ static void apply_raster_state(BOOL has_depth)
 			gl_state.blend_equation = equation;
 			glBlendEquation(equation);
 		}
-		#ifdef HALO_VITA
-		/* Constant factors require glBlendColor even when its stored value
-		 * did not change on this draw. */
-		if ((gl_state.blend_source >= 0x8001 && gl_state.blend_source <= 0x8004) ||
-			(gl_state.blend_destination >= 0x8001 && gl_state.blend_destination <= 0x8004))
-			vita_fatal("D3D8 constant blend factor requires glBlendColor unavailable in vitaGL");
-		#endif
 		color_to_vec4(rs[D3DRS_BLENDCOLOR], blend_color);
 		if (memcmp(gl_state.blend_color, blend_color, sizeof(blend_color)))
 		{
 			memcpy(gl_state.blend_color, blend_color, sizeof(blend_color));
-			#ifdef HALO_VITA
-			#else
 			glBlendColor(blend_color[0], blend_color[1], blend_color[2], blend_color[3]);
-			#endif
 		}
 	}
 	color_mask = (unsigned char)(((write & D3DCOLORWRITEENABLE_RED) ? 1 : 0) | ((write & D3DCOLORWRITEENABLE_GREEN) ? 2 : 0) |
@@ -2737,16 +2463,6 @@ static void gl_check_errors(const char *where)
 			platform_log("GL error %04x at %s (frame %lu)", (unsigned)error, where, device.frame);
 	}
 }
-#elif defined(HALO_VITA)
-static void gl_check_errors(const char *where)
-{
-	GLenum error = glGetError();
-	if (error != GL_NO_ERROR)
-	{
-		vita_log("D3D8 GL error=0x%x at %s frame=%lu", error, where, device.frame);
-		vita_fatal("original D3D8 state/draw was rejected by vitaGL");
-	}
-}
 #else
 #define gl_check_errors(where) ((void)0)
 #endif
@@ -2776,6 +2492,25 @@ static void uniform_float(GLint location, float *shadow, float value)
 	glUniform1f(location, value);
 }
 
+/* Intel's graphics with Mesa's driver can hang the GPU in a long run of
+draws with no pipeline flush between them, which the game's effects make
+(hundreds of small draws in a row): the command streamer stops at a draw,
+and the reset that follows takes the desktop's other programs with it.
+Intel's workaround for a hang of this kind on their DG2 graphics
+(Wa_16014538804) is a flush at least every 3 draws, which Mesa does not
+apply to the others. A memory barrier is one (and only that: nothing
+here writes images). */
+static void draw_flush(void)
+{
+#ifndef HALO_ANDROID
+	if (device.flush_every && ++device.flush_draws >= device.flush_every)
+	{
+		device.flush_draws = 0;
+		glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+	}
+#endif
+}
+
 static struct program_entry *prepare_draw(BOOL immediate)
 {
 	struct vertex_shader_object *program = current_program();
@@ -2788,11 +2523,6 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	if (!device.gl_ready || !program || !device.vertex_shader || !program->instructions)
 	{
 		stats.skipped_no_program++;
-#ifdef HALO_VITA
-		{ static BOOL reported; if (!reported) { reported = TRUE;
-			vita_log("[VITA DRAW] blocked before first original draw: gl_ready=%d program=%p vertex_shader=%p instructions=%p",
-				device.gl_ready, program, device.vertex_shader, program ? program->instructions : NULL); } }
-#endif
 		return NULL;
 	}
 	{
@@ -2810,15 +2540,9 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	if (!bind_targets(&has_depth))
 	{
 		stats.skipped_no_target++;
-#ifdef HALO_VITA
-		{ static BOOL reported; if (!reported) { reported = TRUE;
-			vita_log("[VITA DRAW] blocked before first original draw: no bound color/depth target"); } }
-#endif
 		return NULL;
 	}
-#ifndef HALO_VITA
 	apply_raster_state(has_depth);
-#endif
 
 	memset(&key, 0, sizeof(key));
 	memcpy(key.combiner_state, D3D__RenderState, sizeof(key.combiner_state));
@@ -2828,23 +2552,15 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.combiner_state[D3DRS_PSFINALCOMBINERCONSTANT1] = 0;
 	key.texture_modes = D3D__RenderState[D3DRS_PSTEXTUREMODES];
 	bind_textures(&key, uniforms.texture_scale);
-#ifdef HALO_VITA
-	/* Resource uploads/mip composition invalidate or change GL state.
-	 * copy_level_by_blit ends on framebuffer zero, so restore the original
-	 * color/depth destination as well as raster state after resource work.
-	 * Keep the draw's target, viewport, blend and depth under one owner. */
-	if (!bind_targets(&has_depth))
-	{
-		stats.skipped_no_target++;
-		return NULL;
-	}
-	apply_raster_state(has_depth);
-#endif
 	for (stage = 0; stage < D3DTSS_MAXSTAGES; stage++)
 	{
 		key.alpha_kill[stage] = D3D__TextureState[stage][D3DTSS_ALPHAKILL] == D3DTALPHAKILL_ENABLE;
 		key.color_sign[stage] = (unsigned char)((D3D__TextureState[stage][D3DTSS_COLORSIGN] >> 28) & 0xf);
 	}
+	/* (only with the meter's blend: hud_hires.h, nv2a_pixel_shader_key) */
+	key.coverage_alpha = key.coverage_alpha && D3D__RenderState[D3DRS_ALPHABLENDENABLE] &&
+		D3D__RenderState[D3DRS_SRCBLEND] == D3DBLEND_CONSTANTCOLOR &&
+		D3D__RenderState[D3DRS_DESTBLEND] == D3DBLEND_SRCALPHA;
 	key.alpha_test_function = D3D__RenderState[D3DRS_ALPHATESTENABLE] ? D3D__RenderState[D3DRS_ALPHAFUNC] : 0;
 	key.fog_enable = D3D__RenderState[D3DRS_FOGENABLE] != 0;
 	key.fog_table_mode = (unsigned char)D3D__RenderState[D3DRS_FOGTABLEMODE];
@@ -2852,19 +2568,10 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	key.count_samples = device.visibility_test_active && xgpu_capabilities.atomic_counters;
 #endif
 
-#ifdef HALO_VITA
-	entry = vita_program_pair_get(program, immediate, &key);
-#else
 	entry = program_get(vertex_shader_get(program, immediate), fragment_shader_get(&key));
-#endif
 	if (!entry)
 	{
 		stats.skipped_link++;
-#ifdef HALO_VITA
-		{ static BOOL reported; if (!reported) { reported = TRUE;
-			vita_log("[VITA DRAW] blocked before first original draw: NV2A program link failed"); } }
-		vita_fatal("original Halo NV2A pair rejected; inspect halo_vertex/pixel GLSL and Cg logs");
-#endif
 		gl_check_errors("program");
 		return NULL;
 	}
@@ -2873,6 +2580,7 @@ static struct program_entry *prepare_draw(BOOL immediate)
 		stats.immediate_draws++;
 	else
 		stats.draws++;
+	draw_flush();
 	state_program(entry->program);
 #ifdef HALO_ANDROID
 	if (key.count_samples)
@@ -2880,12 +2588,6 @@ static struct program_entry *prepare_draw(BOOL immediate)
 			(GLintptr)(device.counter_active * sizeof(GLuint)), sizeof(GLuint));
 #endif
 
-#ifdef HALO_VITA
-	if (!entry->constants_serial || entry->constants_serial != constants_serial) {
-		halo_vita_upload_vertex_constants(&entry->constant_array, device.constants, constant_serials, entry->constants_serial);
-		entry->constants_serial = constants_serial;
-	}
-#else
 	if (entry->constants >= 0 && entry->constants_serial != constants_serial)
 	{
 		unsigned long first = entry->constant_count, last = 0, index;
@@ -2926,8 +2628,6 @@ static struct program_entry *prepare_draw(BOOL immediate)
 		}
 		entry->constants_serial = constants_serial;
 	}
-
-#endif
 
 	/* the state the other uniforms come from: most draws share it with the
 	draw before them, and so share its uniforms */
@@ -3014,34 +2714,18 @@ static struct program_entry *prepare_draw(BOOL immediate)
 	uniform_vec4(entry->viewport_scale, entry->uniforms.viewport_scale, draw_uniforms.viewport_scale, 1);
 	uniform_vec4(entry->viewport_offset, entry->uniforms.viewport_offset, draw_uniforms.viewport_offset, 1);
 	uniform_float(entry->point_size, &entry->uniforms.point_size, draw_uniforms.point_size);
-#ifdef HALO_VITA
-	halo_vita_upload_uniform_array(&entry->ps_c0_array, entry->uniforms.ps_c0, draw_uniforms.ps_c0);
-	halo_vita_upload_uniform_array(&entry->ps_c1_array, entry->uniforms.ps_c1, draw_uniforms.ps_c1);
-#else
 	uniform_vec4(entry->ps_c0, entry->uniforms.ps_c0[0], draw_uniforms.ps_c0[0], 8);
 	uniform_vec4(entry->ps_c1, entry->uniforms.ps_c1[0], draw_uniforms.ps_c1[0], 8);
-#endif
 	uniform_vec4(entry->ps_final_c0, entry->uniforms.ps_final_c0, draw_uniforms.ps_final_c0, 1);
 	uniform_vec4(entry->ps_final_c1, entry->uniforms.ps_final_c1, draw_uniforms.ps_final_c1, 1);
 	uniform_vec4(entry->fog_color, entry->uniforms.fog_color, draw_uniforms.fog_color, 1);
 	uniform_vec4(entry->fog_parameters, entry->uniforms.fog_parameters, draw_uniforms.fog_parameters, 1);
 	uniform_float(entry->alpha_reference, &entry->uniforms.alpha_reference, draw_uniforms.alpha_reference);
-#ifdef HALO_VITA
-	halo_vita_upload_uniform_array(&entry->bump_matrix_array, entry->uniforms.bump_matrix, draw_uniforms.bump_matrix);
-	halo_vita_upload_uniform_array(&entry->bump_luminance_array, entry->uniforms.bump_luminance, draw_uniforms.bump_luminance);
-	halo_vita_upload_uniform_array(&entry->texture_scale_array, entry->uniforms.texture_scale, draw_uniforms.texture_scale);
-#else
 	uniform_vec4(entry->bump_matrix, entry->uniforms.bump_matrix[0], draw_uniforms.bump_matrix[0], 4);
 	uniform_vec4(entry->bump_luminance, entry->uniforms.bump_luminance[0], draw_uniforms.bump_luminance[0], 4);
 	uniform_vec4(entry->texture_scale, entry->uniforms.texture_scale[0], draw_uniforms.texture_scale[0], 4);
-#endif
 	uniform_float(entry->screen_offset, &entry->uniforms.screen_offset, draw_uniforms.screen_offset);
 	uniform_vec4(entry->texture_lod_bias, entry->uniforms.texture_lod_bias, draw_uniforms.texture_lod_bias, 1);
-	#ifdef HALO_VITA
-	{ static BOOL first_draw_ready; if (!first_draw_ready) { first_draw_ready = TRUE;
-		vita_log("[VITA DRAW] first original draw prepared: immediate=%d vertex_shader=%lu gl_program=%u frame=%lu",
-			immediate, program->id, entry->program, device.frame); } }
-	#endif
 	return entry;
 }
 
@@ -3052,11 +2736,7 @@ static BOOL trace_frame(void)
 	static long frame = -2;
 
 	if (frame == -2)
-#ifdef HALO_VITA
-		frame = -1; /* Vita uses explicit first-draw logging, no port_config file. */
-#else
 		frame = config_integer("debug.gpu_trace_frame");
-#endif
 	return frame >= 0 && device.frame == (unsigned long)frame;
 }
 
@@ -3065,28 +2745,6 @@ static void trace_draw(const char *kind, D3DPRIMITIVETYPE type, unsigned long co
 	struct vertex_shader_object *program = current_program();
 	DWORD *rs = D3D__RenderState;
 
-#ifdef HALO_VITA
-	/* Bounded observations of original draw inputs; no GL queries/mutations.
-	 * Missing labels/opaque backgrounds need actual coverage/blend evidence. */
-	{
-		static unsigned observed;
-		if (observed < 16) {
-			const float *v = first_vertex ? first_vertex : device.attributes[0];
-			const float *uv = v + 4 * 4, *color = v + 9 * 4;
-			++observed;
-			vita_log("[VITA UI TRACE] draw=%u frame=%lu kind=%s count=%lu vs=%lu program=%u blend=%lu/%lx/%lx GL=%u/%x/%x tex2D=%u,%u,%u,%u tm=%05lx",
-				observed, device.frame, kind, count, program ? program->id : 0, gl_state.program,
-				rs[D3DRS_ALPHABLENDENABLE], rs[D3DRS_SRCBLEND], rs[D3DRS_DESTBLEND],
-				(unsigned)gl_state.blend, gl_state.blend_source, gl_state.blend_destination,
-				gl_state.textures[0][0], gl_state.textures[1][0], gl_state.textures[2][0], gl_state.textures[3][0], rs[D3DRS_PSTEXTUREMODES]);
-			vita_log("[VITA UI TRACE] draw=%u vertex=%s v0=%g,%g,%g,%g v4=%g,%g,%g,%g v9=%g,%g,%g,%g c32=%g,%g,%g,%g ps0=%08lx final=%08lx/%08lx",
-				observed, first_vertex ? "first" : "current", v[0], v[1], v[2], v[3],
-				uv[0], uv[1], uv[2], uv[3], color[0], color[1], color[2], color[3],
-				device.constants[32][0], device.constants[32][1], device.constants[32][2], device.constants[32][3],
-				rs[D3DRS_PSCONSTANT0_0], rs[D3DRS_PSFINALCOMBINERINPUTSABCD], rs[D3DRS_PSFINALCOMBINERINPUTSEFG]);
-		}
-	}
-#endif
 	if (!trace_frame())
 		return;
 	platform_log("%s type %d count %lu vs %lu (decl %lu) vp %lu,%lu %lux%lu z%.2f-%.2f zen %lu zw %lu zf %lx blend %lu %lx/%lx cull %lx cw %08lx tm %05lx cc %lx fin %08lx/%08lx at %lu/%lx",
@@ -3208,7 +2866,6 @@ static struct
 
 /* uploads the pages of [first, last) that are absent or stale; FALSE if one
 of them turns out to be volatile */
-#ifndef HALO_VITA
 static BOOL mirror_refresh(unsigned long first, unsigned long last)
 {
 	unsigned long page, run;
@@ -3366,21 +3023,6 @@ static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buff
 	return TRUE;
 }
 
-#else
-/* Vita has no guest page-write watch. Upload each draw through the existing
-   transient stream instead of reusing potentially stale mirrored data. */
-static BOOL mirror_range(unsigned long address, unsigned long size, GLuint *buffer, unsigned long *offset,
-	unsigned long *generation)
-{
-	(void)address;
-	(void)size;
-	(void)buffer;
-	(void)offset;
-	(void)generation;
-	return FALSE;
-}
-#endif
-
 /* the smallest and largest index of an index range the mirror holds: the
 same ranges are drawn frame after frame */
 #define INDEX_RANGE_SLOTS 4096
@@ -3428,65 +3070,12 @@ static void index_extent(const WORD *indices, unsigned long count, unsigned long
 
 /* ---------- vertex data */
 
-#ifdef HALO_VITA
-/* vitaGL SubData copies an entire recently drawn buffer on every update.
- * Reuse the bounded allocation after completing previous GPU reads instead.
- * This deliberately serializes bring-up; no global driver speedhack or
- * CPU ranges append without overlapping submitted draws. Synchronize before
- * each buffer wrap/reuse, preserving allocation and same-draw reservations.
- * Unmap resets vitaGL's use marker; no SubData/orphan/resize follows. */
-static unsigned long vita_stream_span(unsigned long size, unsigned long capacity)
-{
-	if (!size || size > capacity || size > (~0UL - 15))
-		vita_fatal("Vita stream request exceeds its bounded allocation");
-	return (size + 15) & ~15UL;
-}
-
-static void vita_stream_reuse_sync(void)
-{
-	gl_check_errors("stream before reuse synchronization");
-	glFinish();
-	gl_check_errors("stream reuse synchronization");
-}
-
-static void vita_stream_write(GLenum target, unsigned long offset, unsigned long size,
-	unsigned long capacity, const void *data)
-{
-	void *mapped;
-	if (!data || !size || offset > capacity || size > capacity - offset)
-		vita_fatal("Vita stream write exceeds its reserved range");
-	gl_check_errors("stream before mapping");
-	mapped = glMapBufferRange(target, (GLintptr)offset, (GLsizeiptr)size, GL_MAP_WRITE_BIT);
-	gl_check_errors("stream mapping");
-	if (!mapped)
-		vita_fatal("Vita stream mapping returned NULL");
-	/* Padding aligns the next offset; it is not part of the source object. */
-	memcpy(mapped, data, size);
-	if (!glUnmapBuffer(target))
-		vita_fatal("Vita stream unmap failed");
-	gl_check_errors("stream unmapping");
-	{ static unsigned long writes;
-		if (writes < 4) vita_log("[VITA STREAM] bounded append write target=%x offset=%lu bytes=%lu capacity=%lu PASS",
-			(unsigned)target, offset, size, capacity);
-		writes++;
-	}
-}
-#endif
-
 /* makes room for size bytes of uploads, orphaning the stream buffer if it
 is full. A draw reserves room for all of its streams at once: orphaning
 between two of them would leave the attributes already pointed at the
 buffer reading its new, empty storage. */
 static void stream_reserve(unsigned long size)
 {
-#ifdef HALO_VITA
-	if (size > STREAM_BUFFER_SIZE || device.stream_offset > STREAM_BUFFER_SIZE)
-		vita_fatal("Vita vertex reservation exceeds stream capacity");
-	if (size > STREAM_BUFFER_SIZE - device.stream_offset) {
-		vita_stream_reuse_sync();
-		device.stream_offset = 0;
-	}
-#else
 	if (device.stream_offset + size > STREAM_BUFFER_SIZE)
 	{
 		/* orphan the buffer and start again */
@@ -3494,24 +3083,17 @@ static void stream_reserve(unsigned long size)
 		glBufferData(GL_ARRAY_BUFFER, STREAM_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 		device.stream_offset = 0;
 	}
-#endif
 }
 
 static unsigned long stream_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
-#ifdef HALO_VITA
-	unsigned long bytes = size;
-	size = vita_stream_span(size, STREAM_BUFFER_SIZE);
-#else
+
 	size = (size + 15) & ~15UL;
-#endif
 	stream_reserve(size);
 	offset = device.stream_offset;
 	state_array_buffer(device.stream_buffer);
-#ifdef HALO_VITA
-	vita_stream_write(GL_ARRAY_BUFFER, offset, bytes, STREAM_BUFFER_SIZE, data);
-#elif defined(HALO_ANDROID)
+#ifdef HALO_ANDROID
 	host_gl_buffer_write(GL_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
 	glBufferSubData(GL_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
@@ -3520,10 +3102,9 @@ static unsigned long stream_upload(const void *data, unsigned long size)
 	return offset;
 }
 
-
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 /* stream_upload, with the D3DCOLOR elements of the stream turned from BGRA
-into the RGBA byte order ES/vitaGL reads */
+into the RGBA byte order ES reads */
 static unsigned long stream_upload_swizzled(const struct vertex_shader_object *declaration, unsigned long stream,
 	const unsigned char *data, unsigned long size, unsigned long stride)
 {
@@ -3537,33 +3118,15 @@ static unsigned long stream_upload_swizzled(const struct vertex_shader_object *d
 		const struct vertex_element *element = &declaration->elements[index];
 
 		if (element->stream == stream && element->type == D3DVSDT_D3DCOLOR)
-		{
-#ifdef HALO_VITA
-			if (count >= XGPU_VERTEX_ATTRIBUTE_COUNT)
-				vita_fatal("D3D8 color stream has too many declaration elements");
-			if (!stride || element->offset > stride || stride - element->offset < 4)
-				vita_fatal("D3D8 color element exceeds its stream stride");
-#endif
 			offsets[count++] = element->offset;
-		}
 	}
 	if (!count || !stride)
 		return stream_upload(data, size);
 	if (scratch_size < size)
 	{
-#ifdef HALO_VITA
-		if (size > ~0UL - 65536UL)
-			vita_fatal("D3D8 color conversion size overflow");
-		unsigned char *replacement = malloc(size + 65536);
-		if (!replacement) vita_fatal("D3D8 color conversion allocation failed");
-		free(scratch);
-		scratch = replacement;
-		scratch_size = size + 65536;
-#else
 		free(scratch);
 		scratch_size = size + 65536;
 		scratch = malloc(scratch_size);
-#endif
 	}
 	memcpy(scratch, data, size);
 	for (vertex = 0; vertex + stride <= size; vertex += stride)
@@ -3585,17 +3148,6 @@ static unsigned long index_upload(const void *data, unsigned long size)
 {
 	unsigned long offset;
 
-#ifdef HALO_VITA
-	unsigned long bytes = size;
-	size = vita_stream_span(size, INDEX_BUFFER_SIZE);
-	state_element_array_buffer(device.index_buffer);
-	if (device.index_offset > INDEX_BUFFER_SIZE)
-		vita_fatal("Vita index offset exceeds stream capacity");
-	if (size > INDEX_BUFFER_SIZE - device.index_offset) {
-		vita_stream_reuse_sync();
-		device.index_offset = 0;
-	}
-#else
 	size = (size + 15) & ~15UL;
 	state_element_array_buffer(device.index_buffer);
 	if (device.index_offset + size > INDEX_BUFFER_SIZE)
@@ -3603,11 +3155,8 @@ static unsigned long index_upload(const void *data, unsigned long size)
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, INDEX_BUFFER_SIZE, NULL, GL_STREAM_DRAW);
 		device.index_offset = 0;
 	}
-#endif
 	offset = device.index_offset;
-#ifdef HALO_VITA
-	vita_stream_write(GL_ELEMENT_ARRAY_BUFFER, offset, bytes, INDEX_BUFFER_SIZE, data);
-#elif defined(HALO_ANDROID)
+#ifdef HALO_ANDROID
 	host_gl_buffer_write(GL_ELEMENT_ARRAY_BUFFER, (unsigned int)offset, (unsigned int)size, data);
 #else
 	glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, (GLintptr)offset, (GLsizeiptr)size, data);
@@ -3625,8 +3174,8 @@ static void attribute_format(const struct vertex_element *element, GLint *size, 
 	case D3DVSDT_FLOAT2: *size = 2; *type = GL_FLOAT; break;
 	case D3DVSDT_FLOAT3: case D3DVSDT_FLOAT2H: *size = 3; *type = GL_FLOAT; break;
 	case D3DVSDT_FLOAT4: *size = 4; *type = GL_FLOAT; break;
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
-	/* ES/vitaGL have no BGRA-size attributes: stream upload swaps bytes. */
+#ifdef HALO_ANDROID
+	/* ES has no BGRA attributes: stream_upload_swizzled swaps the bytes */
 	case D3DVSDT_D3DCOLOR: *size = 4; *type = GL_UNSIGNED_BYTE; *normalized = GL_TRUE; break;
 #else
 	case D3DVSDT_D3DCOLOR: *size = GL_BGRA; *type = GL_UNSIGNED_BYTE; *normalized = GL_TRUE; break;
@@ -3666,44 +3215,6 @@ static BOOL stream_has_colors(const struct vertex_shader_object *declaration, un
 }
 #endif
 
-#ifdef HALO_VITA
-/* Keep the authored interleaved stream unchanged. Each packed attribute gets
- * a separate tightly packed float3 stream in the same bounded GPU buffer.
- * setup_streams reserves all these ranges before assigning any offsets. */
-static unsigned long vita_normal_bytes(unsigned long count)
-{
-	if (!count || count > STREAM_BUFFER_SIZE / (3 * sizeof(float)))
-		vita_fatal("Vita packed normal count exceeds stream capacity");
-	return count * 3 * sizeof(float);
-}
-
-static unsigned long vita_normal_upload(const unsigned char *data,
-	unsigned long stride, unsigned long offset, unsigned long count)
-{
-	static float *scratch;
-	static unsigned long capacity;
-	unsigned long bytes = vita_normal_bytes(count), vertex;
-	float *replacement;
-	if (!data || offset > (stride ? stride : 64) ||
-		(stride ? stride : 64) - offset < sizeof(uint32_t))
-		vita_fatal("Vita packed normal exceeds its stream stride");
-	if (capacity < bytes) {
-		replacement = malloc(bytes);
-		if (!replacement) vita_fatal("Vita packed normal allocation failed");
-		free(scratch);
-		scratch = replacement;
-		capacity = bytes;
-	}
-	for (vertex = 0; vertex < count; vertex++) {
-		uint32_t packed;
-		/* Unaligned Xbox declarations are valid; never cast the source. */
-		memcpy(&packed, data + vertex * stride + offset, sizeof(packed));
-		halo_vita_unpack_normpacked3(packed, scratch + vertex * 3);
-	}
-	return stream_upload(scratch, bytes);
-}
-#endif
-
 static void setup_streams(unsigned long first, unsigned long count)
 {
 	struct vertex_shader_object *declaration = device.vertex_shader;
@@ -3712,29 +3223,6 @@ static void setup_streams(unsigned long first, unsigned long count)
 	BOOL placed[16] = { FALSE };
 	BOOL enabled[XGPU_VERTEX_ATTRIBUTE_COUNT] = { FALSE };
 	unsigned long index, total = 0;
-
-#ifdef HALO_VITA
-	/* Check the complete draw up front, including all converted normals. The
-	 * later per-upload reserve must never wrap over attributes of this draw. */
-	for (index = 0; index < declaration->element_count; index++) {
-		const struct vertex_element *element = &declaration->elements[index];
-		unsigned long stride, span;
-		if (element->stream >= 16 || element->reg >= XGPU_VERTEX_ATTRIBUTE_COUNT)
-			vita_fatal("Vita vertex declaration stream/register out of range");
-		if (!device.streams[element->stream].data || element->type == D3DVSDT_NONE)
-			continue;
-		stride = device.streams[element->stream].stride;
-		if (!count || (stride && (count > STREAM_BUFFER_SIZE / stride ||
-			first > ~0UL / stride - count)))
-			vita_fatal("Vita source vertex range overflow");
-		if (element->type == D3DVSDT_NORMPACKED3) {
-			span = vita_stream_span(vita_normal_bytes(count), STREAM_BUFFER_SIZE);
-			if (span > STREAM_BUFFER_SIZE - total)
-				vita_fatal("Vita converted vertex reservation exceeds capacity");
-			total += span;
-		}
-	}
-#endif
 
 	/* the mirror first; then one reservation for everything streamed */
 	for (index = 0; index < declaration->element_count; index++)
@@ -3756,16 +3244,7 @@ static void setup_streams(unsigned long first, unsigned long count)
 		if (mirror_range(base, bytes, &stream_buffers[stream], &stream_offsets[stream], NULL))
 			continue;
 		stream_buffers[stream] = 0;
-#ifdef HALO_VITA
-		{
-			unsigned long span = vita_stream_span(bytes, STREAM_BUFFER_SIZE);
-			if (span > STREAM_BUFFER_SIZE - total)
-				vita_fatal("Vita aggregate vertex reservation exceeds capacity");
-			total += span;
-		}
-#else
 		total += (bytes + 15) & ~15UL;
-#endif
 	}
 	stream_reserve(total);
 	for (index = 0; index < declaration->element_count; index++)
@@ -3784,7 +3263,7 @@ static void setup_streams(unsigned long first, unsigned long count)
 			const unsigned char *base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[stream].data);
 			unsigned long bytes = stride ? stride * count : 64;
 
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 			stream_offsets[stream] = stream_upload_swizzled(declaration, stream, base + first * stride, bytes, stride);
 #else
 			stream_offsets[stream] = stream_upload(base + first * stride, bytes);
@@ -3794,17 +3273,8 @@ static void setup_streams(unsigned long first, unsigned long count)
 		}
 		if (element->type == D3DVSDT_NORMPACKED3)
 		{
-#ifdef HALO_VITA
-			const unsigned char *base = PLATFORM_PHYSICAL_TO_VIRTUAL(device.streams[stream].data);
-			unsigned long offset = vita_normal_upload(base + first * stride,
-				stride, element->offset, count);
-			state_attribute_pointer(element->reg, device.stream_buffer, 3,
-				GL_FLOAT, GL_FALSE, FALSE, 3 * sizeof(float), offset);
-			stats.streamed_bytes += vita_normal_bytes(count);
-#else
 			state_attribute_pointer(element->reg, stream_buffers[stream], 1, GL_UNSIGNED_INT, GL_FALSE, TRUE,
 				(GLsizei)stride, stream_offsets[stream] + element->offset);
-#endif
 		}
 		else
 		{
@@ -3817,14 +3287,9 @@ static void setup_streams(unsigned long first, unsigned long count)
 	for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
 	{
 		if (!enabled[index])
-#ifdef HALO_VITA
-			state_attribute_value(index, device.attributes[index]);
-#else
 			state_attribute_value(index, declaration->packed_mask & (1UL << index) ? NULL : device.attributes[index]);
-#endif
 	}
 }
-
 
 static GLenum primitive_mode(D3DPRIMITIVETYPE type)
 {
@@ -3887,7 +3352,6 @@ void WINAPI D3DDevice_DrawVertices(D3DPRIMITIVETYPE primitive_type, UINT start_v
 		return;
 	trace_draw("draw", primitive_type, vertex_count, NULL);
 	setup_streams(start_vertex, vertex_count);
-	gl_check_errors("vertex streams");
 	if (primitive_type == D3DPT_QUADLIST)
 	{
 		unsigned long count;
@@ -3922,10 +3386,8 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 		mirror_range((unsigned long)index_data, vertex_count * sizeof(WORD), &index_buffer, &index_offset, &generation);
 	index_extent(index_data, vertex_count, generation, mirrored, &minimum, &maximum);
 	trace_draw("indexed", primitive_type, vertex_count, NULL);
-	/* Upstream: index i addresses vertex base + i. The uploaded indices
-	 * still subtract minimum, since the attributes start at base + minimum. */
+	/* (the streams from the base vertex on: index i is vertex base + i) */
 	setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
-	gl_check_errors("vertex streams");
 	if (mirrored)
 	{
 		/* the attributes start at vertex minimum */
@@ -3963,10 +3425,6 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 }
 
 /* ---------- immediate mode */
-
-#ifdef HALO_VITA
-#include "../../vita/include/halo_vita_ui_alpha_probe.h"
-#endif
 
 void WINAPI D3DDevice_Begin(D3DPRIMITIVETYPE primitive_type)
 {
@@ -4018,30 +3476,7 @@ void WINAPI D3DDevice_End(void)
 	{
 		glDrawArrays(primitive_mode(type), 0, (GLsizei)count);
 	}
-	#ifdef HALO_VITA
-	{ static BOOL first_immediate_logged; GLenum error = glGetError();
-		if (!first_immediate_logged || error != GL_NO_ERROR) {
-			first_immediate_logged = TRUE;
-			vita_log("[VITA DRAW] original D3D8 immediate draw type=%d vertices=%lu gl_error=%x", type, count, error);
-		}
-		if (error != GL_NO_ERROR) vita_fatal("original UI immediate draw failed in vitaGL");
-	}
-	#endif
 	gl_check_errors("immediate draw");
-#ifdef HALO_VITA
-	/* Inspect only first-frame real bitmap quads. Keep the original visible
-	 * draw above and its shader/stream resources as the diagnostic inputs. */
-	if (device.frame == 0 && (type == D3DPT_QUADLIST || type == D3DPT_TRIANGLEFAN) && count == 4 &&
-		D3D__RenderState[D3DRS_PSTEXTUREMODES] == 0x421 && device.textures[2]) {
-		struct xgpu_texture_description description;
-		xgpu_texture_describe(device.textures[2]->Format, device.textures[2]->Size, &description);
-		if (description.width >= 32 && description.height >= 32) {
-			halo_vita_ui_alpha_probe(device.immediate_vertices, stride / sizeof(float),
-				gl_state.textures[2][0], &description, device.constants, draw_uniforms.ps_c0);
-			xgpu_gl_state_invalidate();
-		}
-	}
-#endif
 }
 
 static void set_attribute(INT reg, float a, float b, float c, float d)
@@ -4145,7 +3580,6 @@ void WINAPI D3DDevice_Clear(DWORD count, CONST D3DRECT *rectangles, DWORD flags,
 			target_pixel((float)(device.viewport.Y + device.viewport.Height), 1) - y0);
 		glClear(mask);
 		glDisable(GL_SCISSOR_TEST);
-		gl_check_errors("clear");
 		xgpu_gl_state_invalidate();
 		return;
 	}
@@ -4169,7 +3603,6 @@ void WINAPI D3DDevice_Clear(DWORD count, CONST D3DRECT *rectangles, DWORD flags,
 		glClear(mask);
 	}
 	glDisable(GL_SCISSOR_TEST);
-	gl_check_errors("clear rectangles");
 	xgpu_gl_state_invalidate();
 }
 
@@ -4234,11 +3667,7 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	(void)unused;
 	(void)unused2;
 	if (screenshot_every < 0)
-#ifdef HALO_VITA
-		screenshot_every = 0;
-#else
 		screenshot_every = config_integer("debug.screenshot_every");
-#endif
 
 	if (device.gl_ready)
 	{
@@ -4300,12 +3729,6 @@ void WINAPI D3DDevice_Present(CONST RECT *source_rectangle, CONST RECT *destinat
 	}
 	platform_pump_events();
 
-#ifdef HALO_VITA
-	/* The staged menu skips main_initialize_time(), which normally installs
-	 * the vblank callback and starts this worker. Present still queues flips:
-	 * without their original consumer the third frame waits forever. */
-	vertical_blank_start();
-#endif
 	pthread_mutex_lock(&vertical_blank_lock);
 	/* the Xbox keeps at most two frames queued behind its 60 Hz display;
 	with interpolation, frames come at the real display's rate instead,

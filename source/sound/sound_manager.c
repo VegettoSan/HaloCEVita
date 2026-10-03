@@ -249,7 +249,6 @@ symbols in this file:
 enum
 {
 	MAXIMUM_SOUND_CHANNELS = 256,
-	MAXIMUM_NUMBER_OF_LOCAL_PLAYERS = 4,
 	MAXIMUM_SOUND_CALLBACK_DATA = 0x30,
 };
 
@@ -706,11 +705,11 @@ static void prioritize_sounds(
 
 /* ---------- globals */
 
-extern struct data_array *looping_sound_data;
-extern struct data_array *sound_data;
-extern struct sound_channel_datum sound_channels[MAXIMUM_SOUND_CHANNELS];
-extern boolean loud_dialog_hack;
-extern boolean debug_looping_sound;
+struct data_array *looping_sound_data;
+struct data_array *sound_data;
+struct sound_channel_datum sound_channels[MAXIMUM_SOUND_CHANNELS];
+boolean loud_dialog_hack;
+boolean debug_looping_sound;
 
 static real const sound_pitch_range_fade_time = 0.5f;
 static real const sound_inaudible_fade_out_time = 2.f;
@@ -730,6 +729,8 @@ static struct profile_section sound_render_section =
 	{"sound_render", NONE, TRUE};
 real sound_fade_exponent = 2.5f;
 static struct sound_manager_globals sound_manager_globals = { 0 };
+boolean debug_sound;
+boolean debug_sound_channels;
 
 /* ---------- public code */
 
@@ -1114,10 +1115,31 @@ static short sound_definition_promote(
 	return result;
 }
 
+/* port: config.toml's audio.music_volume and audio.effects_volume, read
+again when Settings changes them */
+double config_real(const char *name);
+unsigned long config_changes(void);
+
+static real sound_manager_port_volume(
+	short class_index)
+{
+	static unsigned long read_at = (unsigned long)-1;
+	static real music_volume = 1.f;
+	static real effects_volume = 1.f;
+
+	if (read_at != config_changes())
+	{
+		read_at = config_changes();
+		music_volume = PIN((real)config_real("audio.music_volume"), 0.f, 1.f);
+		effects_volume = PIN((real)config_real("audio.effects_volume"), 0.f, 1.f);
+	}
+	return class_index == _sound_class_music ? music_volume : effects_volume;
+}
+
 static real sound_manager_master_gain(
 	short class_index)
 {
-	real gain = sound_class_get_gain(class_index);
+	real gain = sound_class_get_gain(class_index) * sound_manager_port_volume(class_index);
 
 	if (class_index != _sound_class_scripted_dialog_to_player &&
 		class_index != _sound_class_scripted_dialog_to_other &&
@@ -3820,7 +3842,6 @@ void sound_render(
 				((real)render_time - sound_manager_globals.render_time) *
 				0.029999999f;
 			sound_manager_globals.render_time = render_time;
-#ifdef HALO_LINUX
 			/* Sounds are rendered once a frame, and a frame is well under a
 			tick on the native builds, so the ticks truncate to none and
 			scripted sound class fades would never move: carry the
@@ -3834,9 +3855,6 @@ void sound_render(
 				leftover_ticks -= (real)ticks;
 				sound_classes_update(ticks);
 			}
-#else
-			sound_classes_update((long)sound_manager_globals.ticks_elapsed);
-#endif
 			refresh_listener();
 			process_looping_sounds();
 			refresh_sounds();
@@ -3857,19 +3875,3 @@ void sound_render(
 
 	return;
 }
-
-#ifdef HALO_VITA_MENU_AUDIO
-/* Staged pregame bridge: use the original looping state machine with the
- * same unspatialized source contract as game_sound.c. Full game_sound_update
- * takes ownership when scenario/object initialization becomes available. */
-boolean halo_vita_sound_menu_refresh(long definition_index, short refresh_state)
-{
-	struct sound_source source;
-	csmemset(&source, 0, sizeof(source));
-	source.spatialization_mode = _sound_spatialization_mode_none;
-	source.scale = 1.f;
-	source.gain = 1.f;
-	return sound_refresh_looping(definition_index, definition_index, &source,
-		refresh_state, FALSE, 0.f);
-}
-#endif

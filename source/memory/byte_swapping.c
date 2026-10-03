@@ -59,20 +59,16 @@ symbols in this file:
 
 /* ---------- macros */
 
-#ifdef HALO_VITA
-#define SWAP8(q) __builtin_bswap64(q)
-#else
 #define SWAP8(q) \
 	(((q)>>56) | (((q)>>40)&0xff00) | (((q)>>24)&0xff0000) | (((q)>>8)&0xff000000) | \
 	 (((q)<<8)&0xff00000000ui64) | (((q)<<24)&0xff0000000000ui64) | \
 	 (((q)<<40)&0xff000000000000ui64) | ((q)<<56))
-#endif
 
 /* ---------- structures */
 
 /* ---------- prototypes */
 
-void _byte_swap_data(
+static void _byte_swap_data(
 	struct byte_swap_definition *definition,
 	void *data,
 	byte_swap_code *codes,
@@ -183,7 +179,7 @@ void byte_swap_memory(
 	return;
 }
 
-void _byte_swap_data(
+static void _byte_swap_data(
 	struct byte_swap_definition *definition,
 	void *data,
 	byte_swap_code *codes,

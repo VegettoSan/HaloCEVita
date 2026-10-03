@@ -11,11 +11,7 @@ device itself (d3d8_gl.c).
 #define __HALO_LINUX_XGPU_H
 
 #include "platform.h"
-#ifdef HALO_VITA
-#include "halo_vita_gl.h"
-#else
 #include "gl.h"
-#endif
 
 #ifdef HALO_ANDROID
 /* OpenGL ES features that are optional (d3d8_gl.c gl_initialize) */
@@ -104,7 +100,12 @@ struct nv2a_pixel_shader_key
 	unsigned char fog_table_mode;
 	/* inside a visibility test: count the samples that pass (Android) */
 	unsigned char count_samples;
-	unsigned char pad;
+	/* a high-res HUD meter (hud_hires.h) drawn with the meter's blend (the
+	destination kept by the source's alpha): that alpha is eased to 1 by the
+	coverage texture 0's green holds, so that the meter darkens what is
+	behind it only where it covers it (the Xbox's point-sampled meters stop
+	at their texels' edges; filtered ones have a fringe of faint texels) */
+	unsigned char coverage_alpha;
 };
 
 char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key);
@@ -141,6 +142,8 @@ struct xgpu_texture_description
 	BOOL linear;        /* not swizzled; addressed with texel coordinates */
 	BOOL compressed;
 	unsigned long pitch; /* linear textures */
+	BOOL hires;         /* a high-res HUD texture drawn in the texture's place (hud_hires.h) */
+	BOOL hires_coverage; /* ... whose green is its coverage (a meter's) */
 };
 
 void xgpu_texture_describe(DWORD format_word, DWORD size_word, struct xgpu_texture_description *description);

@@ -6,9 +6,7 @@ force-included by halo_linux_prefix.h and halo_windows_prefix.h.
 
 The Xbox game allows 16 players on at most 4 machines (up to 4 players each
 on split screen). The native builds allow 128 players on up to 128
-machines; split screen stays at 4 players per machine. Game sources use
-these values only under #ifdef HALO_LINUX, so the byte-matching MSVC build
-keeps the original limits.
+machines; split screen stays at 4 players per machine.
 
 128 is the largest session that fits the game's existing records: player,
 machine and team indices are stored in signed chars (0..127 with NONE), and
@@ -48,8 +46,10 @@ machines, 16 players) are 0x226 and 0x434. */
 #define HALO_PORT_NETWORK_GAME_PLAYERS_END \
 	(HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + HALO_PORT_MAXIMUM_NETWORK_PLAYERS * HALO_PORT_NETWORK_PLAYER_SIZE)
 #define HALO_PORT_NETWORK_GAME_RANDOM_SEED_OFFSET (HALO_PORT_NETWORK_GAME_PLAYERS_END + 2)
-#define HALO_PORT_NETWORK_GAME_LOCAL_DATA_OFFSET (HALO_PORT_NETWORK_GAME_PLAYERS_END + 0xA)
-#define HALO_PORT_NETWORK_GAME_SIZE (HALO_PORT_NETWORK_GAME_PLAYERS_END + 0xE)
+/* (then the gametype's PC options, struct game_variant_options: 0x1C bytes) */
+#define HALO_PORT_NETWORK_GAME_VARIANT_OPTIONS_OFFSET (HALO_PORT_NETWORK_GAME_PLAYERS_END + 0xA)
+#define HALO_PORT_NETWORK_GAME_LOCAL_DATA_OFFSET (HALO_PORT_NETWORK_GAME_PLAYERS_END + 0x26)
+#define HALO_PORT_NETWORK_GAME_SIZE (HALO_PORT_NETWORK_GAME_PLAYERS_END + 0x2A)
 
 /* ---------- system link protocol
 
@@ -66,13 +66,17 @@ is newer (network_client_manager.c). A host advertises it, with its netcode,
 in its game's advertisement's reserved bytes (network_server_message_handler.c),
 which hosts built before there was a version send as zeros: version 0.
 Raise it with any change to what the machines send each other. */
-#define HALO_PORT_NETWORK_VERSION 3
+#define HALO_PORT_NETWORK_VERSION 11
 /* ... the advertisement's reserved bytes: the version (a little-endian word),
 then flags */
 #define HALO_PORT_ADVERTISED_VERSION_OFFSET 0
 #define HALO_PORT_ADVERTISED_FLAGS_OFFSET 2
-/* ... the host plays the distributed netcode (else lockstep) */
+/* ... the host plays the distributed netcode (always, since the lockstep
+netcode was removed; hosts of version 4 built before then may not) */
 #define HALO_PORT_ADVERTISED_DISTRIBUTED_FLAG 0x01
+/* ... the game is under way (loading, playing or over), not in its lobby:
+the menus show it before joining it (hosts built before then never set it) */
+#define HALO_PORT_ADVERTISED_IN_PROGRESS_FLAG 0x02
 
 /* a message header's 12-bit length allows messages of up to 0xFFF bytes,
 header included; the per-tick update of 128 players is 3,857 */
@@ -82,7 +86,7 @@ header included; the per-tick update of 128 players is 3,857 */
 update of 128 players decodes to 0x1010 bytes */
 #define HALO_PORT_NETWORK_PACKET_SIZE 0x1100
 
-/* the game settings record (HALO_PORT_NETWORK_GAME_SIZE, 13,092 bytes at 128
+/* the game settings record (HALO_PORT_NETWORK_GAME_SIZE, 13,120 bytes at 128
 machines and players) does not fit one message; it is sent in pieces of
 this many bytes (4 pieces), each 3,594 bytes on the wire */
 #define HALO_PORT_NETWORK_GAME_SETTINGS_FRAGMENT_SIZE 0xE00

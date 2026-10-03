@@ -908,14 +908,27 @@ symbols in this file:
 /* ---------- headers */
 
 #include "cseries.h"
+#include "cache/cache_files.h"
 #include "bungie_net/network/transport.h"
 #include "bungie_net/network/transport_endpoint_winsock.h"
+#include "cseries/errors.h"
+#include "game/game_engine.h"
+#include "game/players.h"
+#include "interface/marketing_and_strategic_business_development.h"
 #include "interface/player_ui.h"
+#include "interface/ui_widget.h"
+#include "main/console.h"
+#include "main/main.h"
+#include "networking/network_game_globals.h"
+#include "networking/network_game_manager.h"
+#include "networking/network_messages.h"
+#include "networking/network_server_manager.h"
+#include "saved games/game_state.h"
 #include "saved games/player_profile.h"
 #include "interface/ui_widget_definitions.h"
-#ifdef HALO_VITA
-#include "vita_runtime.h"
-#endif
+#include "saved games/saved_game_files.h"
+#include "text/unicode.h"
+#include "halo_menus.h" /* port: PC_MENU_FUNCTION_BASE */
 
 /* ---------- constants */
 
@@ -965,11 +978,6 @@ struct event_record
 	short controller_index;
 };
 
-struct network_player_data
-{
-	byte data[0x20];
-};
-
 struct network_game_join_descriptor
 {
 	byte unknown00[2];
@@ -1010,156 +1018,47 @@ struct playlist_profile_item_options_prefix
 
 /* ---------- prototypes */
 
-void main_revert_map(
-	void);
-void main_reset_map(
-	void);
-void game_state_save_to_persistent_storage(
-	void);
-void main_goto_main_menu(
-	void);
-void main_run_demos(
-	void);
-void xbox_dashboard_launch(
-	void);
-void dispose_global_network_game_client(
-	void);
-void dispose_global_network_game_server(
-	void);
-void game_engine_playlist_initialize(
-	void);
 void game_engine_playlist_next(
 	long,
 	long,
 	long);
-void network_game_set_quickstart_local(
-	void);
-void game_connection_set(
-	long);
-void main_menu_switch_to_single_player(
-	void);
-void network_game_server_open_game(
-	void *server);
-void network_game_server_pause_countdown(
-	void *server,
-	boolean pause);
-void *global_network_game_server_get(
-	void);
-boolean xbox_demos_available(
-	void);
-void ui_stop_main_menu_music(
-	void);
-void ui_widgets_pop_stack(
-	short local_player_index);
-boolean ui_main_menu_music_active(
-	void);
-void main_set_difficulty(
-	word difficulty);
-void main_set_map_name(
-	char *map_name);
-void main_defer_map_map_change(
-	void);
-void *widget_free(
-	void *pointer);
-boolean create_global_network_game_client(
-	void);
-boolean create_global_network_game_server(
-	void);
-void game_engine_playlist_begin(
-	void);
-void network_game_accept_remote_connections(
-	boolean accept);
-void ui_start_main_menu_music(
-	void);
-void error(
-#ifdef HALO_VITA
-	short priority,
-	const char *format,
-#else
-	long priority,
-	char *format,
-#endif
-	...);
 void playlist_profile_delete(
 	long profile_index);
-void ui_play_audio_feedback_sound(
-	short feedback);
-void display_error_deferred(
-	short error_code,
-	short local_player_index,
-	boolean modal,
-	boolean pause_game_time);
 boolean virtual_keyboard_launch(
 	void *text,
 	long maximum_length,
 	long keyboard_type);
-void network_game_client_local_player_quit(
-	word controller_index);
-struct widget_instance *widget_instance_get_topmost_parent(
-	struct widget_instance *widget);
-struct widget_instance *widget_instance_get_nth_child(
-	struct widget_instance *widget,
-	long n);
-void display_error(
-	short error_code,
-	short local_player_index,
-	boolean modal,
-	boolean pause_game_time);
-char *main_get_map_name(
-	void);
-void *global_network_game_client_get(
-	void);
 void *network_game_client_get_game(
 	void *client);
 short network_game_client_get_machine_index(
 	void *client);
-boolean network_player_is_valid(
-	void *player);
 boolean network_game_client_request_start_time_change(
 	void *client,
 	boolean start);
 boolean network_game_client_request_remove_player(
 	void *client,
 	void *player);
-boolean network_game_should_accept_remote_connections(
-	void);
 boolean network_game_client_initiate_join_game(
 	void *client,
 	void *server,
 	struct network_game_join_descriptor *join_descriptor,
 	struct transport_address *address);
-#ifdef HALO_LINUX
 /* network_client_manager.c's: whether the host's network version is this
 machine's (else the player is told, and it is not joined) */
 boolean network_game_client_advertised_game_compatible(
 	void *client,
 	void const *game,
 	boolean tell);
-#endif
-void *network_game_get_game(
-	void);
-short network_game_client_get_local_machine_index(
-	void);
 boolean network_game_client_update_local_player_data(
 	void *client,
-	struct network_player_data *player);
+	struct network_player *player);
 boolean network_game_client_add_player(
 	void *client,
 	short controller_index);
-void network_event(
-	char *format,
-	...);
-void ui_widget_delete(
-	struct widget_instance *widget);
 void playlist_profiles_enumerate_available_to_local_player_index(
 	short local_player_index,
 	long *profile_count,
 	long *profile_indices);
-boolean saved_game_file_retrieve_last_used_multiplayer_variant_directory(
-	char *directory_path);
-long saved_game_file_find_profile_index_for_directory_path(
-	char *directory_path,
-	short profile_type);
 extern byte cached_variant_profile[0x144];
 static boolean new_campaign_chosen(
 	struct widget_instance *widget,
@@ -1172,33 +1071,12 @@ static boolean network_game_start_new_server(
 	struct widget_instance *widget,
 	struct event_record *event,
 	boolean *widget_deleted);
-void console_warning(
-	char *format,
-	...);
-void saved_game_file_get_useable_untitled_profile_name(
-	wchar_t *name);
-boolean saved_game_file_retrieve_last_used_multiplayer_map(
-	char *map_name);
-wchar_t *ustrncpy(
-	wchar_t *destination,
-	wchar_t const *source,
-	long count);
-void *ui_widget_realloc(
-	void *pointer,
-	word size,
-	char *file,
-	long line);
 
 extern byte cached_player_profile[0x9C];
 
 long playlist_profile_new(
 	short local_player_index,
 	wchar_t *name);
-boolean saved_game_file_get_path_to_enclosing_directory(
-	long profile_index,
-	char *directory_path);
-void saved_game_file_remember_last_used_multiplayer_variant_directory(
-	char *directory_path);
 struct game_variant_data *build_game_variant_slayer(
 	struct game_variant_data *variant);
 
@@ -1600,19 +1478,10 @@ static boolean solo_level_initialize_list_single_player(
 	struct widget_instance *widget,
 	struct event_record *event,
 	boolean *widget_deleted);
-boolean widget_event_function_list_widget_goto_next_item(
-	struct widget_instance *widget,
-	struct event_record *event,
-	boolean *widget_deleted);
-boolean widget_event_function_list_widget_goto_previous_item(
-	struct widget_instance *widget,
-	struct event_record *event,
-	boolean *widget_deleted);
 
 
 /* ---------- globals */
 
-extern short player_spawn_count;
 static wchar_t new_campaign_profile_name[12] = { 0 };
 byte single_player_level_data[0x50] = { 0 };
 struct persistent_game_difficulty
@@ -1633,15 +1502,12 @@ struct persistent_game_data_info persistant_game_data_info = { 0 };
 
 struct ui_widget_event_handler_function_table
 {
-#if !defined(HALO_VITA) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 	ui_widget_event_handler_function functions[102];
-#endif
 	char const *names[102];
 };
 
 static struct ui_widget_event_handler_function_table event_handler_function_list =
 {
-#if !defined(HALO_VITA) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 	{
 		widget_event_function_null,
 		widget_event_function_list_widget_goto_next_item,
@@ -1746,7 +1612,6 @@ static struct ui_widget_event_handler_function_table event_handler_function_list
 		begin_music_fade_out,
 		new_campaign_if_no_custom_player_profiles_exist,
 	},
-#endif
 	{
 		"NULL",
 		"list goto next item",
@@ -2060,12 +1925,10 @@ static boolean network_game_join_game_from_server_list(
 						struct transport_address address = { { { 0 } } };
 						struct network_game_join_descriptor join_descriptor;
 
-#ifdef HALO_LINUX
 						/* (a host of another network version: the player is told
 						which is the newer, and stays in the list) */
 						if (!network_game_client_advertised_game_compatible(global_network_game_client_get(), server, TRUE))
 							return FALSE;
-#endif
 						transport_client_start(server + 0x18, server + 8, server, 0x141E, &address);
 						if (address.address.long_words[0] != zero && address.port != zero)
 						{
@@ -2446,34 +2309,13 @@ static boolean main_menu_initialize(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] player_ui_clear_multiplayer_joins begin");
-#endif
 	player_ui_clear_multiplayer_joins();
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] player_ui_clear_multiplayer_variant begin");
-#endif
 	player_ui_clear_multiplayer_variant();
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] dispose_global_network_game_client begin");
-#endif
 	dispose_global_network_game_client();
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] dispose_global_network_game_server begin");
-#endif
 	dispose_global_network_game_server();
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] network_game_accept_remote_connections begin");
-#endif
 	network_game_accept_remote_connections(FALSE);
 	player_spawn_count = 1;
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] player_ui_end_editing_profile begin");
-#endif
 	player_ui_end_editing_profile();
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	vita_log("[VITA 027] menu music check begin");
-#endif
 	if (!ui_main_menu_music_active())
 		ui_start_main_menu_music();
 	return TRUE;
@@ -2617,12 +2459,12 @@ static boolean netgame_unjoin_player(
 
 		if (network_game_client_get_state(client, &state) == 2)
 		{
-			byte *game = network_game_client_get_game(client);
+			struct network_game *game = network_game_client_get_game(client);
 			short machine_index;
 			long machine_player_count;
-			byte *player;
+			struct network_player *player;
 			long player_index;
-			byte *test_player;
+			struct network_player *test_player;
 
 			player = NULL;
 			machine_index = network_game_client_get_local_machine_index();
@@ -2630,21 +2472,15 @@ static boolean netgame_unjoin_player(
 
 			if ((short)machine_index != NONE)
 			{
-#ifdef HALO_LINUX
-				/* the native builds' session limits move and extend the players
-				(port/linux/include/halo_port_limits.h) */
-				test_player = game + HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET;
-				for (player_index = 0; player_index < HALO_PORT_MAXIMUM_NETWORK_PLAYERS; player_index++, test_player += 0x20)
-#else
-				test_player = game + 0x226;
-				for (player_index = 0; player_index < 16; player_index++, test_player += 0x20)
-#endif
+				/* (port: every player the native builds' sessions hold, halo_port_limits.h) */
+				test_player = game->players;
+				for (player_index = 0; player_index < (long)NUMBEROF(game->players); player_index++, test_player++)
 				{
 					if (network_player_is_valid(test_player) &&
-						(short)(signed char)test_player[0x1C] == (short)machine_index)
+						(short)test_player->machine_index == (short)machine_index)
 					{
 						machine_player_count++;
-						if ((short)(signed char)test_player[0x1D] == event->controller_index)
+						if ((short)test_player->controller_index == event->controller_index)
 						{
 							match_vassert("c:\\halo\\SOURCE\\interface\\ui_widget_event_handler_functions.c", 4646, !player, "duplicate player registered in game");
 							player = test_player;
@@ -2658,7 +2494,7 @@ static boolean netgame_unjoin_player(
 					{
 						if (!network_game_client_request_remove_player(client, player))
 							error(2, "failed to request player removal");
-						player_ui_clear_multiplayer_autojoin_for_local_player((short)(signed char)player[0x1D]);
+						player_ui_clear_multiplayer_autojoin_for_local_player((short)player->controller_index);
 					}
 
 					if (machine_player_count == 1)
@@ -2975,42 +2811,29 @@ static boolean multiplayer_game_swap_teams(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-	struct network_player_data player_data;
+	struct network_player player;
 	short machine_index;
-	byte *game;
+	struct network_game *game;
 	long player_index;
-	byte *player;
 
 	match_assert("c:\\halo\\SOURCE\\interface\\ui_widget_event_handler_functions.c", 1572, event);
 	game = network_game_get_game();
-	if (game && game[0xC0] == TRUE)
+	if (game && game->variant.universal_variant.teams == TRUE)
 	{
 		machine_index = network_game_client_get_local_machine_index();
 		if ((short)machine_index != NONE)
 		{
-			player_index = 0;
-#ifdef HALO_LINUX
-			/* the players' machine indices, where the native builds' session
-			limits put them (port/linux/include/halo_port_limits.h) */
-			player = game + HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + 0x1C;
-			for (; player_index < HALO_PORT_MAXIMUM_NETWORK_PLAYERS; player_index++, player += 0x20)
-#else
-			player = game + 0x242;
-			for (; player_index < 16; player_index++, player += 0x20)
-#endif
+			/* (port: every player the native builds' sessions hold, halo_port_limits.h) */
+			for (player_index = 0; player_index < (long)NUMBEROF(game->players); player_index++)
 			{
-				if (network_player_is_valid(player - 0x1C) &&
-					(short)(signed char)player[0] == (short)machine_index &&
-					(short)(signed char)player[1] == event->controller_index)
+				if (network_player_is_valid(&game->players[player_index]) &&
+					(short)game->players[player_index].machine_index == (short)machine_index &&
+					(short)game->players[player_index].controller_index == event->controller_index)
 				{
-#ifdef HALO_LINUX
-					player_data = *(struct network_player_data *)(game + HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + player_index * 0x20);
-#else
-					player_data = *(struct network_player_data *)(game + 0x226 + player_index * 0x20);
-#endif
-					player_data.data[0x1E] = !player_data.data[0x1E];
+					player = game->players[player_index];
+					player.team_index = !player.team_index;
 					if (!network_game_client_update_local_player_data(
-						global_network_game_client_get(), &player_data))
+						global_network_game_client_get(), &player))
 					{
 						error(2, "failed to update player's team for multiplayer game");
 					}
@@ -3028,29 +2851,19 @@ static boolean network_game_start_faster(
 	boolean *widget_deleted)
 {
 	void *client = global_network_game_client_get();
-	byte *player;
 	short machine_index;
 	long player_index;
 
 	if (client)
 	{
-		void *game = network_game_client_get_game(client);
+		struct network_game *game = network_game_client_get_game(client);
 		machine_index = network_game_client_get_machine_index(client);
-		player_index = 0;
-		player = (byte *)game;
-#ifdef HALO_LINUX
-		/* the players' machine indices, where the native builds' session
-		limits put them (port/linux/include/halo_port_limits.h) */
-		player += HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + 0x1C;
-		for (; player_index < HALO_PORT_MAXIMUM_NETWORK_PLAYERS; player_index++, player += 0x20)
-#else
-		player += 0x242;
-		for (; player_index < 16; player_index++, player += 0x20)
-#endif
+		/* (port: every player the native builds' sessions hold, halo_port_limits.h) */
+		for (player_index = 0; player_index < (long)NUMBEROF(game->players); player_index++)
 		{
-			if (network_player_is_valid(player - 0x1C) &&
-				(short)(signed char)player[0] == (short)machine_index &&
-				(short)(signed char)player[1] == event->controller_index)
+			if (network_player_is_valid(&game->players[player_index]) &&
+				(short)game->players[player_index].machine_index == (short)machine_index &&
+				(short)game->players[player_index].controller_index == event->controller_index)
 			{
 				if (!network_game_client_request_start_time_change(client, TRUE))
 					error(2, "network_game_client_request_start_time_change() failed");
@@ -3067,29 +2880,19 @@ static boolean network_game_start_slower(
 	boolean *widget_deleted)
 {
 	void *client = global_network_game_client_get();
-	byte *player;
 	short machine_index;
 	long player_index;
 
 	if (client)
 	{
-		void *game = network_game_client_get_game(client);
+		struct network_game *game = network_game_client_get_game(client);
 		machine_index = network_game_client_get_machine_index(client);
-		player_index = 0;
-		player = (byte *)game;
-#ifdef HALO_LINUX
-		/* the players' machine indices, where the native builds' session
-		limits put them (port/linux/include/halo_port_limits.h) */
-		player += HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + 0x1C;
-		for (; player_index < HALO_PORT_MAXIMUM_NETWORK_PLAYERS; player_index++, player += 0x20)
-#else
-		player += 0x242;
-		for (; player_index < 16; player_index++, player += 0x20)
-#endif
+		/* (port: every player the native builds' sessions hold, halo_port_limits.h) */
+		for (player_index = 0; player_index < (long)NUMBEROF(game->players); player_index++)
 		{
-			if (network_player_is_valid(player - 0x1C) &&
-				(short)(signed char)player[0] == (short)machine_index &&
-				(short)(signed char)player[1] == event->controller_index)
+			if (network_player_is_valid(&game->players[player_index]) &&
+				(short)game->players[player_index].machine_index == (short)machine_index &&
+				(short)game->players[player_index].controller_index == event->controller_index)
 			{
 				if (!network_game_client_request_start_time_change(client, FALSE))
 					error(2, "network_game_client_request_start_time_change() failed");
@@ -3537,12 +3340,6 @@ static boolean multiplayer_profiles_list_initialize(
 	return TRUE;
 }
 
-#ifdef HALO_VITA
-static boolean vita_ui_event_failed;
-void halo_vita_ui_event_reset(void) { vita_ui_event_failed = FALSE; }
-boolean halo_vita_ui_event_failed(void) { return vita_ui_event_failed; }
-#endif
-
 boolean ui_widget_event_handler_function_invoke(
 	struct widget_instance *widget,
 	struct event_record *event,
@@ -3554,113 +3351,66 @@ boolean ui_widget_event_handler_function_invoke(
 	match_vassert("c:\\halo\\SOURCE\\interface\\ui_widget_event_handler_functions.c", 478,
 		widget != NULL && widget_deleted != NULL,
 		"(widget != NULL) && (widget_deleted != NULL)");
+	/* port: the menus' own functions (port/linux/game/menu_functions.c) */
+	if (function_index >= PC_MENU_FUNCTION_BASE && function_index < 0x8000)
+	{
+		extern boolean pc_menu_event_function_invoke(struct widget_instance *widget, struct event_record *event,
+			long function_index, boolean *widget_deleted);
+
+		return pc_menu_event_function_invoke(widget, event, function_index - PC_MENU_FUNCTION_BASE, widget_deleted);
+	}
 	if ((short)function_index >= 0 && function_index < 102)
 	{
-#if defined(HALO_VITA) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-		/* The reachable ui.map Main Menu graph uses 0,23,86,87,101.
-		 * Creation needs 23/86. Interactive 87/101 remain explicit
-		 * blockers until their game transitions are connected. */
-		switch (function_index)
-		{
-		case 0: result = widget_event_function_null(widget, event, widget_deleted); break;
-		case 1: result = widget_event_function_list_widget_goto_next_item(widget, event, widget_deleted); break;
-		case 2: result = widget_event_function_list_widget_goto_previous_item(widget, event, widget_deleted); break;
-		case 22: result = coop_game_initialize(widget, event, widget_deleted); break;
-		case 24: result = multiplayer_type_menu_initialize(widget, event, widget_deleted); break;
-		case 99: result = difficulty_menu_initialize(widget, event, widget_deleted); break;
-		case 3: result = widget_event_function_null(widget, event, widget_deleted); break;
-		case 4: result = widget_event_function_null(widget, event, widget_deleted); break;
-		case 7: result = solo_level_dispose_list(widget, event, widget_deleted); break;
-		case 8: result = solo_level_set_next_map_name(widget, event, widget_deleted); break;
-		case 9: result = difficulty_set(widget, event, widget_deleted); break;
-		case 26: result = multiplayer_level_list_initialize(widget, event, widget_deleted); break;
-		case 27: result = multiplayer_level_list_dispose(widget, event, widget_deleted); break;
-		case 29: result = multiplayer_profiles_list_initialize(widget, event, widget_deleted); break;
-		case 30: result = multiplayer_profiles_list_dispose(widget, event, widget_deleted); break;
-		case 34: result = player_profiles_list_initialize(widget, event, widget_deleted); break;
-		case 35: result = player_profiles_list_dispose(widget, event, widget_deleted); break;
-		case 36: result = player_profile_set_for_game_3wide(widget, event, widget_deleted); break;
-		case 37: result = player_profile_set_for_game_1wide(widget, event, widget_deleted); break;
-		case 38: result = playlist_profile_begin_editing(widget, event, widget_deleted); break;
-		case 39: result = playlist_profile_end_editing(widget, event, widget_deleted); break;
-		case 40: result = playlist_profile_set_game_engine(widget, event, widget_deleted); break;
-		case 41: result = playlist_profile_change_name(widget, event, widget_deleted); break;
-		case 42: result = playlist_profile_change_ctf_rules(widget, event, widget_deleted); break;
-		case 43: result = playlist_profile_change_koth_rules(widget, event, widget_deleted); break;
-		case 44: result = playlist_profile_change_slayer_rules(widget, event, widget_deleted); break;
-		case 45: result = playlist_profile_change_oddball_rules(widget, event, widget_deleted); break;
-		case 46: result = playlist_profile_change_racing_rules(widget, event, widget_deleted); break;
-		case 47: result = playlist_profile_change_player_options(widget, event, widget_deleted); break;
-		case 48: result = playlist_profile_change_item_options(widget, event, widget_deleted); break;
-		case 49: result = playlist_profile_change_indicator_options(widget, event, widget_deleted); break;
-		case 50: result = playlist_profile_initialize_game_engine(widget, event, widget_deleted); break;
-		case 51: result = playlist_profile_initialize_name(widget, event, widget_deleted); break;
-		case 52: result = playlist_profile_initialize_ctf_rules(widget, event, widget_deleted); break;
-		case 53: result = playlist_profile_initialize_koth_rules(widget, event, widget_deleted); break;
-		case 54: result = playlist_profile_initialize_slayer_rules(widget, event, widget_deleted); break;
-		case 55: result = playlist_profile_initialize_oddball_rules(widget, event, widget_deleted); break;
-		case 56: result = playlist_profile_initialize_racing_rules(widget, event, widget_deleted); break;
-		case 57: result = playlist_profile_initialize_player_options(widget, event, widget_deleted); break;
-		case 58: result = playlist_profile_initialize_item_options(widget, event, widget_deleted); break;
-		case 59: result = playlist_profile_initialize_indicator_options(widget, event, widget_deleted); break;
-		case 60: result = playlist_profile_save_changes(widget, event, widget_deleted); break;
-		case 61: result = player_profile_color_picker_menu_initialize(widget, event, widget_deleted); break;
-		case 62: result = player_profile_color_picker_menu_dispose(widget, event, widget_deleted); break;
-		case 63: result = player_profile_color_picker_select_color(widget, event, widget_deleted); break;
-		case 64: result = player_profile_begin_editing(widget, event, widget_deleted); break;
-		case 65: result = player_profile_end_editing(widget, event, widget_deleted); break;
-		case 66: result = player_profile_change_name(widget, event, widget_deleted); break;
-		case 67: result = player_profile_save_changes(widget, event, widget_deleted); break;
-		case 68: result = player_profile_initialize_controller_settings(widget, event, widget_deleted); break;
-		case 69: result = player_profile_initialize_advanced_controller_settings(widget, event, widget_deleted); break;
-		case 70: result = player_profile_change_controller_settings(widget, event, widget_deleted); break;
-		case 71: result = player_profile_change_advanced_controller_settings(widget, event, widget_deleted); break;
-		case 74: result = delete_player_profile_request(widget, event, widget_deleted); break;
-		case 75: result = delete_playlist_profile_request(widget, event, widget_deleted); break;
-		case 76: result = delete_player_profile_final(widget, event, widget_deleted); break;
-		case 77: result = delete_playlist_profile_final(widget, event, widget_deleted); break;
-		case 78: result = cancel_profile_delete(widget, event, widget_deleted); break;
-		case 79: result = create_and_begin_editing_new_gametype_profile(widget, event, widget_deleted); break;
-		case 80: result = create_and_begin_editing_new_player_profile(widget, event, widget_deleted); break;
-		case 88: result = single_player_reset_controller_choices(widget, event, widget_deleted); break;
-		case 89: result = single_player_set_player1_controller_choice(widget, event, widget_deleted); break;
-		case 90: result = single_player_set_player2_controller_choice(widget, event, widget_deleted); break;
-		case 94: result = close_calling_widget_if_not_editing_profile(widget, event, widget_deleted); break;
-		case 96: result = new_campaign_chosen(widget, event, widget_deleted); break;
-		case 97: result = new_campaign_decision(widget, event, widget_deleted); break;
-		case 98: result = pop_history_stack_once(widget, event, widget_deleted); break;
-		case 101: result = new_campaign_if_no_custom_player_profiles_exist(widget, event, widget_deleted); break;
-		case 23:
-			vita_log("[VITA 027] main_menu_initialize begin");
-			result = main_menu_initialize(widget, event, widget_deleted);
-			if (result) vita_log("[VITA 027] main_menu_initialize PASS");
-			break;
-		case 86:
-			vita_log("[VITA 026] Main Menu child created handler begin index=86");
-			result = disable_widget_if_no_xdemos(widget, event, widget_deleted);
-			if (result) vita_log("[VITA 026] handler86 returned XDemos=%s", widget->disabled ? "absent" : "present");
-			break;
-		default:
-			vita_log("MAIN MENU BLOCKED: unsupported original UI event function index=%u", function_index);
-			result = FALSE;
-			vita_ui_event_failed = TRUE;
-			break;
-		}
-#else
 		result = event_handler_function_list.functions[(short)function_index](widget, event, widget_deleted);
-#endif
 		if (!result)
-		{
-#ifdef HALO_VITA
-			vita_log("MAIN MENU BLOCKED: event handler '%s' failed", event_handler_function_list.names[(short)function_index]);
-#else
 			console_warning("event handler '%s' failed", event_handler_function_list.names[(short)function_index]);
-#endif
-		}
 		return result;
 	}
 	error(2, "invalid event_handler_function");
 	return FALSE;
+}
+
+/* port: a function's name, as the tags name it, by its index (NULL past the
+last), for the menus' files (port/linux/game/menu_tags.c) */
+char const *ui_widget_event_handler_function_name(
+	long function_index)
+{
+	return function_index >= 0 && function_index < NUMBEROF(event_handler_function_list.names) ?
+		event_handler_function_list.names[function_index] : NULL;
+}
+
+/* port: the PC version's campaign menus (port/linux/game/menu_functions.c):
+reads player 1's saved game, as the Xbox's level list does (which the
+difficulty menu and its warning then use), and gives its map, its level and
+its difficulty; FALSE if there is none */
+short main_get_solo_level_from_name(char const *name);
+
+boolean ui_widget_port_saved_game(
+	char const **map_name,
+	short *level,
+	short *difficulty)
+{
+	memset(&persistant_game_data_info, 0, sizeof(persistant_game_data_info));
+	event_handler_functions.last_player1_profile_index = player_ui_get_active_player_profile_index(0);
+	if (event_handler_functions.last_player1_profile_index != NONE)
+	{
+		persistant_game_data_info.valid = game_state_test_persistent_storage(
+			persistant_game_data_info.map_name,
+			&persistant_game_data_info.difficulty.value,
+			&persistant_game_data_info.corrupted);
+	}
+	persistant_game_data_info.map_name[0xFF] = 0;
+	*level = main_get_solo_level_from_name(persistant_game_data_info.map_name);
+	if (persistant_game_data_info.valid != TRUE || *level == NONE)
+	{
+		persistant_game_data_info.valid = FALSE;
+		return FALSE;
+	}
+	persistant_game_data_info.map_index = (byte)*level;
+	persistant_game_data_info.difficulty.value = PIN(persistant_game_data_info.difficulty.value, 0, 3);
+	*map_name = persistant_game_data_info.map_name;
+	*difficulty = persistant_game_data_info.difficulty.value;
+	return TRUE;
 }
 
 static boolean new_campaign_chosen(
@@ -4194,6 +3944,13 @@ static boolean playlist_profile_change_slayer_rules(
 		case 2: *(long *)(profile + 0x40) = 15; break;
 		case 3: *(long *)(profile + 0x40) = 25; break;
 		case 4: *(long *)(profile + 0x40) = 50; break;
+		/* port: higher, for big games (ui_widget.c's kills_to_win_extra_strings) */
+		case 5: *(long *)(profile + 0x40) = 75; break;
+		case 6: *(long *)(profile + 0x40) = 100; break;
+		case 7: *(long *)(profile + 0x40) = 150; break;
+		case 8: *(long *)(profile + 0x40) = 200; break;
+		case 9: *(long *)(profile + 0x40) = 250; break;
+		case 10: *(long *)(profile + 0x40) = 500; break;
 		default: error(2, "unknown option selected in 'kills to win' option spinner list"); break;
 		}
 		list_item = list_item->next;
@@ -4244,6 +4001,16 @@ static boolean player_profile_set_for_game_1wide(
 	}
 	if (player_profile_get(available_profiles[spinner_list->data3C.selected_index], &profile))
 	{
+		/* port: not a profile whose name the host's ban command could not
+		name (one made before names were checked: player_name_valid) */
+		if (!player_name_valid(profile.player_name, NUMBEROF(profile.player_name)))
+		{
+			display_error_text_deferred(
+				L"Sorry, this profile's\r\nname can't be used in\r\nmultiplayer. Please\r\nrename the profile.",
+				controller_index);
+			ui_play_audio_feedback_sound(4);
+			return FALSE;
+		}
 		player_ui_set_active_player_profile(controller_index, available_profiles[spinner_list->data3C.selected_index], &profile);
 		return TRUE;
 	}
@@ -4527,30 +4294,19 @@ static boolean netgame_join_player(
 	if (network_game_client_get_state(client, &value) != 2)
 		return TRUE;
 	{
-		byte *game = network_game_get_game();
+		struct network_game *game = network_game_get_game();
 		short machine_index = network_game_client_get_local_machine_index();
 		match_assert("c:\\halo\\SOURCE\\interface\\ui_widget_event_handler_functions.c", 1627, game);
 		if ((short)machine_index != NONE)
 		{
-#ifdef HALO_LINUX
-			/* the native builds' session limits move and extend the players
-			(port/linux/include/halo_port_limits.h) */
-			for (value = 0; value < HALO_PORT_MAXIMUM_NETWORK_PLAYERS; value++)
+			/* (port: every player the native builds' sessions hold, halo_port_limits.h) */
+			for (value = 0; value < (short)NUMBEROF(game->players); value++)
 			{
-				if (network_player_is_valid(game + HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + value * 0x20) &&
-					(short)(signed char)game[HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + 0x1C + value * 0x20] == (short)machine_index &&
-					(short)(signed char)game[HALO_PORT_NETWORK_GAME_PLAYERS_OFFSET + 0x1D + value * 0x20] == event->controller_index)
+				if (network_player_is_valid(&game->players[value]) &&
+					(short)game->players[value].machine_index == (short)machine_index &&
+					(short)game->players[value].controller_index == event->controller_index)
 					return TRUE;
 			}
-#else
-			for (value = 0; value < 16; value++)
-			{
-				if (network_player_is_valid(game + 0x226 + value * 0x20) &&
-					(short)(signed char)game[0x242 + value * 0x20] == (short)machine_index &&
-					(short)(signed char)game[0x243 + value * 0x20] == event->controller_index)
-					return TRUE;
-			}
-#endif
 		}
 		if (!network_game_client_add_player(client, event->controller_index))
 			network_event("failed to send join request");
@@ -5112,6 +4868,13 @@ static boolean playlist_profile_initialize_slayer_rules(
 		case 15: option_spinner->data3C.selected_index = 2; break;
 		case 25: option_spinner->data3C.selected_index = 3; break;
 		case 50: option_spinner->data3C.selected_index = 4; break;
+		/* port: higher, for big games (ui_widget.c's kills_to_win_extra_strings) */
+		case 75: option_spinner->data3C.selected_index = 5; break;
+		case 100: option_spinner->data3C.selected_index = 6; break;
+		case 150: option_spinner->data3C.selected_index = 7; break;
+		case 200: option_spinner->data3C.selected_index = 8; break;
+		case 250: option_spinner->data3C.selected_index = 9; break;
+		case 500: option_spinner->data3C.selected_index = 10; break;
 		default: option_spinner->data3C.selected_index = 0; break;
 		}
 
@@ -5860,6 +5623,18 @@ static boolean multiplayer_level_select(
 		map_name = automation_map_name;
 		fclose(file);
 	}
+	/* port: a map of a build this version does not play with others (its
+	objects would not be the same as theirs): said, and the list stays */
+	{
+		char build[0x20];
+
+		if (global_network_game_server_get() && !network_game_is_splitscreen_local() &&
+			!cache_files_map_plays_multiplayer(map_name, build))
+		{
+			cache_files_show_multiplayer_unavailable(map_name, build);
+			return FALSE;
+		}
+	}
 	main_set_multiplayer_map_name(map_name);
 	game_engine_override_map_name(map_name);
 	{
@@ -5878,31 +5653,20 @@ static boolean multiplayer_level_select(
 	return TRUE;
 }
 
-struct playlist_profile_data
-{
-	byte data[0x68];
-};
-
-struct playlist_profile_data *game_engine_get_variant_by_name(
-	struct playlist_profile_data *result,
-	char *name);
 boolean playlist_profile_get(
 	long profile_index,
-	struct playlist_profile_data *profile);
-boolean saved_game_file_get_path_to_enclosing_directory(
-	long profile_index,
-	char *directory_path);
+	struct game_variant *profile);
 
 static boolean multiplayer_profile_set_for_game(
 	struct widget_instance *widget,
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-	struct playlist_profile_data profile;
+	struct game_variant profile;
 	char variant_name[128];
-	struct playlist_profile_data automation_profile;
-	struct playlist_profile_data empty_profile;
-	struct playlist_profile_data temporary_profile;
+	struct game_variant automation_profile;
+	struct game_variant empty_profile;
+	struct game_variant temporary_profile;
 	char directory_path[256];
 	struct widget_instance *profile_select_screen;
 	struct widget_instance *profile_list;
@@ -6074,3 +5838,288 @@ static boolean solo_level_initialize_list_single_player(
 	}
 	return TRUE;
 }
+
+/* port: the PC version's multiplayer menus (port/linux/game/menu_functions.c),
+on our lists rather than the Xbox's spinners: */
+
+/* the multiplayer maps (the Xbox's 13), and the one used last (else 0) */
+short ui_widget_port_multiplayer_maps(
+	char const *const **names,
+	short *last_used)
+{
+	char map_name[256];
+	short level_index;
+
+	*names = (char const *const *)event_handler_functions.multiplayer_levels;
+	*last_used = 0;
+	if (saved_game_file_retrieve_last_used_multiplayer_map(map_name))
+	{
+		for (level_index = 0; level_index < 13; level_index++)
+		{
+			if (!_stricmp(map_name, event_handler_functions.multiplayer_levels[level_index]))
+				*last_used = level_index;
+		}
+	}
+	return 13;
+}
+
+/* the map chosen (as multiplayer_level_select), the server's if there is
+one; FALSE if this build cannot play it with others (said) */
+boolean ui_widget_port_multiplayer_map_choose(
+	short level_index)
+{
+	char const *map_name;
+	void *server = global_network_game_server_get();
+
+	if (level_index < 0 || level_index >= 13)
+		return FALSE;
+	map_name = event_handler_functions.multiplayer_levels[level_index];
+	{
+		char build[0x20];
+
+		if (server && !network_game_is_splitscreen_local() &&
+			!cache_files_map_plays_multiplayer(map_name, build))
+		{
+			cache_files_show_multiplayer_unavailable(map_name, build);
+			return FALSE;
+		}
+	}
+	main_set_multiplayer_map_name(map_name);
+	game_engine_override_map_name(map_name);
+	if (server)
+		network_game_server_change_map_name(server, map_name);
+	saved_game_file_remember_last_used_multiplayer_map(event_handler_functions.multiplayer_levels[level_index]);
+	return TRUE;
+}
+
+/* the gametypes (the built-in ones and those saved): their count, and the
+one used last (else 0) */
+short ui_widget_port_gametypes(
+	long *indices,
+	short maximum,
+	short *last_used)
+{
+	char directory_path[256];
+	word count = (word)maximum;
+	short index;
+
+	playlist_profiles_enumerate_available_to_local_player_index(0, &count, indices);
+	*last_used = 0;
+	if (saved_game_file_retrieve_last_used_multiplayer_variant_directory(directory_path))
+	{
+		long profile_index = saved_game_file_find_profile_index_for_directory_path(directory_path, 1);
+
+		for (index = 0; profile_index != NONE && index < (short)count; index++)
+		{
+			if (indices[index] == profile_index)
+				*last_used = index;
+		}
+	}
+	return (short)count;
+}
+
+/* the gametype chosen (as multiplayer_profile_set_for_game), the server's
+if there is one */
+boolean ui_widget_port_gametype_choose(
+	long profile_index)
+{
+	struct game_variant profile;
+	char directory_path[256];
+	void *server;
+
+	if (profile_index == NONE || !(profile_index & 0x80000000))
+	{
+		ui_play_audio_feedback_sound(4);
+		return FALSE;
+	}
+	if (!playlist_profile_get(profile_index, &profile))
+		return FALSE;
+	server = global_network_game_server_get();
+	if (saved_game_file_get_path_to_enclosing_directory(profile_index, directory_path))
+		saved_game_file_remember_last_used_multiplayer_variant_directory(directory_path);
+	player_ui_set_game_variant(&profile);
+	/* (and its PC options: game_engine.h) */
+	{
+		struct game_variant_options options;
+
+		playlist_profile_get_options(profile_index, &options);
+		player_ui_set_game_variant_options(&options);
+	}
+	if (server)
+		network_game_server_change_game_variant(server, &profile);
+	return TRUE;
+}
+
+/* hosting (as the Xbox's server list's Y) */
+boolean ui_widget_port_host(
+	struct widget_instance *widget,
+	struct event_record *event,
+	boolean *widget_deleted)
+{
+	return network_game_start_new_server(widget, event, widget_deleted);
+}
+
+/* the game browsing (as the Xbox's server list): found games' client */
+boolean ui_widget_port_browse(
+	struct widget_instance *widget,
+	struct event_record *event,
+	boolean *widget_deleted)
+{
+	return global_network_game_client_get() || network_game_server_list_initialize(widget, event, widget_deleted);
+}
+
+/* joining a found game (as network_game_join_game_from_server_list), then
+the lobby (by name) in place of the widget's screen */
+boolean ui_widget_port_join(
+	struct widget_instance *widget,
+	void *advertised_game,
+	char const *lobby_name,
+	boolean *widget_deleted)
+{
+	byte *server = advertised_game;
+	struct transport_address address = { { { 0 } } };
+	struct network_game_join_descriptor join_descriptor;
+	struct widget_instance *topmost_parent;
+
+	if (!server || !global_network_game_client_get())
+		return FALSE;
+	if (server[0xE0] != TRUE)
+	{
+		error(2, "attempted to join a closed game");
+		ui_play_audio_feedback_sound(4);
+		return FALSE;
+	}
+	if (*(short *)(server + 0xDE) != 0 ||
+		!network_game_client_advertised_game_compatible(global_network_game_client_get(), server, TRUE))
+	{
+		return FALSE;
+	}
+	transport_client_start(server + 0x18, server + 8, server, 0x141E, &address);
+	if (!address.address.long_words[0] || !address.port)
+	{
+		error(2, "attempted to join a network game with a bogus address");
+		return FALSE;
+	}
+	join_descriptor.unknown02 = 0;
+	network_game_generate_join_game_token(join_descriptor.token);
+	if (!network_game_client_initiate_join_game(global_network_game_client_get(), server, &join_descriptor, &address))
+	{
+		network_game_abort();
+		error(2, "failed to initiate join game procedures");
+		return FALSE;
+	}
+	topmost_parent = widget_instance_get_topmost_parent(widget);
+	if (!ui_widget_load_by_name_or_tag(lobby_name, NONE, NULL, NONE, topmost_parent->definition_tag_index,
+		widget->parent ? widget->parent->definition_tag_index : NONE, widget_instance_get_child_index_from_parent(widget)))
+	{
+		error(2, "event handler failed to spawn widget");
+	}
+	game_connection_set(1);
+	*widget_deleted = TRUE;
+	return TRUE;
+}
+
+/* the player of the controller in a network game: player 1's profile (its
+name one the host's ban command can name, as player_profile_set_for_game_1wide
+asks), joining it (the lobby's "net splitscreen prejoin players" adds it) */
+boolean ui_widget_port_multiplayer_player(
+	short controller_index,
+	long profile_index)
+{
+	struct player_profile profile;
+
+	if (controller_index < 0 || controller_index >= 4 || !player_profile_get(profile_index, &profile))
+		return FALSE;
+	if (!player_name_valid(profile.player_name, NUMBEROF(profile.player_name)))
+	{
+		display_error_text_deferred(
+			L"Sorry, this profile's\r\nname can't be used in\r\nmultiplayer. Please\r\nrename the profile.",
+			controller_index);
+		ui_play_audio_feedback_sound(4);
+		return FALSE;
+	}
+	player_ui_set_active_player_profile(controller_index, profile_index, &profile);
+	player_ui_local_player_joined_multiplayer_game(controller_index);
+	return TRUE;
+}
+
+/* a screen by name in place of the widget's (back returns to it: as
+ui_widget_port_join opens the lobby) */
+boolean ui_widget_port_open(
+	struct widget_instance *widget,
+	char const *name,
+	boolean *widget_deleted)
+{
+	struct widget_instance *topmost_parent = widget_instance_get_topmost_parent(widget);
+
+	if (!ui_widget_load_by_name_or_tag(name, NONE, NULL, NONE, topmost_parent->definition_tag_index,
+		widget->parent ? widget->parent->definition_tag_index : NONE, widget_instance_get_child_index_from_parent(widget)))
+	{
+		error(2, "event handler failed to spawn widget");
+		return FALSE;
+	}
+	*widget_deleted = TRUE;
+	return TRUE;
+}
+
+/* the gametype editor's: the gametype (a built-in one too: saving it asks
+for a new name, player_ui_save_profile) being edited */
+boolean ui_widget_port_gametype_edit_begin(
+	long profile_index)
+{
+	if (profile_index == NONE || !(profile_index & 0x80000000))
+	{
+		ui_play_audio_feedback_sound(4);
+		return FALSE;
+	}
+	player_ui_begin_editing_profile(profile_index);
+	return player_ui_get_edit_playlist_profile() != NULL;
+}
+
+/* a saved gametype deleted (as delete_playlist_profile_final) */
+boolean ui_widget_port_gametype_delete(
+	long profile_index)
+{
+	if ((profile_index & 0xF) != 1 || (profile_index & 0x40000000))
+		return FALSE;
+	playlist_profile_delete(profile_index);
+	return TRUE;
+}
+
+/* the game's gametype (Server Setup's options' copy), the server's */
+boolean ui_widget_port_game_variant_set(
+	struct game_variant *variant,
+	struct game_variant_options const *options)
+{
+	void *server = global_network_game_server_get();
+
+	player_ui_set_game_variant(variant);
+	player_ui_set_game_variant_options(options);
+	if (server)
+		network_game_server_change_game_variant(server, variant);
+	return TRUE;
+}
+
+/* the gametype editor's OK (as playlist_profile_save_changes, which fails
+when nothing changed, after closing the screen: the menus show a failure) */
+boolean ui_widget_port_gametype_save(
+	struct widget_instance *widget,
+	boolean *widget_deleted)
+{
+	if (!player_ui_edit_profile_is_dirty())
+	{
+		player_ui_end_editing_profile();
+		ui_widget_delete(widget_instance_get_topmost_parent(widget));
+		*widget_deleted = TRUE;
+		return TRUE;
+	}
+	/* (a built-in gametype changed: a new name asked first, the saving
+	screen not opened over it, as the Xbox's) */
+	if (player_ui_edit_profile_is_default_profile() && !player_ui_edit_profile_name_is_dirty())
+	{
+		player_ui_prompt_user_to_rename_edit_profile();
+		return FALSE;
+	}
+	return player_ui_save_profile();
+}
+

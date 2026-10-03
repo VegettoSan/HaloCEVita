@@ -37,26 +37,14 @@ symbols in this file:
 #include "cseries.h"
 #include "cseries_windows.h"
 #include "cache/physical_memory_map.h"
-#ifdef HALO_VITA
-#include "halo_vita_memory.h"
-#define PHYSICAL_EXPECTED_ADDRESS(address) halo_vita_memory_address(address)
-#else
-#define PHYSICAL_EXPECTED_ADDRESS(address) (address)
-#endif
 
 /* ---------- constants */
 
-#ifdef HALO_LINUX
 /* the native builds' larger game state, placed above the tag cache
 (halo_port_capacity.h); the verified part is the CPU part, as on the Xbox */
 #define GAME_STATE_BASE_ADDRESS HALO_PORT_GAME_STATE_BASE_ADDRESS
 #define GAME_STATE_SIZE HALO_PORT_GAME_STATE_SIZE
 #define GAME_STATE_VERIFY_SIZE HALO_PORT_GAME_STATE_CPU_SIZE
-#else
-#define GAME_STATE_BASE_ADDRESS 0x80061000
-#define GAME_STATE_SIZE 0x345000
-#define GAME_STATE_VERIFY_SIZE 0x305000
-#endif
 #define TAG_CACHE_BASE_ADDRESS 0x803A6000
 #define TAG_CACHE_SIZE 0x1600000
 #define TEXTURE_CACHE_SIZE 0x1600000
@@ -87,11 +75,11 @@ void physical_memory_allocate(
 {
 	physical_memory_map_globals.game_state_base_address = XPhysicalAlloc(GAME_STATE_SIZE, GAME_STATE_BASE_ADDRESS & 0x7FFFFFFF, 0, PAGE_READWRITE);
 #line 46 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"
-	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.game_state_base_address==PHYSICAL_EXPECTED_ADDRESS(GAME_STATE_BASE_ADDRESS));
+	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.game_state_base_address==GAME_STATE_BASE_ADDRESS);
 
 	physical_memory_map_globals.tag_cache_base_address = XPhysicalAlloc(TAG_CACHE_SIZE, TAG_CACHE_BASE_ADDRESS & 0x7FFFFFFF, 0, PAGE_READWRITE);
 #line 50 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"
-	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.tag_cache_base_address==PHYSICAL_EXPECTED_ADDRESS(TAG_CACHE_BASE_ADDRESS));
+	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.tag_cache_base_address==TAG_CACHE_BASE_ADDRESS);
 
 	physical_memory_map_globals.texture_cache_base_address = XPhysicalAlloc(TEXTURE_CACHE_SIZE, -1, 0, PAGE_READWRITE | PAGE_WRITECOMBINE);
 #line 55 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"

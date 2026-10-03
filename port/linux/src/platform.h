@@ -110,14 +110,8 @@ The Xbox maps physical memory at virtual 0x80000000 + P. The layer reserves
 that window at start-up and hands out page-granular blocks from it, so the
 physical/virtual arithmetic the game and Direct3D rely on keeps working. */
 
-#ifdef HALO_VITA
-#include "halo_vita_memory.h"
-#define PLATFORM_CONTIGUOUS_BASE (halo_vita_memory_base())
-#define PLATFORM_CONTIGUOUS_SIZE HALO_VITA_ARENA_SIZE
-#else
 #define PLATFORM_CONTIGUOUS_BASE 0x80000000UL
 #define PLATFORM_CONTIGUOUS_SIZE 0x08000000UL /* a 128 MB development kit */
-#endif
 #define PLATFORM_ANY_PHYSICAL_ADDRESS 0xffffffffUL
 
 /* returns NULL on failure; physical_address places the block exactly */
@@ -125,13 +119,8 @@ void *platform_contiguous_alloc(unsigned long size, unsigned long alignment,
 	unsigned long physical_address, DWORD protect);
 void platform_contiguous_free(void *address);
 BOOL platform_is_contiguous(const void *address);
-#ifdef HALO_VITA
-#define PLATFORM_PHYSICAL_TO_VIRTUAL(physical) ((void *)(PLATFORM_CONTIGUOUS_BASE + (unsigned long)(physical)))
-#define PLATFORM_VIRTUAL_TO_PHYSICAL(address) ((unsigned long)(address) - PLATFORM_CONTIGUOUS_BASE)
-#else
 #define PLATFORM_PHYSICAL_TO_VIRTUAL(physical) ((void *)((unsigned long)(physical) | PLATFORM_CONTIGUOUS_BASE))
 #define PLATFORM_VIRTUAL_TO_PHYSICAL(address) ((unsigned long)(address) & ~PLATFORM_CONTIGUOUS_BASE)
-#endif
 
 /* ---------- guest memory write tracking (memory_watch.c)
 

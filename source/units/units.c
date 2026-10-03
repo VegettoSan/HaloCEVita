@@ -651,20 +651,23 @@ symbols in this file:
 #include "dialogue_definitions.h"
 #include "unit_definitions.h"
 
-#include "ai/actor_looking.h"
+#include "math/real_math.h"
 #include "ai/actors.h"
 #include "ai/ai_debug.h"
-#include "ai/ai_runtime.h"
+#include "ai/ai.h"
 #include "bitmaps/bitmaps.h"
 #include "cseries/errors.h"
 #include "cseries/profile.h"
+#include "devices/device_machines.h"
 #include "effects/effects.h"
 #include "effects/material_effect_definitions.h"
 #include "game/cheats.h"
+#include "game/game_allegiance.h"
 #include "game/game_globals.h"
 #include "game/game_engine.h"
 #include "game/players.h"
 #include "hs/object_lists.h"
+#include "interface/first_person_weapons.h"
 #include "items/equipment.h"
 #include "items/equipment_definitions.h"
 #include "items/projectiles.h"
@@ -676,6 +679,7 @@ symbols in this file:
 #include "objects/damage.h"
 #include "objects/damage_effect_definitions.h"
 #include "objects/object_lights.h"
+#include "physics/breakable_surfaces.h"
 #include "physics/collision_bsp.h"
 #include "physics/collision_models.h"
 #include "physics/collision_usage.h"
@@ -817,15 +821,6 @@ struct unit_control_data
 typedef char unit_control_data_size_assert[
 	sizeof(struct unit_control_data) == 0x40 ? 1 : -1];
 
-struct unit_animation_update_data
-{
-	char state_desired;
-	boolean crouching;
-};
-
-typedef char unit_animation_update_data_size_assert[
-	sizeof(struct unit_animation_update_data) == 0x2 ? 1 : -1];
-
 struct unit_initial_weapon
 {
 	struct tag_reference weapon;
@@ -852,17 +847,7 @@ typedef char game_globals_flaming_death_offset_check[
 
 /* ---------- prototypes */
 
-void player_died(
-	long player_index);
-void actor_died(
-	long actor_index);
-void actor_swarm_unit_died(
-	long swarm_actor_index,
-	long unit_index);
-
 void unit_detach_from_parent(
-	long unit_index);
-void unit_start_running_blindly(
 	long unit_index);
 void unit_start_flaming_to_death(
 	long unit_index,
@@ -872,15 +857,6 @@ void unit_flame_to_death(
 boolean unit_unsuspecting(
 	long unit_index,
 	real_point3d const *point);
-void unit_impact_melee_damage(
-	long unit_index,
-	long target_object_index,
-	short node_index,
-	short region_index,
-	short material_index,
-	real_point3d const *position,
-	real_vector3d const *object_normal,
-	struct location const *location);
 void unit_cause_melee_damage(
 	long unit_index,
 	boolean melee_hit,
@@ -895,10 +871,6 @@ static short seat_label_to_base_seat_index(char const *seat_label);
 static char const *base_weapon_label_get(short base_weapon_index);
 
 static void unit_refresh_illumination(long unit_index);
-
-void unit_animation_start_action(
-	long unit_index,
-	short action);
 
 static boolean unit_euler_axis_doplan(
 	struct unit_acceleration_plan *plan,
@@ -965,21 +937,6 @@ static void unit_align_facing(
 	long unit_index,
 	real_vector2d const *alignment_vector);
 
-void player_control_set_desired_weapon(
-	long unit_index,
-	short desired_weapon_index);
-boolean ai_try_vehicle_eviction(
-	long actor_index,
-	long entering_unit_index,
-	boolean immediate);
-void biped_stop_melee_attack(
-	long unit_index);
-void first_person_weapon_message_from_unit(
-	long unit_index,
-	short message_type);
-void weapon_stop_reload(
-	long weapon_index);
-
 static short unit_weapon_next_index(long unit_index, short current_index, short delta);
 static void unit_ready_desired_weapon(
 	long unit_index,
@@ -1003,9 +960,6 @@ static boolean unit_set_or_test_seat_and_weapon_label(
 static boolean unit_animation_set_state(
 	long unit_index,
 	short new_state);
-short unit_update_animation(
-	long unit_index,
-	struct unit_animation_update_data *data);
 
 static boolean unit_vectors_are_valid(long unit_index);
 static void unit_throw_grenade_release(long unit_index, boolean premature);
@@ -1018,10 +972,10 @@ static void unit_cause_continuous_melee_damage(long unit_index);
 
 static long unit_get_weapon(struct unit_datum *unit, short index);
 static void unit_drop_item(long unit_index, long item_index);
-#ifdef HALO_LINUX
 /* port/linux/game/network_objects.c's */
 boolean network_objects_creating_host_object(void);
-#endif
+/* network_game_globals.c's */
+boolean network_game_distributed_client(void);
 static void unit_drop_grenades(
 	long unit_index);
 static void unit_drop_inventory_weapons(
@@ -1032,32 +986,8 @@ static void unit_running_blind(long unit_index, real_vector3d *run_vector);
 
 static boolean unit_integrated_night_vision_is_active(long unit_index);
 
-boolean game_team_is_enemy(
-	short team_index0,
-	short team_index1);
-void player_died(
-	long player_index);
-void actor_died(
-	long actor_index);
-void actor_swarm_unit_died(
-	long swarm_actor_index,
-	long unit_index);
 void unit_detach_from_parent(
 	long unit_index);
-void unit_exit_seat_end(
-	long unit_index);
-void aiming_screen_apply(
-	struct animation const *animation,
-	struct animation_aiming_screen_bounds const *aiming_screen_bounds,
-	real yaw,
-	real pitch,
-	struct real_orientation *node_orientations);
-void biped_exit_seat_end(
-	long biped_index,
-	long parent_unit_index);
-short animation_choose_random_permutation(
-	long animation_graph_index,
-	short animation_index);
 
 extern char const *base_seat_labels[NUMBER_OF_UNIT_BASE_SEATS];
 
@@ -2496,12 +2426,10 @@ static void unit_add_initial_weapons(
 	struct unit_datum *unit = unit_get(unit_index);
 	struct unit_definition *unit_definition = unit_definition_get(unit->definition_index);
 
-#ifdef HALO_LINUX
 	/* (a client of the distributed netcode making the host's unit: its
 	weapons are the host's objects, port/linux/game/network_objects.c) */
 	if (network_objects_creating_host_object())
 		return;
-#endif
 	for (initial_weapon_index = 0;
 		initial_weapon_index < unit_definition->unit.initial_weapons.count;
 		initial_weapon_index++)
@@ -4340,7 +4268,9 @@ boolean unit_throw_grenade_begin(
 			break;
 
 		default:
-			if (!weapon_prevents_grenade_throwing(weapon_index))
+			/* port: and with no weapon (a loadout of none), as melee
+			(bipeds.c), which weapon_prevents_grenade_throwing(NONE) prevents */
+			if (weapon_index == NONE || !weapon_prevents_grenade_throwing(weapon_index))
 			{
 				struct animation_graph *animation_graph;
 				struct animation *animation;
@@ -7663,8 +7593,20 @@ static void unit_throw_grenade_move_to_hand(
 		!actor_has_unlimited_grenades(unit->unit.actor_index)))
 	{
 		match_assert("c:\\halo\\SOURCE\\units\\units.c", 7966, unit->unit.current_grenade_index>=0 && unit->unit.current_grenade_index<NUMBER_OF_UNIT_GRENADE_TYPES);
+		/* port: a distributed client's grenade counts are the host's (what
+		every unit carries, network_objects.c), which can arrive between a
+		throw starting and the grenade reaching the hand, the throw already
+		counted there: the host's count stands */
+		if (network_game_distributed_client())
+		{
+			if (unit->unit.grenade_counts[unit->unit.current_grenade_index] > 0)
+				--unit->unit.grenade_counts[unit->unit.current_grenade_index];
+		}
+		else
+		{
 		match_assert("c:\\halo\\SOURCE\\units\\units.c", 7967, unit->unit.grenade_counts[unit->unit.current_grenade_index]>0);
 		--unit->unit.grenade_counts[unit->unit.current_grenade_index];
+		}
 	}
 
 	object_get_marker_by_name(unit_index, "left hand", &marker, 1);
@@ -8668,15 +8610,22 @@ enum
 	_collision_result_breakable_surface_bit = 3,
 };
 
-void breakable_surface_damage(
-	short breakable_surface_index,
-	struct damage_data *damage_data,
-	long seed_surface_index);
-void machine_try_to_open_with_damage(
-	long machine_index);
-void vehicle_accelerate(
-	long vehicle_index,
-	real_vector3d const *acceleration);
+/* port: the melee damage of a unit with no weapon (a gametype's loadout of
+none): its own, else (a player's biped has none: players always had a
+weapon) the blow of the globals' first multiplayer weapon, the assault
+rifle's. network_damage.c takes it as the player's. */
+long unit_unarmed_melee_damage(
+	long unit_index)
+{
+	struct unit_definition *unit_definition = unit_definition_get(unit_get(unit_index)->definition_index);
+	long weapon_definition_index;
+
+	if (unit_definition->unit.melee_damage.index!=NONE)
+		return unit_definition->unit.melee_damage.index;
+	weapon_definition_index = list_index_to_weapon_definition_index(0);
+	return weapon_definition_index!=NONE ?
+		weapon_definition_get(weapon_definition_index)->weapon.melee_attack_damage.index : NONE;
+}
 
 void unit_cause_player_melee_damage(
 	long unit_index)
@@ -8845,6 +8794,20 @@ void unit_cause_player_melee_damage(
 		if (melee_damage_effect_index==NONE)
 		{
 			melee_damage_effect_index = unit_definition->unit.melee_damage.index;
+		}
+		/* port: a player with no weapon (a gametype's loadout of none), whose
+		biped has no blow of its own: unit_unarmed_melee_damage's, and its
+		response */
+		if (melee_damage_effect_index==NONE)
+		{
+			long weapon_definition_index = list_index_to_weapon_definition_index(0);
+
+			melee_damage_effect_index = unit_unarmed_melee_damage(unit_index);
+			if (weapon_definition_index!=NONE && melee_response_effect_index==NONE)
+			{
+				melee_response_effect_index =
+					weapon_definition_get(weapon_definition_index)->weapon.melee_attack_response.index;
+			}
 		}
 
 		if (best_object_index!=NONE)
@@ -11707,9 +11670,6 @@ static boolean unit_integrated_night_vision_is_active(
 
 /* Verify the public seat-helper declaration without perturbing this legacy
  * translation unit's authenticated function-declaration order. */
-#include "vehicle_scripting.h"
-
-#ifdef HALO_LINUX
 /* the distributed netcode (port/linux/game/network_objects.c): a client's
 unit carries the host's weapons, the same objects, moved in and out as the
 host's unit had them (the host has applied the game's rules) */
@@ -11765,4 +11725,3 @@ void unit_network_forget_weapon(
 	if (unit->unit.desired_weapon_index == slot || unit->unit.desired_weapon_index == NONE)
 		unit->unit.desired_weapon_index = unit_weapon_next_index(unit_index, NONE, 0);
 }
-#endif

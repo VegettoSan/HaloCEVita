@@ -455,9 +455,6 @@ static void cache_copy_block_on_raw_write(
 	struct simple_decompressor_definition *self);
 static void cache_copy_wait_for_async_io(
 	struct simple_decompressor_definition *self);
-struct cache_copy_read_request *acquire_read_request(
-	struct simple_decompressor_definition *self,
-	short read_sequence_index);
 static void cache_copy_issue_read(
 	struct simple_decompressor_definition *self,
 	void *buffer,
@@ -506,7 +503,7 @@ static void cache_copy_run_decompression(
 	struct simple_decompressor_definition *self);
 static unsigned long __stdcall simple_cache_copy_thread(
 	void *parameter);
-static void CALLBACK cache_copy_FileIOCompletionRoutine(
+void CALLBACK cache_copy_FileIOCompletionRoutine(
 	unsigned long error_code,
 	unsigned long bytes_transferred,
 	OVERLAPPED *overlapped);
@@ -516,11 +513,8 @@ static void CALLBACK cache_copy_FileIOCompletionRoutine(
 static struct decompressor_runtime_globals decompressor_globals;
 static struct simple_decompressor_definition *global_self = &decompressor_globals.self;
 static long performance_frequency = 1;
-
-static boolean decompressor_print_timing;
-#ifdef HALO_VITA
-static boolean vita_stream_complete;
-#endif
+/* January PDB: public, module 33 .bss+0xcc0; explicit zero avoids COMMON. */
+boolean decompressor_print_timing = FALSE;
 
 /* ---------- code */
 
@@ -656,9 +650,6 @@ void cache_copy_queue_end(
 static void cache_copy_initialize_zlib(
 	struct simple_decompressor_definition *self)
 {
-#ifdef HALO_VITA
-	vita_stream_complete = FALSE;
-#endif
 	self->zlib_stream.next_in = NULL;
 	self->zlib_stream.avail_in = 0;
 	self->zlib_stream.next_out = NULL;
@@ -1016,9 +1007,6 @@ short cache_copy_get_status(
 {
 	unsigned long flags = cache_copy_get_flags();
 	short status = 0;
-#ifdef HALO_VITA
-	boolean vita_copy_completed;
-#endif
 
 	match_assert(
 		"c:\\halo\\SOURCE\\cache\\cache_files_decompress_windows.c",
@@ -1028,22 +1016,12 @@ short cache_copy_get_status(
 	if (global_self->blocking)
 		Sleep(16);
 
-#ifdef HALO_VITA
-    /* Sample completion before flags, after the original blocking sleep.
-     * Otherwise that sleep can make a stale success snapshot publish failure. */
-    vita_copy_completed = WaitForSingleObject(global_self->copy_complete_event, 0) == WAIT_OBJECT_0;
-    flags = cache_copy_get_flags();
-#endif
 	if (!flags && global_self->copy_thread)
 	{
 		if (global_self->header.size > 0)
 		{
-#ifdef HALO_VITA
-			status = vita_copy_completed ? _cache_copy_finished : _cache_copy_in_progress;
-#else
 			status = (short)((WaitForSingleObject(global_self->copy_complete_event, 0) == 0) +
 				_cache_copy_in_progress);
-#endif
 			if (WaitForSingleObject(global_self->progress_update_event, 0) == 0)
 			{
 				real read_progress;
@@ -1104,7 +1082,7 @@ void cache_copy_end(
 	return;
 }
 
-static void CALLBACK cache_copy_FileIOCompletionRoutine(
+void CALLBACK cache_copy_FileIOCompletionRoutine(
 	unsigned long error_code,
 	unsigned long bytes_transferred,
 	OVERLAPPED *overlapped)
@@ -1632,9 +1610,6 @@ static void cache_copy_run_decompression(
 		if (self->write_requests_pending > 1)
 			decompressor_timer_stop(_decompressor_timer_zlib_during_write_file);
 
-#ifdef HALO_VITA
-		if (zlib_result == Z_STREAM_END) vita_stream_complete = TRUE;
-#endif
 		if (zlib_result == Z_OK || zlib_result == Z_STREAM_END)
 		{
 			if (!zlib_stream->avail_in)
@@ -1780,15 +1755,6 @@ static unsigned long __stdcall simple_cache_copy_thread(
 				if (!self->write_bytes_left)
 				{
 					cache_copy_wait_for_async_io(self);
-#ifdef HALO_VITA
-                    /* Validate the publication boundary: a header length alone
-                     * is not proof of a complete, checksum-validated stream. */
-                    if (!vita_stream_complete ||
-                        self->zlib_stream.total_out != (unsigned long)(self->header.size - sizeof(self->header)) ||
-                        (self->flags & ALL_COPY_FAILURE_FLAGS))
-                        cache_copy_set_flag(_copy_bad_file_bit);
-                    else
-#endif
 					cache_copy_issue_write_raw(self, &self->header, sizeof(self->header), 0);
 				}
 			}

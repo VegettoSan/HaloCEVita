@@ -102,24 +102,16 @@ symbols in this file:
 #include "saved games/game_state.h"
 #include "sound/sound_manager.h"
 #include <xtl.h>
-#ifdef HALO_VITA
-#include "halo_vita_memory.h"
-#endif
 
 /* ---------- constants */
 
 enum
 {
 	CPU_PAGE_SIZE = 0x1000,
-#ifdef HALO_LINUX
 	/* the native builds' larger game state (halo_port_capacity.h); the saved
 	game files only need to hold it */
 	GAME_STATE_SIZE = HALO_PORT_GAME_STATE_SIZE,
 	GAME_STATE_FILE_SIZE = HALO_PORT_GAME_STATE_SIZE
-#else
-	GAME_STATE_SIZE = 0x345000,
-	GAME_STATE_FILE_SIZE = 0x380000
-#endif
 };
 
 /* ---------- structures */
@@ -152,7 +144,7 @@ static HANDLE game_state_open_persistent_storage(
 
 /* ---------- globals */
 
-struct xbox_game_state_globals_prefix xbox_game_state_globals = { 0 };
+static struct xbox_game_state_globals_prefix xbox_game_state_globals = { 0 };
 
 /* ---------- public code */
 
@@ -162,11 +154,6 @@ void *game_state_allocate_buffer(
 	unsigned long gpu_size)
 {
 	void *result;
-#ifdef HALO_VITA
-	/* The caller still supplies the original Xbox VA. Keep the downstream
-	 * CPU/GPU split and saved-state bookkeeping on the native arena VA. */
-	address = halo_vita_memory_address(address);
-#endif
 
 	match_assert(
 		"c:\\halo\\SOURCE\\saved games\\game_state_xbox.c",

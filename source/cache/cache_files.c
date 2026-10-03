@@ -130,13 +130,10 @@ symbols in this file:
 #include "cache_files.h"
 #include "physical_memory_map.h"
 #include "sound_cache.h"
+#include "texture_cache.h"
+#include "interface/ui_widget.h"
 #include "scenario/scenario_definitions.h"
 #include "sound/sound_manager.h"
-#ifdef HALO_VITA
-#include "halo_vita_cache.h"
-#include "halo_vita_memory.h"
-#include "vita_runtime.h"
-#endif
 
 /* ---------- constants */
 
@@ -224,24 +221,12 @@ typedef char verify_cache_file_header_size[
 
 static struct cache_file_tag_instance *cache_get_tag_instance(
 	long tag_index);
-void texture_cache_close(
-	void);
-void display_error_damaged_media(
-	void);
-void texture_cache_open(
-	void);
-void sound_idle(
-	void);
 
 /* ---------- globals */
 
-struct cache_file_globals cache_file_globals = { 0 };
+static struct cache_file_globals cache_file_globals = { 0 };
 extern struct cache_file_tag_instance *global_tag_instances;
-#ifdef HALO_VITA
-/* MSVC common storage normally supplied by halo_linker_common.c. */
-struct cache_file_tag_instance *global_tag_instances;
-#endif
-char const *data_00316820[] =
+static char const *data_00316820[] =
 {
 	"d:\\maps_de\\",
 	"d:\\maps_fr\\",
@@ -340,14 +325,46 @@ char const *cache_files_map_directory(
 void scenario_tags_unload(
 	void)
 {
+	/* port: the high-res HUD forgets this map's bitmaps (port/linux/game/hud_hires_tags.c) */
+	{
+		extern void hud_hires_tags_unloaded(void);
+
+		hud_hires_tags_unloaded();
+	}
 	sound_cache_close();
 	texture_cache_close();
+	/* port: the menus' tags go, and the map's own table comes back
+	(port/linux/game/menu_tags.c): after the texture cache, which writes to
+	the bitmaps it has loaded as it closes, theirs among them */
+	{
+		extern void menu_tags_unloaded(void);
+
+		menu_tags_unloaded();
+	}
 	cache_file_close();
 	tags_header_deregister_vertex_and_index_buffers(cache_file_globals.tag_header);
 	cache_file_globals.tags_loaded = FALSE;
 	global_tag_instances = NULL;
 
 	return;
+}
+
+/* port: the loaded tags' table, and its tags' count, for the menus' tags
+(port/linux/game/menu_tags.c), which a copy with theirs added replaces */
+void *cache_files_tag_instances(
+	long *count)
+{
+	*count = cache_file_globals.tags_loaded ? cache_file_globals.tag_header->tag_count : 0;
+	return cache_file_globals.tags_loaded ? cache_file_globals.tag_header->tag_instances : NULL;
+}
+
+void cache_files_set_tag_instances(
+	void *instances,
+	long count)
+{
+	cache_file_globals.tag_header->tag_instances = instances;
+	cache_file_globals.tag_header->tag_count = count;
+	global_tag_instances = instances;
 }
 
 void tag_files_open(
@@ -416,11 +433,7 @@ long tag_loaded(
 void cache_files_enable_writes(
 	void)
 {
-#ifdef HALO_VITA
-	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READWRITE);
-#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READWRITE);
-#endif
 
 	return;
 }
@@ -428,11 +441,7 @@ void cache_files_enable_writes(
 void cache_files_disable_writes(
 	void)
 {
-#ifdef HALO_VITA
-	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READONLY);
-#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READONLY);
-#endif
 	XPhysicalProtect(
 		cache_file_globals.tag_header->vertex_buffers,
 		cache_file_globals.tag_header->vertex_buffer_count * 12,
@@ -570,21 +579,6 @@ boolean cache_file_header_verify(
 	char const *scenario_name,
 	boolean fatal)
 {
-#ifdef HALO_VITA_ORIGINAL_RUNTIME
-    /* The original owner still verifies identity/version. Preserve the native
-     * arena and bounded-string contract before any read or csstrlen. */
-    if (!memchr(header->name, 0, sizeof(header->name)) ||
-        !memchr(header->build, 0, sizeof(header->build)) ||
-        header->file_length < 0x800 || header->tag_data_offset < 0x800 ||
-        header->tag_data_size < 36 || header->tag_data_size > HALO_VITA_TAG_CAPACITY ||
-        header->tag_data_offset > header->file_length ||
-        header->tag_data_size > header->file_length - header->tag_data_offset)
-    {
-        vita_log("[VITA ORIGINAL CACHE] header rejected: logical=%ld tag_offset=%ld tag_bytes=%ld capacity=%lu", header->file_length, header->tag_data_offset, header->tag_data_size, (unsigned long)HALO_VITA_TAG_CAPACITY);
-        if (fatal) vita_fatal("original cache header exceeds native arena/logical file contract");
-        return FALSE;
-    }
-#endif
 	if (header->header_signature != CACHE_FILE_HEADER_SIGNATURE ||
 		header->footer_signature != CACHE_FILE_FOOTER_SIGNATURE ||
 		header->file_length < 0 ||
@@ -617,29 +611,123 @@ boolean cache_file_header_verify(
 		return FALSE;
 	}
 
-#if !defined(HALO_LINUX) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-	/* (the native builds try a cache file whatever build made it, NTSC's
-	01.10.12.2276 included) */
-	if (csstrcmp(header->build, "01.01.14.2342"))
-	{
-		if (fatal)
-		{
-			match_vassert(
-				"c:\\halo\\SOURCE\\cache\\cache_files.c",
-				553,
-				FALSE,
-				csprintf(
-					temporary,
-					"the cache file '%s' belongs to a different build (%s)",
-					header->name,
-					header->build));
-		}
-
-		return FALSE;
-	}
-#endif
-
 	return TRUE;
+}
+
+/* port: the builds of the released maps, by region. Any build here plays
+multiplayer with the others; a map of another build may differ in what
+machines send each other, so its players cannot open the multiplayer menu
+(ui_widget.c, ui_widget_launch_widget). A PAL build's maps are played as the
+NTSC maps are (port/linux/game/pal_tags.c) */
+static struct
+{
+	char const *build;
+	char const *region;
+} const cache_file_builds[] =
+{
+	{ "01.01.14.2342", "PAL" },
+	{ "01.10.12.2276", "NTSC" },
+	{ "01.08.15.1749", "NTSC" },
+};
+
+/* the region of a build's maps ("PAL" or "NTSC") if it is listed above, else
+NULL; build is a cache file header's (which need not end it) */
+char const *cache_files_build_region(
+	char const *build)
+{
+	short index;
+
+	for (index = 0; index < NUMBEROF(cache_file_builds); index++)
+	{
+		if (!csstrncmp(build, cache_file_builds[index].build, sizeof(cache_file_globals.header.build)))
+			return cache_file_builds[index].region;
+	}
+
+	return NULL;
+}
+
+/* the region of the loaded map's build if it plays multiplayer, else NULL;
+build gets the build */
+char const *cache_files_multiplayer_region(
+	char build[0x20])
+{
+	csstrncpy(build, cache_file_globals.header.build, 0x20);
+	build[0x1F] = 0;
+
+	return cache_files_build_region(cache_file_globals.header.build);
+}
+
+/* whether the named map plays multiplayer with the others: FALSE only for
+a map whose header is of a build not listed above (a map whose header cannot
+be read is left to precaching, which tells of a missing map); build gets the
+map's build, empty if unread. The multiplayer menus check the loaded map's
+(ui.map's) build; this checks a multiplayer map's own, which may be of
+another build: the object and damage messages name definitions by tag
+index, which differs between builds */
+boolean cache_files_map_plays_multiplayer(
+	char const *map_name,
+	char build[0x20])
+{
+	struct cache_file_header header;
+	char path[256];
+	HANDLE file;
+	boolean result = TRUE;
+
+	build[0] = 0;
+	if (!map_name || !map_name[0])
+		return TRUE;
+	snprintf(path, sizeof(path), "%s%s.map", cache_files_map_directory(), tag_name_strip_path(map_name));
+	file = CreateFileA(path, GENERIC_READ, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (file != INVALID_HANDLE_VALUE)
+	{
+		unsigned long bytes_read;
+
+		if (ReadFile(file, &header, sizeof(header), &bytes_read, NULL) &&
+			bytes_read == sizeof(header) &&
+			cache_file_header_verify(&header, path, FALSE))
+		{
+			csstrncpy(build, header.build, 0x20);
+			build[0x1F] = 0;
+			result = cache_files_build_region(header.build) != NULL;
+		}
+		CloseHandle(file);
+	}
+
+	return result;
+}
+
+/* tells the player that maps of a build (a cache file header's) do not play
+multiplayer: map_name the map's, or NULL for the player's maps */
+void cache_files_show_multiplayer_unavailable(
+	char const *map_name,
+	char const *build)
+{
+	void platform_log(char const *format, ...);
+	void platform_show_message(char const *title, char const *message);
+	char message[320];
+
+	if (map_name)
+	{
+		platform_log("multiplayer is unavailable: the map %s is of build %s, which is not supported", map_name, build);
+		snprintf(
+			message,
+			sizeof(message),
+			"The map %s (build %s) isn't supported for multiplayer yet.\n\nAsk in the Discord to get it added.",
+			tag_name_strip_path(map_name),
+			build);
+	}
+	else
+	{
+		platform_log("multiplayer is unavailable: maps of build %s are not supported", build);
+		snprintf(
+			message,
+			sizeof(message),
+			"Your maps (build %s) aren't supported for multiplayer yet.\n\nAsk in the Discord to get them added.",
+			build);
+	}
+	platform_show_message("Halo: multiplayer unavailable", message);
+
+	return;
 }
 
 boolean cache_files_give_time_to_precache(
@@ -647,6 +735,14 @@ boolean cache_files_give_time_to_precache(
 {
 	boolean result = FALSE;
 
+	/* port: no map named yet is nothing to precache. A client joining over
+	the internet asks for its multiplayer map (network_game_client_update_precache_status)
+	before the host's settings name it: an empty name, which matched a cache
+	file slot not yet used, and once all six hold maps (two campaign levels,
+	the main menu and three multiplayer maps played) matched none, so was
+	taken for a map missing from the disc (the damaged disc error) */
+	if (!map_name || !map_name[0])
+		return FALSE;
 	if (cache_files_precache_map_loaded(map_name))
 	{
 		result = TRUE;
@@ -710,12 +806,6 @@ long scenario_tags_load(
 				SwitchToThread();
 			}
 
-#ifdef HALO_VITA_ORIGINAL_RUNTIME
-            /* Reading/completion stays with Halo. Convert serialized addresses
-             * only after the original owner has waited for the tag read. */
-            halo_vita_cache_activate_original_tags(tag_cache_base_address,
-                cache_file_globals.header.tag_data_size);
-#endif
 			cache_file_globals.tag_header = tag_cache_base_address;
 			match_vassert(
 				"c:\\halo\\SOURCE\\cache\\cache_files.c",
@@ -735,6 +825,24 @@ long scenario_tags_load(
 			global_tag_instances = cache_file_globals.tag_header->tag_instances;
 			tags_header_register_vertex_and_index_buffers(cache_file_globals.tag_header);
 			cache_file_globals.tags_loaded = TRUE;
+			/* port: a PAL map played as the NTSC maps are (port/linux/game/pal_tags.c) */
+			{
+				extern void pal_tags_loaded(char const *build);
+
+				pal_tags_loaded(cache_file_globals.header.build);
+			}
+			/* port: the menus' tags, added to the map's (port/linux/game/menu_tags.c) */
+			{
+				extern void menu_tags_loaded(char const *map_name);
+
+				menu_tags_loaded(cache_file_globals.header.name);
+			}
+			/* port: the bitmaps the high-res HUD stands for (port/linux/game/hud_hires_tags.c) */
+			{
+				extern void hud_hires_tags_loaded(void);
+
+				hud_hires_tags_loaded();
+			}
 			result = cache_file_globals.tag_header->scenario_tag_index;
 		}
 	}
@@ -773,9 +881,6 @@ boolean scenario_structure_bsp_load(
 		}
 	}
 
-#ifdef HALO_VITA_ORIGINAL_RUNTIME
-    halo_vita_cache_activate_original_bsp(reference->base_address, reference->file_size);
-#endif
 	cache_file_globals.structure_bsp_header = reference->base_address;
 	match_assert(
 		"c:\\halo\\SOURCE\\cache\\cache_files.c",
@@ -848,7 +953,6 @@ void *tag_get(
 	return tag_instance->base_address;
 }
 
-#ifdef HALO_LINUX
 /* whether the index is a loaded tag of the group (or a group it inherits
 from): the distributed netcode names tags another machine sent
 (port/linux/game/network_damage.c), which tag_get would only assert on */
@@ -870,7 +974,6 @@ boolean tag_index_is_group(
 			tag_instance->parent_group_tags[1] == group_tag);
 }
 
-#endif
 char *tag_get_name(
 	long tag_index)
 {
@@ -882,138 +985,3 @@ unsigned long tag_get_group_tag(
 {
 	return cache_get_tag_instance(tag_index)->group_tag;
 }
-
-#ifdef HALO_VITA
-/* Restricted integration checkpoint. The validated image may remain mounted
- * while original tag/UI consumers run; BSP/GPU resources are not registered. */
-typedef char vita_scenario_size[sizeof(struct scenario) == 1456 ? 1 : -1];
-typedef char vita_scenario_skies[offsetof(struct scenario, sky_references) == 48 ? 1 : -1];
-typedef char vita_scenario_bsps[offsetof(struct scenario, structure_bsp_references) == 1444 ? 1 : -1];
-struct vita_original_tag_pointers { char *name; void *base_address; };
-static struct {
-    void *tags;
-    size_t length;
-    struct vita_cache_info info;
-    struct vita_menu_stats stats;
-    struct vita_menu_relocation *plan;
-    struct vita_original_tag_pointers *instances;
-    struct cache_file_tag_instance *directory;
-    struct cache_file_tag_instance *original_directory;
-} vita_menu_mount;
-static void *vita_tag_span(void *tags, size_t length, const void *pointer, size_t bytes)
-{
-	uintptr_t value = (uintptr_t)pointer;
-	if (value < HALO_XBOX_TAG_BASE || value - HALO_XBOX_TAG_BASE > length ||
-		bytes > length - (value - HALO_XBOX_TAG_BASE)) return NULL;
-	return (byte *)tags + value - HALO_XBOX_TAG_BASE;
-}
-int halo_vita_cache_mount_menu(void *tags, size_t length)
-{
-    struct vita_cache_info info;
-    struct vita_menu_stats menu_stats;
-    struct vita_menu_relocation *menu_plan;
-    struct cache_file_tag_instance *directory;
-    struct vita_original_tag_pointers *instances;
-    long i;
-    char reason[128];
-    if (vita_menu_mount.tags || cache_file_globals.tags_loaded ||
-        !vita_cache_validate_index(tags, length, &info, reason, sizeof(reason))) {
-        vita_log("cache index mount rejected (already mounted or invalid directory)"); return 0;
-    }
-    directory = vita_tag_span(tags, length, ((struct cache_file_tag_header *)tags)->tag_instances,
-        info.tag_count * sizeof(*directory));
-    if (!directory) { vita_log("cache directory span invalid"); return 0; }
-    instances = malloc(info.tag_count * sizeof(*instances));
-    if (!instances) { vita_log("cache directory journal allocation failed"); return 0; }
-    for (i = 0; i < (long)info.tag_count; ++i) {
-        instances[i].name = directory[i].name;
-        instances[i].base_address = directory[i].base_address;
-    }
-    menu_plan = vita_cache_relocate_menu(tags, length, (uint32_t)(uintptr_t)tags,
-        &menu_stats, reason, sizeof(reason));
-    if (!menu_plan) {
-        vita_log("menu typed relocation FAILED: %s", reason);
-        free(instances); return 0;
-    }
-    /* All directory spans were checked by the index reader. No operation
-     * after the relocation commit may fail before this journal is installed. */
-    vita_menu_mount.tags = tags;
-    vita_menu_mount.length = length;
-    vita_menu_mount.info = info;
-    vita_menu_mount.stats = menu_stats;
-    vita_menu_mount.plan = menu_plan;
-    vita_menu_mount.instances = instances;
-    vita_menu_mount.directory = directory;
-    vita_menu_mount.original_directory = ((struct cache_file_tag_header *)tags)->tag_instances;
-    vita_log("[VITA 017] typed menu relocation committed: pointers=%u blocks=%u references=%u widgets=%u fonts=%u strings=%u bitmaps=%u; metadata only",
-        menu_stats.pointers, menu_stats.blocks, menu_stats.references, menu_stats.widgets,
-        menu_stats.fonts, menu_stats.string_lists, menu_stats.bitmap_groups);
-    vita_log("Vita typed rebase rules: tag_block.address=%u tag_data.address=%u tag_reference.name=%u; directory/root/name handled by mount; BSP/GPU words unchanged",
-        menu_stats.block_addresses, menu_stats.data_addresses, menu_stats.reference_names);
-	cache_file_globals.tag_header = tags;
-	global_tag_instances = directory;
-	cache_file_globals.tag_header->tag_instances = directory;
-	for (i = 0; i < (long)info.tag_count; ++i) {
-		global_tag_instances[i].name = vita_tag_span(tags, length, global_tag_instances[i].name, 1);
-		if (global_tag_instances[i].base_address)
-			global_tag_instances[i].base_address = vita_tag_span(tags, length, global_tag_instances[i].base_address, 1);
-	}
-	cache_file_globals.tags_loaded = TRUE;
-	vita_log("[VITA 021] UI cache mounted persistently: tags=%u bytes=%lu", info.tag_count, (unsigned long)length);
-	return 1;
-}
-int halo_vita_cache_validate_menu(void)
-{
-	const struct vita_cache_info *info = &vita_menu_mount.info;
-	const struct vita_menu_stats *stats = &vita_menu_mount.stats;
-	struct tag_iterator iterator;
-	struct scenario *scenario;
-	long index, count = 0, bitmaps = 0;
-	if (!vita_menu_mount.tags || !cache_file_globals.tags_loaded) return 0;
-	tag_iterator_new(&iterator, NONE);
-	while ((index = tag_iterator_next(&iterator)) != NONE) {
-		++count;
-		if (tag_get_group_tag(index) == 'bitm') ++bitmaps;
-	}
-	if (count != (long)info->tag_count || !tag_index_is_group(info->scenario_index, SCENARIO_TAG)) return 0;
-	scenario = tag_get(SCENARIO_TAG, info->scenario_index);
-	if (scenario->type < _scenario_type_solo || scenario->type > _scenario_type_main_menu ||
-		scenario->sky_references.count < 0 || scenario->structure_bsp_references.count < 0) return 0;
-	vita_log("Halo original tag_iterator/tag_get/tag_index_is_group PASS: tags=%ld bitmaps=%ld scenario=%08lx type=%d skies=%ld BSPs=%ld name=%s",
-		count, bitmaps, (unsigned long)info->scenario_index, scenario->type, scenario->sky_references.count,
-		scenario->structure_bsp_references.count, tag_get_name(info->scenario_index));
-	return halo_vita_menu_tags_probe(stats->menu_index, stats);
-}
-int halo_vita_cache_unmount_menu(void)
-{
-	struct vita_cache_info restored;
-	char reason[128];
-	long i;
-	int result;
-	if (!vita_menu_mount.tags) return 1;
-	for (i = 0; i < (long)vita_menu_mount.info.tag_count; ++i) {
-		vita_menu_mount.directory[i].name = vita_menu_mount.instances[i].name;
-		vita_menu_mount.directory[i].base_address = vita_menu_mount.instances[i].base_address;
-	}
-	((struct cache_file_tag_header *)vita_menu_mount.tags)->tag_instances = vita_menu_mount.original_directory;
-	vita_cache_restore_menu(vita_menu_mount.plan);
-	result = vita_cache_validate_index(vita_menu_mount.tags, vita_menu_mount.length,
-		&restored, reason, sizeof(reason)) && restored.tag_crc == vita_menu_mount.info.tag_crc;
-	if (result) vita_log("[VITA 020] menu cache unmounted; original Xbox image CRC=%08x restored", restored.tag_crc);
-	else vita_log("menu cache rollback FAILED: %s", reason);
-	cache_file_globals.tags_loaded = FALSE;
-	cache_file_globals.tag_header = NULL; global_tag_instances = NULL;
-	free(vita_menu_mount.instances);
-	memset(&vita_menu_mount, 0, sizeof(vita_menu_mount));
-	return result;
-}
-int halo_vita_cache_index_probe(void *tags, size_t length)
-{
-	int result;
-	if (!halo_vita_cache_mount_menu(tags, length)) return 0;
-	result = halo_vita_cache_validate_menu();
-	if (!halo_vita_cache_unmount_menu()) result = 0;
-	if (!result) vita_log("cache scenario/index checkpoint FAILED; detached");
-	return result;
-}
-#endif

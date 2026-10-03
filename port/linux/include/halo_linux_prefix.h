@@ -10,11 +10,9 @@ byte-for-byte identical to what the matching MSVC build compiles.
 #ifndef __HALO_LINUX_PREFIX_H
 #define __HALO_LINUX_PREFIX_H
 
-#if !defined(__i386__) && !defined(HALO_ANDROID) && !defined(HALO_VITA)
+#if !defined(__i386__) && !defined(HALO_ANDROID)
 #error the Linux port targets 32-bit x86: game data structures assume 32-bit pointers
 #endif
-
-#define HALO_LINUX 1
 
 /* ---------- XDK architecture selection (MSVC predefines these) */
 

@@ -15,10 +15,10 @@ memory_watch.c detects that by write-protecting the pages.
 */
 
 #include "xgpu.h"
+#include "hud_hires.h"
+#include "menu_files.h"
+#include "text_hires.h"
 #include "port_config.h"
-#ifdef HALO_VITA
-#include "vita_runtime.h"
-#endif
 
 #include <stdio.h>
 #ifdef HALO_ANDROID
@@ -398,8 +398,8 @@ static void decode_level(const struct xgpu_texture_description *description, uns
 	}
 }
 
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
-/* ---------- Original DXT decoding for platform sampling fallbacks */
+#ifdef HALO_ANDROID
+/* ---------- DXT decoding, for ES drivers without S3TC (Mali) */
 
 static unsigned long color565(unsigned long value)
 {
@@ -538,7 +538,7 @@ static GLenum compressed_format(unsigned char kind)
 /* debug.texture_dump_directory writes level 0 of every upload as a TGA, read back from GL */
 static void texture_dump(GLenum target, const struct xgpu_texture_description *description)
 {
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 	/* ES cannot read textures back */
 	(void)target;
 	(void)description;
@@ -575,98 +575,32 @@ static void texture_dump(GLenum target, const struct xgpu_texture_description *d
 }
 #endif
 
-#ifdef HALO_VITA
-static void vita_upload_check(GLuint texture, GLenum target, long level, const char *phase)
-{
-	GLenum error = glGetError();
-	if (error != GL_NO_ERROR)
-	{
-		vita_log("[VITA TEXTURE] rejected phase=%s id=%u target=%x level=%ld GL error=0x%x",
-			phase, texture, target, level, error);
-		vita_fatal("Xbox texture upload/state failed in vitaGL");
-	}
-}
-#endif
-
 static void upload(GLuint texture, GLenum target, const struct xgpu_texture_description *description,
 	const unsigned char *base, const D3DCOLOR *palette)
 {
 	struct format_information information = format_information(description->format);
 	unsigned long face_count = description->cube_map ? 6 : 1;
 	unsigned long face_size = xgpu_texture_face_size(description);
-	unsigned long largest;
+	unsigned long largest = description->width * description->height * description->depth;
 	BOOL decode_compressed = FALSE;
 	unsigned long *converted;
 	unsigned long face, level;
 
 #ifdef HALO_ANDROID
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
-#elif defined(HALO_VITA)
-	/* Reuse upstream's existing complete DXT decoder for every compressed
-	 * format. Vita receives the original BGRA texels, mip/face offsets and
-	 * punch-through alpha; no separate platform decoder is needed. */
-	decode_compressed = description->compressed;
-#endif
-	#ifdef HALO_VITA
-	if (!description->width || !description->height || !description->depth ||
-		description->width > ~0UL / description->height ||
-		description->width * description->height > ~0UL / description->depth)
-		vita_fatal("Xbox texture dimensions overflow on Vita");
-	#endif
-	largest = description->width * description->height * description->depth;
-	#ifdef HALO_VITA
-	if (target == GL_TEXTURE_3D)
-		vita_fatal("Xbox volume texture upload requires a Vita 3D texture fallback");
-	#endif
-	#ifdef HALO_VITA
-	if (!description->width || !description->height || !description->depth ||
-		!description->levels ||
-		largest > (16UL << 20) / sizeof(unsigned long))
-		vita_fatal("Xbox texture conversion size invalid or exceeds Vita 16MiB temporary bound");
-	#endif
-#ifdef HALO_VITA
-	if (decode_compressed) {
-		static unsigned decoded_masks_logged;
-		if (decoded_masks_logged++ < 8)
-			vita_log("[VITA DXT ALPHA] original CPU decoder selected: kind=%u dims=%lux%lux%lu levels=%lu source_bytes_per_face=%lu staging_bytes=%lu",
-				(unsigned)information.kind, description->width, description->height, description->depth, description->levels,
-				face_size, largest * sizeof(unsigned long));
-	}
 #endif
 	converted = description->compressed && !decode_compressed ? NULL : malloc(largest * sizeof(unsigned long));
-#ifdef HALO_VITA
-	if ((!description->compressed || decode_compressed) && !converted)
-		vita_fatal("Xbox texture conversion allocation failed on Vita");
-#endif
 	glBindTexture(target, texture);
 	xgpu_gl_state_invalidate();
-#ifdef HALO_VITA
-	vita_upload_check(texture, target, -1, "bind/incoming state");
-	glFinish();
-	vita_upload_check(texture, target, -1, "prior texture draws");
-	if (halo_vita_texture_transfer_finish() < 0)
-		vita_fatal("Vita prior texture transfer completion failed");
-#endif
 #ifdef HALO_ANDROID
 	/* converted texels are BGRA in memory (32-bit ARGB words); ES takes
 	RGBA */
 	glTexParameteri(target, GL_TEXTURE_SWIZZLE_R, converted ? GL_BLUE : GL_RED);
 	glTexParameteri(target, GL_TEXTURE_SWIZZLE_B, converted ? GL_RED : GL_BLUE);
 #endif
-#ifdef HALO_VITA
-	/* vitaGL implements ROW_LENGTH, but rejects UNPACK_ALIGNMENT. The
-	 * original decoder produces tight 32-bit BGRA rows; DXT uploads use
-	 * compressed blocks. Neither path needs byte-row alignment padding.
-	 * Reset any prior unpack row length through the supported API. */
-	glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-	vita_upload_check(texture, target, -1, "tight rows");
-#else
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-#endif
-#ifndef HALO_VITA
 	glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, (GLint)description->levels - 1);
-#endif
 	for (face = 0; face < face_count; face++)
 	{
 		GLenum image_target = description->cube_map ? GL_TEXTURE_CUBE_MAP_POSITIVE_X + face : target;
@@ -680,80 +614,29 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 
 			if (description->compressed && !decode_compressed)
 			{
-				#ifndef HALO_VITA
 				if (target == GL_TEXTURE_3D)
 					glCompressedTexImage3D(image_target, (GLint)level, compressed_format(information.kind), width, height, depth, 0,
 						(GLsizei)level_bytes(description, level), source);
 				else
-				#endif
 					glCompressedTexImage2D(image_target, (GLint)level, compressed_format(information.kind), width, height, 0,
 						(GLsizei)level_bytes(description, level), source);
 			}
 			else
 			{
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 				if (decode_compressed)
 					dxt_decode_level(information.kind, source, (unsigned long)width, (unsigned long)height,
 						(unsigned long)depth, converted);
 				else
 #endif
 				decode_level(description, level, source, palette, converted);
-#ifdef HALO_VITA
-				/* Observe original font and image coverage without changing bytes.
-				 * Keep separate budgets so image uploads do not exhaust font data. */
-				if (face == 0 && level == 0) {
-					static unsigned font_coverage_logged, image_coverage_logged;
-					unsigned *coverage_logged = description->format == 0x04 ?
-						&font_coverage_logged : &image_coverage_logged;
-					unsigned limit = description->format == 0x04 ? 4 : 8;
-					if (*coverage_logged < limit) {
-						unsigned long p, pixels = (unsigned long)width * (unsigned long)height;
-						unsigned long zero = 0, opaque = 0, white = 0;
-						unsigned min_alpha = 255, max_alpha = 0;
-						for (p = 0; p < pixels; ++p) {
-							unsigned alpha = (unsigned)(converted[p] >> 24) & 255;
-							if (alpha < min_alpha) min_alpha = alpha;
-							if (alpha > max_alpha) max_alpha = alpha;
-							zero += alpha == 0; opaque += alpha == 255;
-							white += (converted[p] & 0x00ffffffUL) == 0x00ffffffUL;
-						}
-						++*coverage_logged;
-						vita_log("[VITA UI ALPHA] id=%u format=%lx dims=%dx%d alpha=%u..%u zero=%lu opaque=%lu whiteRGB=%lu pixels=%lu",
-							texture, (unsigned long)description->format, (int)width, (int)height,
-							min_alpha, max_alpha, zero, opaque, white, pixels);
-					}
-				}
-#endif
-				#ifndef HALO_VITA
 				if (target == GL_TEXTURE_3D)
 					glTexImage3D(image_target, (GLint)level, GL_RGBA8, width, height, depth, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 				else
-				#endif
 					glTexImage2D(image_target, (GLint)level, GL_RGBA8, width, height, 0, GL_BGRA, GL_UNSIGNED_BYTE, converted);
 			}
-#ifdef HALO_VITA
-			/* The next mip may move/free a transfer destination. Finish first. */
-			if (halo_vita_texture_transfer_finish() < 0)
-				vita_fatal("Vita texture mip transfer completion failed");
-			vita_upload_check(texture, image_target, (long)level,
-				description->compressed && !decode_compressed ? "compressed mip" : "decoded BGRA mip");
-#endif
 		}
 	}
-	#ifdef HALO_VITA
-	{
-		GLenum error = glGetError();
-		static unsigned long uploads_logged;
-		if (uploads_logged < 8 || error != GL_NO_ERROR)
-		{
-			uploads_logged++;
-			vita_log("[VITA TEXTURE] upload id=%u target=%x format=%lx dims=%lux%lux%lu levels=%lu bytes/face=%lu gl_error=%x",
-				texture, target, (unsigned long)description->format, description->width,
-				description->height, description->depth, description->levels, face_size, error);
-		}
-		if (error != GL_NO_ERROR) vita_fatal("Xbox texture upload failed in vitaGL");
-	}
-	#endif
 	free(converted);
 	texture_dump(target, description);
 }
@@ -771,10 +654,8 @@ struct texture_entry
 	unsigned long address, size;
 	unsigned long generation;
 	unsigned long last_used_frame;
-#ifdef HALO_VITA
-	unsigned char *vita_shadow;
-	unsigned long vita_shadow_size;
-#endif
+	/* the high-res HUD texture drawn in its place (hud_hires.h), or -1 */
+	long override;
 };
 
 #define TEXTURE_BUCKET_COUNT 4096
@@ -799,62 +680,6 @@ static struct
 static unsigned long texture_drop_serial = 1;
 static unsigned long texture_frame = 0;
 
-#ifdef HALO_VITA
-/* Exact comparison replaces unavailable page fault tracking. Retain at most
- * 4MiB of CPU source snapshots across all GPU entries. Budget/allocation misses
- * safely keep the earlier refresh-on-every-use path; no hash-only validity. */
-#define VITA_TEXTURE_SHADOW_LIMIT (4UL << 20)
-static unsigned long vita_texture_shadow_bytes;
-
-static unsigned long vita_texture_shadow_size(const struct texture_entry *entry,
-    const D3DCOLOR *palette)
-{
-    unsigned long extra = palette ? 256 * sizeof(*palette) : 0;
-    if (!entry->size || entry->size > VITA_TEXTURE_SHADOW_LIMIT - extra)
-        return 0;
-    return entry->size + extra;
-}
-
-static BOOL vita_texture_shadow_matches(const struct texture_entry *entry,
-    const D3DCOLOR *palette)
-{
-    unsigned long size = vita_texture_shadow_size(entry, palette);
-    if (!size || !entry->vita_shadow || entry->vita_shadow_size != size ||
-        memcmp(entry->vita_shadow, (const void *)entry->address, entry->size))
-        return FALSE;
-    return !palette || !memcmp(entry->vita_shadow + entry->size, palette,
-        256 * sizeof(*palette));
-}
-
-static void vita_texture_shadow_release(struct texture_entry *entry)
-{
-    if (entry->vita_shadow) {
-        vita_texture_shadow_bytes -= entry->vita_shadow_size;
-        free(entry->vita_shadow);
-        entry->vita_shadow = NULL;
-        entry->vita_shadow_size = 0;
-    }
-}
-
-static void vita_texture_shadow_store(struct texture_entry *entry,
-    const D3DCOLOR *palette)
-{
-    unsigned long size = vita_texture_shadow_size(entry, palette);
-    if (entry->vita_shadow_size != size) vita_texture_shadow_release(entry);
-    if (!size) return;
-    if (!entry->vita_shadow) {
-        if (size > VITA_TEXTURE_SHADOW_LIMIT - vita_texture_shadow_bytes) return;
-        entry->vita_shadow = malloc(size);
-        if (!entry->vita_shadow) return;
-        entry->vita_shadow_size = size;
-        vita_texture_shadow_bytes += size;
-    }
-    memcpy(entry->vita_shadow, (const void *)entry->address, entry->size);
-    if (palette) memcpy(entry->vita_shadow + entry->size, palette,
-        256 * sizeof(*palette));
-}
-#endif
-
 static unsigned long bucket_index(DWORD data, DWORD format_word, DWORD size_word)
 {
 	return ((data >> 7) ^ (format_word * 2654435761UL) ^ size_word) % TEXTURE_BUCKET_COUNT;
@@ -873,6 +698,49 @@ static unsigned long palette_hash(const D3DCOLOR *palette)
 	return hash ? hash : 1;
 }
 
+/* an entry's GL texture and description: its high-res HUD texture's, if it has
+one, with the bitmap's own size (which its coordinates are in) */
+static GLuint texture_entry_result(struct texture_entry *entry, GLenum *target,
+	struct xgpu_texture_description *description)
+{
+	*target = entry->target;
+	*description = entry->description;
+	/* (the high-res text's atlas, for its placeholder bitmap: text_hires.h) */
+	{
+		GLuint atlas = text_hires_atlas_texture(entry->data);
+
+		if (atlas)
+		{
+			description->levels = 1;
+			return atlas;
+		}
+	}
+	/* (a menu's bitmap: menu_files.h) */
+	{
+		unsigned long levels;
+		GLuint art = menu_art_texture(entry->data, &levels);
+
+		if (art)
+		{
+			description->levels = levels;
+			description->hires = TRUE;
+			return art;
+		}
+	}
+	if (entry->override >= 0)
+	{
+		GLuint texture = hud_hires_override_texture(entry->override, &description->levels);
+
+		if (texture)
+		{
+			description->hires = TRUE;
+			description->hires_coverage = hud_hires_override_coverage(entry->override);
+			return texture;
+		}
+	}
+	return entry->texture;
+}
+
 GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *target,
 	struct xgpu_texture_description *description)
 {
@@ -887,13 +755,8 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	unsigned long variant_count = 0;
 	static int no_cache = -1;
 	unsigned long recent = bucket_index(data, format_word, size_word) % RECENT_TEXTURE_COUNT;
-	#ifdef HALO_VITA
-	unsigned long watch_serial = 0;
-	#else
 	unsigned long watch_serial = memory_watch_serial();
-	#endif
 
-	#ifndef HALO_VITA
 	if (!palettized && recent_textures[recent].entry && recent_textures[recent].data == data &&
 		recent_textures[recent].format_word == format_word && recent_textures[recent].size_word == size_word &&
 		recent_textures[recent].watch_serial == watch_serial &&
@@ -901,12 +764,9 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	{
 		entry = recent_textures[recent].entry;
 		entry->last_used_frame = texture_frame;
-		*target = entry->target;
-		*description = entry->description;
-		return entry->texture;
+		return texture_entry_result(entry, target, description);
 	}
 
-	#endif
 	for (entry = *bucket; entry; entry = entry->next)
 	{
 		if (entry->data == data && entry->format_word == format_word && entry->size_word == size_word)
@@ -928,9 +788,6 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 	if (!entry)
 	{
 		entry = calloc(1, sizeof(*entry));
-#ifdef HALO_VITA
-		if (!entry) vita_fatal("Xbox texture metadata allocation failed on Vita");
-#endif
 		entry->data = data;
 		entry->format_word = format_word;
 		entry->size_word = size_word;
@@ -941,43 +798,35 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 		entry->address = (unsigned long)PLATFORM_PHYSICAL_TO_VIRTUAL(data);
 		entry->size = xgpu_texture_face_size(&entry->description) * (entry->description.cube_map ? 6 : 1);
 		entry->generation = 0;
+		entry->override = -1;
 		glGenTextures(1, &entry->texture);
-#ifdef HALO_VITA
-		if (!entry->texture) vita_fatal("Xbox texture GL object allocation failed on Vita");
-#endif
 		entry->next = *bucket;
 		*bucket = entry;
 	}
 
-	#ifdef HALO_VITA
-	/* Validate before any source comparison, including a GPU cache hit. */
-	if (!entry->size || entry->address + entry->size < entry->address ||
-		!platform_is_contiguous((void *)entry->address) ||
-		!platform_is_contiguous((void *)(entry->address + entry->size - 1)))
-		vita_fatal("Xbox texture source outside Vita contiguous guest window");
-	no_cache = !vita_texture_shadow_matches(entry, palettized ? palette : NULL);
-	generation = 0;
-	#else
 	if (no_cache < 0)
 		no_cache = config_boolean("debug.texture_no_cache");
 	generation = memory_watch_generation(entry->address, entry->size);
-	#endif
 	if (!entry->generation || generation > entry->generation || no_cache)
 	{
 		/* protect first, so a write racing with the upload is noticed */
-		#ifndef HALO_VITA
 		memory_watch_protect(entry->address, entry->size);
 		entry->generation = memory_watch_generation(entry->address, entry->size);
-		#endif
 		if (!entry->generation)
 			entry->generation = 1;
-		#ifdef HALO_VITA
-		if (!entry->size || entry->address + entry->size < entry->address ||
-			!platform_is_contiguous((void *)entry->address) ||
-			!platform_is_contiguous((void *)(entry->address + entry->size - 1)))
-			vita_fatal("Xbox texture source outside Vita contiguous guest window");
-		#endif
-		if (platform_is_contiguous((void *)entry->address) &&
+		/* (which bitmap is here may have changed with the pixels) */
+		entry->override = -1;
+		if (!palettized && !entry->description.cube_map && entry->description.depth == 1)
+		{
+			unsigned long levels;
+
+			entry->override = hud_hires_override_find(entry->address, entry->description.width,
+				entry->description.height, entry->description.levels > 1 ?
+				xgpu_texture_level_offset(&entry->description, 1) : xgpu_texture_face_size(&entry->description));
+			if (entry->override >= 0 && !hud_hires_override_texture(entry->override, &levels))
+				entry->override = -1;
+		}
+		if (entry->override < 0 && platform_is_contiguous((void *)entry->address) &&
 			platform_is_contiguous((void *)(entry->address + entry->size - 1)))
 		{
 			if (config_boolean("debug.texture_log"))
@@ -996,10 +845,6 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 					ones * 100 / entry->size, zeros * 100 / entry->size);
 			}
 			upload(entry->texture, entry->target, &entry->description, (const unsigned char *)entry->address, palette);
-#ifdef HALO_VITA
-			/* Commit only after checked GPU upload/transfer completion. */
-			vita_texture_shadow_store(entry, palettized ? palette : NULL);
-#endif
 		}
 	}
 	entry->last_used_frame = texture_frame;
@@ -1012,9 +857,7 @@ GLuint xgpu_texture_get(const DWORD *resource, const D3DCOLOR *palette, GLenum *
 		recent_textures[recent].watch_serial = watch_serial;
 		recent_textures[recent].drop_serial = texture_drop_serial;
 	}
-	*target = entry->target;
-	*description = entry->description;
-	return entry->texture;
+	return texture_entry_result(entry, target, description);
 }
 
 void xgpu_texture_cache_begin_frame(void)
@@ -1039,9 +882,6 @@ void xgpu_texture_cache_begin_frame(void)
 				glDeleteTextures(1, &entry->texture);
 				xgpu_gl_state_invalidate();
 				texture_drop_serial++;
-#ifdef HALO_VITA
-				vita_texture_shadow_release(entry);
-#endif
 				free(entry);
 			}
 			else

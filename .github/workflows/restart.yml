@@ -1,0 +1,14 @@
+name: Clean Restart
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  origins:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify direct-source imports and absence of discarded modules
+        run: python3 tools/verify_origins.py

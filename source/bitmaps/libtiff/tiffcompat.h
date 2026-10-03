@@ -177,7 +177,7 @@ extern	void *realloc(void *ptr, size_t size);
 #if defined(MSDOS)
 #include <malloc.h>
 #else /* !MSDOS */
-#if defined(_IBMR2) || defined(HALO_VITA)
+#if defined(_IBMR2)
 #include <stdlib.h>
 #else /* !_IBMR2 */
 extern	char *malloc();

@@ -633,13 +633,13 @@ struct widget_instance;
 #include "bitmaps/bitmaps.h"
 #include "bink/bink_playback.h"
 #include "bungie_net/common/thread.h"
+#include "cache/cache_files.h"
 #include "cache/texture_cache.h"
 #include "cseries/cseries_windows.h"
 #include "cutscene/cinematics.h"
 #include "event_manager.h"
 #include "game/game_engine.h"
 #include "game/game_globals.h"
-#include "game/player_control.h"
 #include "game/players.h"
 #include "hs/hs.h"
 #include "input/input.h"
@@ -657,7 +657,6 @@ struct widget_instance;
 #include "interface/ui_widget_text_search_and_replace_functions.h"
 #include "interface/virtual_keyboard.h"
 #include "main/main.h"
-#include "main/main_runtime.h"
 #include "memory/stack_memory_pool.h"
 #include "networking/network_client_manager.h"
 #include "networking/network_connection.h"
@@ -678,15 +677,14 @@ struct widget_instance;
 #include "text/text_group.h"
 #include "text/unicode.h"
 #include "ui_widget.h"
-#ifdef HALO_VITA
-#include "vita_runtime.h"
-#endif
 
 /* ---------- constants */
 
 enum
 {
-	WIDGET_MEMORY_POOL_SIZE = 0x4000,
+	/* port: 16 KB on the Xbox; the PC version's screens (port/assets/menus)
+	have many more widgets */
+	WIDGET_MEMORY_POOL_SIZE = 0x40000,
 	MAXIMUM_WIDGET_MEMORY_POOL_BLOCKS = 4096
 };
 
@@ -933,16 +931,6 @@ this TU owns the complete January layout used below. */
 #define ui_widget_definition_get(tag_index) \
 	((struct ui_widget_definition *)tag_get(UI_WIDGET_DEFINITION_TAG, (tag_index)))
 
-/* Native compiled widget blocks keep serialized Xbox addresses. Preserve
- * original traversal/behavior and translate only at the typed block boundary. */
-#ifdef HALO_VITA
-#define UI_WIDGET_BLOCK_ELEMENT(block, index, type) \
-	TAG_BLOCK_GET_ELEMENT((block), (index), type)
-#else
-#define UI_WIDGET_BLOCK_ELEMENT(block, index, type) \
-	((type *)(block)->address + (index))
-#endif
-
 /* ---------- structures */
 
 struct stack_memory_pool_block;
@@ -972,33 +960,145 @@ struct stack_memory_pool_medium
 	struct stack_memory_pool_block *blocks[MAXIMUM_WIDGET_MEMORY_POOL_BLOCKS - 1];
 };
 
-/* narrow views of the tag definitions this file reaches through; the owning
-translation units (HUD.C, HUD_MESSAGING.C, INTERFACE.C) keep their own */
-
-struct icon_hud_element_definition
-{
-	short sequence_index;
-	short width_offset;
-	point2d offset;
-	pixel32 color;
-	char frame_rate;
-	byte flags;
-	short text_index;
-};
-
-struct interface_tag_references_definition
-{
-	struct tag_reference tags[NUMBER_OF_INTERFACE_TAGS];
-	byte unused[48];
-};
-
 typedef char verify_icon_hud_element_definition_size[
 	sizeof(struct icon_hud_element_definition) == 0x10 ? 1 : -1];
 typedef char verify_hud_globals_button_icons_offset[
 	offsetof(struct hud_globals_definition, messaging.button_icons) == 0xC4 ? 1 : -1];
 typedef char verify_interface_tag_references_definition_size[
-	sizeof(struct interface_tag_references_definition) == 0x130 ? 1 : -1];
-#include "ui_widget_tags.h"
+	sizeof(struct game_globals_interface_tag_references) == 0x130 ? 1 : -1];
+/* narrow views of the 'DeLa' widget definition tag and of the three block
+elements this file walks; only the members this file reaches are named and
+every other span is left explicitly unknown */
+
+struct ui_widget_event_handler_reference
+{
+	long flags;
+	short event_type;
+	short function;
+	struct tag_reference widget_tag;
+	struct tag_reference sound_effect;
+	char script[32];
+};
+
+struct ui_widget_child_reference
+{
+	struct tag_reference widget_tag;
+	char name[32];
+	long flags;
+	short custom_controller_index;
+	short vertical_offset;
+	short horizontal_offset;
+	byte unknown03A[0x50 - 0x3A];
+};
+
+struct ui_widget_conditional_reference
+{
+	struct tag_reference widget_tag;
+	char name[32];
+	long flags;
+	short custom_controller_index;
+	byte unknown036[0x50 - 0x36];
+};
+
+struct ui_widget_game_data_input_reference
+{
+	short function;
+	byte unknown002[0x24 - 0x02];
+};
+
+struct ui_widget_search_and_replace_reference
+{
+	char search_string[32];
+	short replace_function;
+};
+
+struct ui_widget_definition
+{
+	short type;
+	short controller_index;
+	char name[32];
+	rectangle2d bounds;
+	long flags;
+	long milliseconds_to_auto_close;
+	long auto_close_fade_time;
+	struct tag_reference background_bitmap;
+	struct tag_block game_data_inputs;
+	struct tag_block event_handlers;
+	struct tag_block search_and_replace_functions;
+	byte unknown06C[0xEC - 0x6C];
+	struct tag_reference text_label_string_list;
+	struct tag_reference text_font;
+	real_argb_color text_color;
+	short justification;
+	word text_box_flags;
+	byte unknown120[0x12E - 0x120];
+	short string_list_index;
+	short horizontal_offset;
+	short vertical_offset;
+	byte unknown134[0x150 - 0x134];
+	long list_flags;
+	struct tag_reference list_header_bitmap;
+	struct tag_reference list_footer_bitmap;
+	rectangle2d list_header_bounds;
+	rectangle2d list_footer_bounds;
+	byte unknown184[0x1A4 - 0x184];
+	struct tag_reference extended_description_widget;
+	byte unknown1B4[0x2D4 - 0x1B4];
+	struct tag_block conditional_widgets;
+	byte unknown2E0[0x3E0 - 0x2E0];
+	struct tag_block child_widgets;
+};
+
+typedef char verify_ui_widget_game_data_input_reference_size[
+	sizeof(struct ui_widget_game_data_input_reference) == 0x24 ? 1 : -1];
+typedef char verify_ui_widget_search_and_replace_reference_size[
+	sizeof(struct ui_widget_search_and_replace_reference) == 0x22 ? 1 : -1];
+typedef char verify_ui_widget_child_reference_size[
+	sizeof(struct ui_widget_child_reference) == 0x50 ? 1 : -1];
+typedef char verify_ui_widget_conditional_reference_size[
+	sizeof(struct ui_widget_conditional_reference) == 0x50 ? 1 : -1];
+typedef char verify_ui_widget_event_handler_reference_size[
+	sizeof(struct ui_widget_event_handler_reference) == 0x48 ? 1 : -1];
+typedef char verify_ui_widget_definition_bounds_offset[
+	offsetof(struct ui_widget_definition, bounds) == 0x24 ? 1 : -1];
+typedef char verify_ui_widget_definition_flags_offset[
+	offsetof(struct ui_widget_definition, flags) == 0x2C ? 1 : -1];
+typedef char verify_ui_widget_definition_game_data_inputs_offset[
+	offsetof(struct ui_widget_definition, game_data_inputs) == 0x48 ? 1 : -1];
+typedef char verify_ui_widget_definition_search_and_replace_offset[
+	offsetof(struct ui_widget_definition, search_and_replace_functions) == 0x60 ? 1 : -1];
+typedef char verify_ui_widget_definition_text_font_offset[
+	offsetof(struct ui_widget_definition, text_font) == 0xFC ? 1 : -1];
+typedef char verify_ui_widget_definition_text_color_offset[
+	offsetof(struct ui_widget_definition, text_color) == 0x10C ? 1 : -1];
+typedef char verify_ui_widget_definition_justification_offset[
+	offsetof(struct ui_widget_definition, justification) == 0x11C ? 1 : -1];
+typedef char verify_ui_widget_definition_text_box_flags_offset[
+	offsetof(struct ui_widget_definition, text_box_flags) == 0x11E ? 1 : -1];
+typedef char verify_ui_widget_definition_string_list_index_offset[
+	offsetof(struct ui_widget_definition, string_list_index) == 0x12E ? 1 : -1];
+typedef char verify_ui_widget_definition_horizontal_offset_offset[
+	offsetof(struct ui_widget_definition, horizontal_offset) == 0x130 ? 1 : -1];
+typedef char verify_ui_widget_definition_list_header_bitmap_offset[
+	offsetof(struct ui_widget_definition, list_header_bitmap) == 0x154 ? 1 : -1];
+typedef char verify_ui_widget_definition_list_header_bounds_offset[
+	offsetof(struct ui_widget_definition, list_header_bounds) == 0x174 ? 1 : -1];
+typedef char verify_ui_widget_definition_event_handlers_offset[
+	offsetof(struct ui_widget_definition, event_handlers) == 0x54 ? 1 : -1];
+typedef char verify_ui_widget_definition_background_bitmap_offset[
+	offsetof(struct ui_widget_definition, background_bitmap) == 0x38 ? 1 : -1];
+typedef char verify_ui_widget_definition_text_label_string_list_offset[
+	offsetof(struct ui_widget_definition, text_label_string_list) == 0xEC ? 1 : -1];
+typedef char verify_ui_widget_definition_list_flags_offset[
+	offsetof(struct ui_widget_definition, list_flags) == 0x150 ? 1 : -1];
+typedef char verify_ui_widget_definition_extended_description_offset[
+	offsetof(struct ui_widget_definition, extended_description_widget) == 0x1A4 ? 1 : -1];
+typedef char verify_ui_widget_definition_conditional_widgets_offset[
+	offsetof(struct ui_widget_definition, conditional_widgets) == 0x2D4 ? 1 : -1];
+typedef char verify_ui_widget_definition_child_widgets_offset[
+	offsetof(struct ui_widget_definition, child_widgets) == 0x3E0 ? 1 : -1];
+typedef char verify_ui_widget_definition_size[
+	sizeof(struct ui_widget_definition) == 0x3EC ? 1 : -1];
 
 struct ui_widget_deferred_error
 {
@@ -1217,7 +1317,7 @@ static void ui_widget_delete_children_recursive(
 	struct widget_instance *widget);
 static struct widget_instance *ui_widget_launch_widget(
 	struct widget_instance *widget,
-	long widget_tag_index);
+	long new_widget_tag_index);
 static __inline boolean widget_instance_can_handle_events(
 	struct widget_instance *widget);
 static struct widget_instance *widget_instance_find_by_tag_index_recursive(
@@ -1253,9 +1353,6 @@ static void widget_instance_reload_recursive(
 	struct widget_instance *widget);
 static void ui_widget_reload_by_tag(
 	long tag_index);
-#ifdef HALO_VITA_MENU_BRINGUP
-static boolean vita_menu_dispatch_blocked;
-#endif
 static void event_handler_dispatch(
 	struct widget_instance *widget,
 	struct ui_widget_definition *definition,
@@ -1265,6 +1362,9 @@ static void event_handler_dispatch(
 static boolean ui_widget_load_children_recursive(
 	struct widget_instance *widget,
 	struct ui_widget_definition *definition);
+/* port: whether the tag is one of the menus' (port/linux/game/menu_tags.c) */
+boolean pc_menu_tag(
+	long tag_index);
 static void widget_instance_initialize(
 	struct widget_instance *widget,
 	struct widget_instance *parent,
@@ -1324,8 +1424,45 @@ static void widget_instance_process_one_event_recursive(
 	boolean *return_widget_deleted);
 static boolean ui_check_for_pause_game(
 	void);
+static long spinner_string_list_extra_count(
+	long string_list_index);
+static wchar_t *spinner_string_list_get_string(
+	long string_list_index,
+	short string_index);
 
 /* ---------- globals */
+
+/* port: text boxes' string list indices from here are the descriptions of
+spinners' extra items (kills_to_win_extra_descriptions) */
+#define SPINNER_EXTRA_DESCRIPTION_BASE 0x5000
+/* ... and the pixels a spinner with extra items is wider (for three digits) */
+#define SPINNER_EXTRA_WIDTH 12
+
+/* port: the strings a spinner's string list has past the tag's own, as more
+items: the higher kills to win of the Slayer game type editor
+(ui_widget_event_handler_functions.c saves and loads them) */
+static wchar_t const *const kills_to_win_extra_strings[] =
+{
+	L"75", L"100", L"150", L"200", L"250", L"500",
+};
+
+/* ... their descriptions, as a text box's string list index of
+SPINNER_EXTRA_DESCRIPTION_BASE and up (ui_widget_spinner_extra_description) */
+static wchar_t const *const kills_to_win_extra_descriptions[] =
+{
+	L"Seventy-five kills to win. Settle in for a long\r\nfight.",
+	L"A hundred kills to win. Made for big games.",
+	L"A hundred and fifty kills to win. Only a crowded\r\nserver gets there.",
+	L"Two hundred kills to win. Bring friends. Lots of\r\nthem.",
+	L"Two hundred and fifty kills to win.",
+	L"Five hundred kills to win. You'll be here a while.",
+};
+
+/* port: an error message of the port's own text (display_error_text_deferred):
+the text waiting for its dialog, then the dialog's text box showing it */
+static wchar_t const *ui_widget_port_error_pending_text = NULL;
+static wchar_t const *ui_widget_port_error_text = NULL;
+static struct widget_instance *ui_widget_port_error_text_box = NULL;
 
 static struct ui_widget_bss_prefix ui_widget_globals_storage;
 
@@ -1333,8 +1470,8 @@ static struct ui_widget_bss_prefix ui_widget_globals_storage;
 #define widget_globals ui_widget_globals_storage.widget_globals
 #define we_are_at_the_main_menu ui_widget_globals_storage.we_are_at_the_main_menu
 #define dpad_event_times ui_widget_globals_storage.dpad_event_times
-extern real_argb_color ui_plasma_effect_color;
-extern short local_player_index_for_draw_string_and_hack_in_icons;
+real_argb_color ui_plasma_effect_color;
+short local_player_index_for_draw_string_and_hack_in_icons;
 
 /* January defines this and never references it, as we do not */
 real const _one_over_255 = 1.0f / 255.0f;
@@ -1458,9 +1595,9 @@ static char button_mappings[_icon_custom_1 - _icon_action] =
 	_icon_right_stick	/* look */
 };
 
-real global_ui_white_red = 0.8f;
-real global_ui_white_green = 0.8f;
-real global_ui_white_blue = 0.8f;
+static real global_ui_white_red = 0.8f;
+static real global_ui_white_green = 0.8f;
+static real global_ui_white_blue = 0.8f;
 
 
 /* ---------- public code */
@@ -1533,8 +1670,8 @@ void draw_bitmap_in_rect(
 		real_argb_color plasma_fade = ui_plasma_effect_color;
 		real_rgb_color map_tint = { 0.9f, 0.9f, 0.9f };
 		real map_fade = 0.9f;
-		rectangle2d default_bitmap_rect;
-		real_point2d positions[NUMBER_OF_POINTS_PER_RECTANGLE];
+		rectangle2d temp;
+		real_point2d points[NUMBER_OF_POINTS_PER_RECTANGLE];
 		struct dynamic_screen_vertex vertices[NUMBER_OF_POINTS_PER_RECTANGLE];
 		struct rasterizer_dynamic_screen_geometry_parameters parameters;
 		real bitmap_width;
@@ -1553,11 +1690,11 @@ void draw_bitmap_in_rect(
 
 		if (!bitmap_rect)
 		{
-			default_bitmap_rect.x0 = 0;
-			default_bitmap_rect.y0 = 0;
-			default_bitmap_rect.x1 = bitmap->width;
-			default_bitmap_rect.y1 = bitmap->height;
-			bitmap_rect = &default_bitmap_rect;
+			temp.x0 = 0;
+			temp.y0 = 0;
+			temp.x1 = bitmap->width;
+			temp.y1 = bitmap->height;
+			bitmap_rect = &temp;
 		}
 
 		rectangle_width = rect->x1 - rect->x0;
@@ -1566,32 +1703,32 @@ void draw_bitmap_in_rect(
 		rectangle_y0 = rect->y0;
 		source_width = bitmap_rect->x1 - bitmap_rect->x0;
 		source_height = bitmap_rect->y1 - bitmap_rect->y0;
-		positions[0].x = (real)rectangle_x0;
-		positions[0].y = (real)rectangle_y0;
-		positions[1].x = (real)(rectangle_x0 + rectangle_width);
-		positions[1].y = (real)rectangle_y0;
-		positions[2].x = (real)(rectangle_x0 + rectangle_width);
-		positions[2].y = (real)(rectangle_y0 + rectangle_height);
-		positions[3].x = (real)rectangle_x0;
-		positions[3].y = (real)(rectangle_y0 + rectangle_height);
+		points[0].x = (real)rectangle_x0;
+		points[0].y = (real)rectangle_y0;
+		points[1].x = (real)(rectangle_x0 + rectangle_width);
+		points[1].y = (real)rectangle_y0;
+		points[2].x = (real)(rectangle_x0 + rectangle_width);
+		points[2].y = (real)(rectangle_y0 + rectangle_height);
+		points[3].x = (real)rectangle_x0;
+		points[3].y = (real)(rectangle_y0 + rectangle_height);
 
 		if (clip_rect)
 		{
 			if (clip_rect->x0 > rect->x0)
 			{
-				positions[0].x = positions[3].x = (real)clip_rect->x0;
+				points[0].x = points[3].x = (real)clip_rect->x0;
 			}
 			if (clip_rect->x1 < rect->x1)
 			{
-				positions[1].x = positions[2].x = (real)clip_rect->x1;
+				points[1].x = points[2].x = (real)clip_rect->x1;
 			}
 			if (clip_rect->y0 > rect->y0)
 			{
-				positions[0].y = positions[1].y = (real)clip_rect->y0;
+				points[0].y = points[1].y = (real)clip_rect->y0;
 			}
 			if (clip_rect->y1 < rect->y1)
 			{
-				positions[2].y = positions[3].y = (real)clip_rect->y1;
+				points[2].y = points[3].y = (real)clip_rect->y1;
 			}
 		}
 
@@ -1613,7 +1750,7 @@ void draw_bitmap_in_rect(
 				(vertex_index % 3) ? texture_width : 0.0f;
 			vertices[vertex_index].texture_coordinates.y =
 				(vertex_index > 1) ? texture_height : 0.0f;
-			vertices[vertex_index].position = positions[vertex_index];
+			vertices[vertex_index].position = points[vertex_index];
 		}
 
 		csmemset(&parameters, 0, sizeof(parameters));
@@ -2009,40 +2146,6 @@ void ui_widgets_initialize(
 	return;
 }
 
-#ifdef HALO_VITA
-/* Share the original render clock while the complete event/update closure
- * is still being linked. This updates no widget/event/game/audio state. The
- * existing bitmap/plasma/text render equations consume this real timestamp. */
-void halo_vita_ui_render_clock_update(void)
-{
-	match_assert("c:\\halo\\SOURCE\\interface\\ui_widget.c", 644,
-		widget_globals.initialized);
-	widget_globals.current_system_milliseconds = system_milliseconds();
-}
-
-/* Read-only checkpoint of the original widget allocator/global state. */
-boolean halo_vita_ui_widgets_initialized(void)
-{
-	return widget_globals.initialized && widget_memory_pool->base_address != NULL;
-}
-
-/* The staged Vita checkpoint has no widget instances yet. Free the original
- * allocation without pulling the active-widget event/disposal graph into it. */
-boolean halo_vita_ui_widgets_dispose_checkpoint(void)
-{
-	long stack;
-	for (stack = 0; stack < NUMBEROF(widget_globals.active_widgets); stack++)
-		if (widget_globals.active_widgets[stack])
-			return FALSE;
-	if (widget_memory_pool->base_address)
-		pool_free(widget_memory_pool->base_address);
-	widget_memory_pool->base_address = NULL;
-	widget_memory_pool->size = 0;
-	memset(&widget_globals, 0, sizeof(widget_globals));
-	return TRUE;
-}
-#endif
-
 void ui_widgets_dispose(
 	void)
 {
@@ -2113,8 +2216,7 @@ void ui_widget_delete(
 		handler_index++)
 	{
 		struct ui_widget_event_handler_reference *handler =
-			UI_WIDGET_BLOCK_ELEMENT(
-				&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
+			(struct ui_widget_event_handler_reference *)definition->event_handlers.address + handler_index;
 
 		if (handler->event_type == _widget_event_deleted &&
 			TEST_FLAG(handler->flags, _event_handler_run_function_bit))
@@ -2183,6 +2285,11 @@ void ui_widget_delete(
 	case _ui_widget_type_text_box:
 		if (widget->parameters.text_box.text)
 			dispose_pointer(widget_memory_pool, widget->parameters.text_box.text);
+		if (widget == ui_widget_port_error_text_box)
+		{
+			ui_widget_port_error_text_box = NULL;
+			ui_widget_port_error_text = NULL;
+		}
 		break;
 	case _ui_widget_type_spinner_list:
 	case _ui_widget_type_column_list:
@@ -2245,12 +2352,31 @@ static void ui_widget_delete_children_recursive(
 
 static struct widget_instance *ui_widget_launch_widget(
 	struct widget_instance *widget,
-	long widget_tag_index)
+	long new_widget_tag_index)
 {
-	struct ui_widget_definition *definition = ui_widget_definition_get(widget_tag_index);
+	struct ui_widget_definition *definition = ui_widget_definition_get(new_widget_tag_index);
 	struct widget_instance *root;
 	struct widget_instance *new_widget;
 	short local_player_index;
+
+	/* port: the menus of multiplayer with other machines (not split screen's
+	or co-op's) open only on maps of a build that plays multiplayer with the
+	others (cache_files.c, cache_files_multiplayer_region); otherwise the
+	player is told why, and the menu stays */
+	{
+		static char const multiplayer_menus[] = "ui\\shell\\main_menu\\multiplayer_type_select\\connected\\";
+		char const *name = tag_get_name(new_widget_tag_index);
+		char build[0x20];
+
+		if (name &&
+			!csstrncmp(name, multiplayer_menus, sizeof(multiplayer_menus) - 1) &&
+			!cache_files_multiplayer_region(build))
+		{
+			cache_files_show_multiplayer_unavailable(NULL, build);
+
+			return NULL;
+		}
+	}
 
 	if (TEST_FLAG(definition->flags, _widget_always_use_tag_controller_index_bit))
 	{
@@ -2311,7 +2437,7 @@ static struct widget_instance *ui_widget_launch_widget(
 	root = widget_instance_get_topmost_parent(widget);
 	new_widget = ui_widget_load_by_name_or_tag(
 		NULL,
-		widget_tag_index,
+		new_widget_tag_index,
 		NULL,
 		local_player_index,
 		root->definition_tag_index,
@@ -2337,6 +2463,17 @@ static __inline boolean widget_instance_can_handle_events(
 	}
 
 	return FALSE;
+}
+
+/* port: a label in the PC version's lists (port/assets/menus): an item that
+takes no events and has nothing in it that does, which its game passes over
+(its rows of settings take none themselves, but their spinners do), or one
+hidden (a list's rows past its items: port/linux/game/menu_functions.c) or
+disabled (the server browser's column titles, which sort nothing) */
+static boolean widget_instance_port_is_label(
+	struct widget_instance *widget)
+{
+	return (!widget_instance_can_handle_events(widget) && !widget->child) || !widget->visible || widget->disabled;
 }
 
 static struct widget_instance *widget_instance_find_by_tag_index_recursive(
@@ -2538,6 +2675,25 @@ boolean widget_event_function_list_widget_goto_next_item(
 				child = widget->child;
 				item_index = 0;
 			}
+			/* port: the PC version's lists (port/assets/menus) pass over the
+			children that take no events (their labels and lines), as its
+			game does */
+			if (child && widget->type == _ui_widget_type_column_list &&
+				pc_menu_tag(widget->definition_tag_index))
+			{
+				long tries = 0;
+
+				while (widget_instance_port_is_label(child) && tries++ < 256)
+				{
+					child = child->next;
+					item_index++;
+					if (!child)
+					{
+						child = widget->child;
+						item_index = 0;
+					}
+				}
+			}
 			if (child)
 			{
 				widget_instance_give_focus_by_tag(
@@ -2664,6 +2820,27 @@ boolean widget_event_function_list_widget_goto_previous_item(
 					item_index++;
 				}
 			}
+			/* port: as goto_next_item, over the PC version's labels */
+			if (widget->type == _ui_widget_type_column_list && pc_menu_tag(widget->definition_tag_index))
+			{
+				long tries = 0;
+
+				while (widget_instance_port_is_label(child) && tries++ < 256)
+				{
+					child = child->previous;
+					item_index--;
+					if (!child)
+					{
+						child = widget->child;
+						item_index = 0;
+						while (child->next)
+						{
+							child = child->next;
+							item_index++;
+						}
+					}
+				}
+			}
 			widget_instance_give_focus_by_tag(
 				widget,
 				child->definition_tag_index,
@@ -2681,6 +2858,12 @@ void ui_widgets_close_all(
 {
 	long local_player_index;
 
+	/* port: the virtual keyboard goes with the widgets (while the widget
+	whose text it edits is still there): left open, it drew on after a game
+	loaded, with the menu map's font, which the game's tags no longer have
+	(a player typing when the host started the game) */
+	if (virtual_keyboard_active())
+		virtual_keyboard_close();
 	for (local_player_index = 0;
 		local_player_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS;
 		local_player_index++)
@@ -3062,15 +3245,8 @@ static void event_handler_dispatch(
 	if (TEST_FLAG(handler->flags, _event_handler_run_scenario_script_bit) &&
 		handler->script[0])
 	{
-#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-		vita_log("[VITA UI BLOCKED] scenario script '%s' requires world runtime", handler->script);
-		vita_menu_dispatch_blocked = TRUE;
-		*calling_widget_deleted = FALSE;
-		return;
-#else
 		if (!hs_evaluate_by_name(handler->script))
 			error(_error_silent, "failed to run ui widget event script '%s'", handler->script);
-#endif
 	}
 	if (TEST_FLAG(handler->flags, _event_handler_run_function_bit) &&
 		!widget_deleted &&
@@ -3298,8 +3474,8 @@ static void event_handler_dispatch(
 				conditional_index++)
 			{
 				struct ui_widget_conditional_reference *conditional =
-					UI_WIDGET_BLOCK_ELEMENT(
-						&definition->conditional_widgets, conditional_index, struct ui_widget_conditional_reference);
+					(struct ui_widget_conditional_reference *)definition->conditional_widgets.address +
+					conditional_index;
 
 				if (function_failed == TRUE &&
 					TEST_FLAG(
@@ -3362,7 +3538,8 @@ static boolean ui_widget_load_children_recursive(
 		string_list = unicode_string_list_definition_get(definition->text_label_string_list.index);
 		widget_globals.dont_load_children_recursive = TRUE;
 		for (string_index = 0;
-			string_index < string_list->strings.count;
+			string_index < string_list->strings.count +
+				spinner_string_list_extra_count(definition->text_label_string_list.index);
 			string_index++)
 		{
 			struct widget_instance *child = ui_widget_load_by_name_or_tag(
@@ -3389,8 +3566,7 @@ static boolean ui_widget_load_children_recursive(
 		child_index++)
 	{
 		struct ui_widget_child_reference *reference =
-			UI_WIDGET_BLOCK_ELEMENT(
-				&definition->child_widgets, child_index, struct ui_widget_child_reference);
+			(struct ui_widget_child_reference *)definition->child_widgets.address + child_index;
 		short controller_index = widget->local_player_index;
 
 		if (TEST_FLAG(reference->flags, _child_widget_use_custom_controller_index_bit))
@@ -3466,17 +3642,27 @@ static boolean ui_widget_load_children_recursive(
 		if (focus_a_child)
 		{
 			struct widget_instance *child;
+			/* port: the PC version's lists (port/assets/menus) start on their
+			first child that takes events, past their labels */
+			boolean skip_labels = widget->type == _ui_widget_type_column_list &&
+				pc_menu_tag(widget->definition_tag_index);
+			short index = 0;
 
-			for (child = widget->child; child; child = child->next)
+			for (child = widget->child; child; child = child->next, index++)
 			{
-				if (widget->type == _ui_widget_type_spinner_list ||
-					widget->type == _ui_widget_type_column_list ||
+				if (((widget->type == _ui_widget_type_spinner_list ||
+					widget->type == _ui_widget_type_column_list) &&
+					(!skip_labels || !widget_instance_port_is_label(child))) ||
 					widget_instance_can_handle_events(child))
 				{
 					widget->focused_child = child;
+					if (skip_labels)
+						widget->parameters.list.selected_index = index;
 					break;
 				}
 			}
+			if (!widget->focused_child && skip_labels)
+				widget->focused_child = widget->child;
 		}
 	}
 
@@ -3528,28 +3714,15 @@ static void widget_instance_initialize(
 	}
 	if (!widget_globals.dont_load_children_recursive)
 	{
-#ifdef HALO_VITA_MENU_BRINGUP
-		if (!parent) vita_log("[VITA 025] root child recursion begin");
-#endif
 		if (!ui_widget_load_children_recursive(widget, definition))
-		{
 			error(_error_silent, "failed to load widget children");
-#ifdef HALO_VITA_MENU_BRINGUP
-			vita_menu_dispatch_blocked = TRUE;
-			vita_log("MAIN MENU BLOCKED: original child recursion failed tag=%08lx", (unsigned long)tag_index);
-#endif
-		}
-#ifdef HALO_VITA_MENU_BRINGUP
-		else if (!parent) vita_log("[VITA 025] root child recursion PASS");
-#endif
 	}
 	for (handler_index = 0;
 		handler_index < definition->event_handlers.count;
 		handler_index++)
 	{
 		struct ui_widget_event_handler_reference *handler =
-			UI_WIDGET_BLOCK_ELEMENT(
-				&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
+			(struct ui_widget_event_handler_reference *)definition->event_handlers.address + handler_index;
 
 		if (handler->event_type == _widget_event_created)
 		{
@@ -3572,14 +3745,6 @@ static void widget_instance_initialize(
 	}
 	if (widget->pause_game_time == TRUE)
 	{
-#ifdef HALO_VITA_MENU_BRINGUP
-		/* All nine validated Main Menu definitions have this bit clear.
-		 * A future tag requiring it must stop before the root is reported
-		 * active, until original game-time/sound state is connected. */
-		vita_log("MAIN MENU BLOCKED: widget %08lx requires game-time pause contract",
-			(unsigned long)widget->definition_tag_index);
-		vita_menu_dispatch_blocked = TRUE;
-#else
 		widget_globals.pause_game_time_count++;
 		if (!game_time_get_paused())
 			game_time_set_paused(TRUE);
@@ -3588,10 +3753,82 @@ static void widget_instance_initialize(
 			sound_pause(TRUE);
 			widget_globals.sound_paused = TRUE;
 		}
-#endif
 	}
 
 	return;
+}
+
+/* port: the PC version's events that this engine never sends (its custom
+activation), for the menus' functions (port/linux/game/menu_functions.c):
+runs the widget's handlers for the event, else the first descendant's that
+has any (depth first); FALSE if none has */
+boolean ui_widget_port_dispatch_event(
+	struct widget_instance *widget,
+	short event_type,
+	short controller_index,
+	boolean *deleted)
+{
+	struct ui_widget_definition *definition = ui_widget_definition_get(widget->definition_tag_index);
+	struct widget_instance *child;
+	boolean found = FALSE;
+	long handler_index;
+
+	/* (deleted: a handler deleted the widget's screen, opening another or
+	going back; the callers' widgets are gone with it) */
+	*deleted = FALSE;
+
+	for (handler_index = 0; handler_index < definition->event_handlers.count; handler_index++)
+	{
+		struct ui_widget_event_handler_reference *handler =
+			(struct ui_widget_event_handler_reference *)definition->event_handlers.address + handler_index;
+
+		if (handler->event_type == event_type)
+		{
+			struct event_record event = {0};
+			boolean widget_deleted = FALSE;
+
+			event.controller_index = controller_index;
+			event_handler_dispatch(widget, definition, &event, handler, &widget_deleted);
+			found = TRUE;
+			if (widget_deleted)
+			{
+				*deleted = TRUE;
+				return TRUE;
+			}
+		}
+	}
+	for (child = widget->child; child && !found; child = child->next)
+	{
+		found = ui_widget_port_dispatch_event(child, event_type, controller_index, deleted);
+		if (*deleted)
+			break;
+	}
+	return found;
+}
+
+/* port: the number of a list's focused item: among all its children, but
+in the PC version's lists (port/assets/menus) among those that take events,
+past their labels, as its game counts them */
+short ui_widget_port_list_index(
+	struct widget_instance *list_widget)
+{
+	boolean skip_labels = pc_menu_tag(list_widget->definition_tag_index);
+	struct widget_instance *child;
+	short index = 0;
+
+	for (child = list_widget->child; child && child != list_widget->focused_child; child = child->next)
+	{
+		if (!skip_labels || !widget_instance_port_is_label(child))
+			index++;
+	}
+	return index;
+}
+
+/* port: back to the screen before, for the menus' functions */
+void ui_widget_port_go_back(
+	struct widget_instance *widget)
+{
+	widget_instance_go_back_to_previous(widget);
 }
 
 struct widget_instance *ui_widget_load_by_name_or_tag(
@@ -3624,9 +3861,6 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 	if (tag_index != NONE)
 	{
 		definition = ui_widget_definition_get(tag_index);
-#ifdef HALO_VITA_MENU_BRINGUP
-		if (!parent) vita_log("[VITA 025] root allocation begin tag=%08lx", (unsigned long)tag_index);
-#endif
 		widget = pool_new_pointer(
 			widget_memory_pool,
 			sizeof(struct widget_instance),
@@ -3634,9 +3868,6 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 			395);
 		if (widget)
 		{
-#ifdef HALO_VITA_MENU_BRINGUP
-			if (!parent) vita_log("[VITA 025] root allocation PASS pointer=%p", widget);
-#endif
 			if (!parent)
 			{
 				short previous_local_player_index;
@@ -3708,68 +3939,6 @@ struct widget_instance *ui_widget_load_by_name_or_tag(
 	return widget;
 }
 
-#ifdef HALO_VITA_MENU_BRINGUP
-static long halo_vita_widget_count(struct widget_instance *widget)
-{
-	long count = 0;
-	for (; widget; widget = widget->next)
-	{
-		if (++count > 32) return -1;
-		if (widget->child)
-		{
-			long children = halo_vita_widget_count(widget->child);
-			if (children < 0 || (count += children) > 32) return -1;
-		}
-		if (widget->type == _ui_widget_type_column_list &&
-			widget->parameters.list.extended_description)
-		{
-			long description = halo_vita_widget_count(
-				widget->parameters.list.extended_description);
-			if (description < 0 || (count += description) > 32) return -1;
-		}
-	}
-	return count;
-}
-
-boolean halo_vita_menu_root_load(void)
-{
-	struct widget_instance *root;
-	struct widget_instance *child;
-	long descendants, direct_children = 0;
-
-	if (!widget_globals.initialized || widget_globals.active_widgets[0])
-	{
-		vita_log("MAIN MENU BLOCKED: root precondition initialized=%d active=%p",
-			widget_globals.initialized, widget_globals.active_widgets[0]);
-		return FALSE;
-	}
-	halo_vita_ui_event_reset();
-	vita_menu_dispatch_blocked = FALSE;
-	vita_log("[VITA 025] Main Menu root load begin");
-	root = ui_widget_load_by_name_or_tag(
-		"ui\\shell\\main_menu\\main_menu", NONE, NULL, NONE, NONE, NONE, NONE);
-	if (!root || halo_vita_ui_event_failed() || vita_menu_dispatch_blocked ||
-		widget_globals.active_widgets[0] != root)
-	{
-		vita_log("MAIN MENU BLOCKED: root load result=%p event_failed=%d effects_blocked=%d active=%p",
-			root, halo_vita_ui_event_failed(), vita_menu_dispatch_blocked,
-			widget_globals.active_widgets[0]);
-		return FALSE;
-	}
-	descendants = halo_vita_widget_count(root);
-	for (child = root->child; child; child = child->next) direct_children++;
-	if (descendants != 9 || direct_children != 3)
-	{
-		vita_log("MAIN MENU BLOCKED: root graph widgets=%ld direct_children=%ld expected=9/3",
-			descendants, direct_children);
-		return FALSE;
-	}
-	vita_log("[VITA 028] Main Menu root ACTIVE pointer=%p active_roots=1 widgets=%ld type=%d children=%ld focused=%p",
-		root, descendants, root->type, direct_children, root->focused_child);
-	return TRUE;
-}
-#endif
-
 static void render_state_text(
 	rectangle2d *bounds,
 	rectangle2d *cursor_bounds,
@@ -3798,7 +3967,7 @@ static void render_state_bitmap(
 	struct icon_hud_element_definition *icon)
 {
 	struct game_globals *game_globals;
-	struct interface_tag_references_definition *interface_tag_references;
+	struct game_globals_interface_tag_references *interface_tag_references;
 	long bitmap_group_index;
 	long frame_index;
 	struct bitmap_data const *bitmap;
@@ -3812,9 +3981,9 @@ static void render_state_bitmap(
 		? TAG_BLOCK_GET_ELEMENT(
 			&game_globals->interface_tag_references,
 			0,
-			struct interface_tag_references_definition)
+			struct game_globals_interface_tag_references)
 		: NULL;
-	bitmap_group_index = interface_tag_references->tags[_interface_bitmap_iface_map2].index;
+	bitmap_group_index = interface_tag_references->interface_tag_references[_interface_bitmap_iface_map2].index;
 	frame_index = 0;
 	bitmap = NULL;
 	clip = NULL;
@@ -3993,19 +4162,9 @@ void ui_start_main_menu_music(
 
 		if (sound_definition_index != NONE)
 		{
-#if defined(HALO_VITA_MENU_BRINGUP) && defined(HALO_VITA_MENU_AUDIO)
-			if (halo_vita_menu_audio_start((uint32_t)sound_definition_index))
-				widget_globals.main_menu_music_active = TRUE;
-#elif defined(HALO_VITA_MENU_BRINGUP)
-			/* The original sound manager/game-state data are not initialized
-			 * by this UI-only checkpoint. Keep music inactive and observable. */
-			vita_log("MENU AUDIO DEFERRED: title1 tag=%08lx; original game sound state not initialized",
-				(unsigned long)sound_definition_index);
-#else
 			error(_error_silent, "starting main menu music");
 			scripted_looping_sound_start(sound_definition_index, NONE, 1.0f);
 			widget_globals.main_menu_music_active = TRUE;
-#endif
 		}
 		else
 		{
@@ -4026,11 +4185,7 @@ void ui_stop_main_menu_music(
 		if (sound_definition_index != NONE)
 		{
 			error(_error_silent, "stopping main menu music");
-#if defined(HALO_VITA_MENU_BRINGUP) && defined(HALO_VITA_MENU_AUDIO)
-			halo_vita_menu_audio_stop();
-#else
 			scripted_looping_sound_stop(sound_definition_index);
-#endif
 		}
 		else
 		{
@@ -4076,6 +4231,22 @@ void display_error_deferred(
 			"there is already a deferred error message for local player %d; ignoring this one",
 			index);
 	}
+
+	return;
+}
+
+/* port: an error message of the port's own text (the maps have only the
+Xbox's), in the dialog of an error whose text it takes the place of */
+void display_error_text_deferred(
+	wchar_t const *text,
+	short local_player_index)
+{
+	short index = local_player_index == NONE ? 0 : local_player_index;
+
+	if (!VALID_INDEX(index, MAXIMUM_NUMBER_OF_LOCAL_PLAYERS) || widget_globals.deferred_errors[index].error_code != NONE)
+		return;
+	ui_widget_port_error_pending_text = text;
+	display_error_deferred(_error_cannot_create_saved_game_file_with_empty_name, local_player_index, TRUE, FALSE);
 
 	return;
 }
@@ -4176,7 +4347,15 @@ void display_error(
 		struct widget_instance *top_widget;
 		long top_widget_tag_index;
 		struct widget_instance *widget;
+		/* (port: the port's own text for this error, taken whether or not its
+		dialog opens, so that it is never another's) */
+		wchar_t const *port_text = NULL;
 
+		if (error_code == _error_cannot_create_saved_game_file_with_empty_name)
+		{
+			port_text = ui_widget_port_error_pending_text;
+			ui_widget_port_error_pending_text = NULL;
+		}
 		if (local_player_index != NONE)
 		{
 			short index;
@@ -4289,6 +4468,12 @@ void display_error(
 					text_box->type == _ui_widget_type_text_box,
 					"expected a text box widget in the error widget");
 				text_box->parameters.text_box.string_list_index = PIN(error_code, 0, NUMBER_OF_ERROR_CODES - 1);
+				/* (port: the port's own text in place of the error's) */
+				if (port_text)
+				{
+					ui_widget_port_error_text_box = text_box;
+					ui_widget_port_error_text = port_text;
+				}
 				widget->widget_is_error_dialog = TRUE;
 				if (!widget->pause_game_time)
 				{
@@ -4379,6 +4564,9 @@ void display_error_damaged_media(
 	return;
 }
 
+/* port: menu_tags.c's */
+char const *pc_menus_screen(char const *name);
+
 void network_game_reset_to_pregame_ui(
 	void)
 {
@@ -4409,8 +4597,9 @@ void network_game_reset_to_pregame_ui(
 		if (global_network_game_server_get())
 		{
 			network_game_server_pause_countdown(global_network_game_server_get(), TRUE);
+			/* port: with the PC version's menus, theirs (port/linux/game/menu_tags.c) */
 			if (!ui_widget_load_by_name_or_tag(
-				"ui\\shell\\main_menu\\multiplayer_type_select\\connected\\connected_map_select_postgame_wrapper",
+				pc_menus_screen("ui\\shell\\main_menu\\multiplayer_type_select\\connected\\connected_map_select_postgame_wrapper"),
 				NONE, NULL, NONE, NONE, NONE, NONE))
 			{
 				error(_error_silent, "failed to load map select postgame screen");
@@ -4419,7 +4608,7 @@ void network_game_reset_to_pregame_ui(
 		else
 		{
 			if (!ui_widget_load_by_name_or_tag(
-				"ui\\shell\\main_menu\\multiplayer_type_select\\connected\\pregame\\connected_pregame_screen",
+				pc_menus_screen("ui\\shell\\main_menu\\multiplayer_type_select\\connected\\pregame\\connected_pregame_screen"),
 				NONE, NULL, NONE, NONE, NONE, NONE))
 			{
 				error(_error_silent, "failed to load networked pregame status screen");
@@ -4642,10 +4831,6 @@ void main_screen_shell_load(
 	boolean load_main_menu = TRUE;
 
 	ui_widgets_inhibit_processing(FALSE);
-#if !defined(HALO_VITA_MENU_BRINGUP) || defined(HALO_VITA_ORIGINAL_RUNTIME)
-	/* Staged Vita already initialized saved-game/event/keyboard owners before
-	 * its first root. Returning to this shell must not start Bink/attract mode
-	 * or repeat full-platform initialization while no world runtime exists. */
 	if (main_screen_shell_first_load == TRUE)
 	{
 		char const *command_line = shell_get_command_line();
@@ -4670,15 +4855,17 @@ void main_screen_shell_load(
 		perform_filesystem_initialization();
 		input_abstraction_reset_controller_detection_timer();
 	}
-#endif
 	if (load_main_menu)
 	{
-#if !defined(HALO_VITA_MENU_BRINGUP) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 		attract_mode_reset_timer();
-#endif
 		ui_widgets_close_all();
-		if (!ui_widget_load_by_name_or_tag("ui\\shell\\main_menu\\main_menu", NONE, NULL, NONE, NONE, NONE, NONE))
-			error(_error_silent, "failed to load main screen shell window");
+		/* port: the menus' main menu, when they are there (port/linux/game/menu_tags.c) */
+		{
+			extern char const *pc_menus_root_name(void);
+
+			if (!ui_widget_load_by_name_or_tag(pc_menus_root_name(), NONE, NULL, NONE, NONE, NONE, NONE))
+				error(_error_silent, "failed to load main screen shell window");
+		}
 		if (widget_globals.main_menu_deferred_error_code != NONE)
 		{
 			display_error(widget_globals.main_menu_deferred_error_code, NONE, TRUE, FALSE);
@@ -4747,26 +4934,6 @@ static __inline real widget_instance_get_cumulative_alpha_modifier(
 
 	return alpha_modifier;
 }
-
-#ifdef HALO_VITA
-/* Observe original tag/instance inputs; do not force opacity or rewrite tags. */
-static void vita_widget_text_color_observe(struct widget_instance *widget,
-	struct ui_widget_definition *definition, real cumulative,
-	real_argb_color const *color)
-{
-	static unsigned observed;
-	if (observed < 8) {
-		++observed;
-		vita_log("[VITA UI COLOR] widget=%08lx type=%d font=%08lx tag_alpha=%g instance_alpha=%g cumulative=%g output_argb=%g,%g,%g,%g flags=%08lx time_ms=%lu",
-			(unsigned long)widget->definition_tag_index, (int)widget->type,
-			(unsigned long)definition->text_font.index,
-			definition->text_color.alpha, widget->alpha_modifier, cumulative,
-			color->alpha, color->red, color->green, color->blue,
-			(unsigned long)definition->text_box_flags,
-			(unsigned long)widget_globals.current_system_milliseconds);
-	}
-}
-#endif
 
 static boolean widget_instance_text_box_is_focused(
 	struct widget_instance *widget)
@@ -4928,9 +5095,15 @@ static void widget_instance_render_text_box(
 			string_list_index = definition->string_list_index;
 		else
 			string_list_index = widget->parameters.text_box.string_list_index;
-		string = unicode_string_list_get_string(
-			definition->text_label_string_list.index,
-			string_list_index);
+		string = widget == ui_widget_port_error_text_box && ui_widget_port_error_text ?
+			(wchar_t *)ui_widget_port_error_text :
+			unicode_string_list_get_string(definition->text_label_string_list.index, string_list_index);
+		/* port: the description of a spinner's extra item */
+		if (string_list_index >= SPINNER_EXTRA_DESCRIPTION_BASE &&
+			string_list_index < SPINNER_EXTRA_DESCRIPTION_BASE + (short)NUMBEROF(kills_to_win_extra_descriptions))
+		{
+			string = (wchar_t *)kills_to_win_extra_descriptions[string_list_index - SPINNER_EXTRA_DESCRIPTION_BASE];
+		}
 		length = ustrlen(string);
 		widget->parameters.text_box.text = pool_resize_pointer(
 			widget_memory_pool,
@@ -4956,8 +5129,9 @@ static void widget_instance_render_text_box(
 		search_index++)
 	{
 		struct ui_widget_search_and_replace_reference *reference =
-			UI_WIDGET_BLOCK_ELEMENT(
-				&definition->search_and_replace_functions, search_index, struct ui_widget_search_and_replace_reference);
+			(struct ui_widget_search_and_replace_reference *)
+				definition->search_and_replace_functions.address +
+			search_index;
 
 		if (reference && reference->search_string[0])
 		{
@@ -5029,9 +5203,6 @@ static void widget_instance_render_text_box(
 			widget_globals.current_system_milliseconds *
 				SECONDS_PER_MILLISECOND * 3.0f) + 1.5f) * 0.4f) * color.alpha;
 	}
-#ifdef HALO_VITA
-	vita_widget_text_color_observe(widget, definition, alpha_modifier, &color);
-#endif
 	draw_string_set_draw_mode(font_index, NONE, justification, 0, &color);
 	if (string_has_icons_to_draw(*text))
 		draw_string_and_hack_in_icons(&bounds, &clip, NULL, 0, *text, FALSE);
@@ -5086,6 +5257,13 @@ static void widget_instance_render_spinner_list(
 
 		csmemset(&parameters, 0, sizeof(parameters));
 		bounds = definition->list_header_bounds;
+		/* port: a spinner with extra items is wider, to the left, its arrow
+		with it */
+		if (spinner_string_list_extra_count(definition->text_label_string_list.index))
+		{
+			bounds.x0 -= SPINNER_EXTRA_WIDTH;
+			bounds.x1 -= SPINNER_EXTRA_WIDTH;
+		}
 		bounds.x0 += offset.x;
 		bounds.y0 += offset.y;
 		bounds.x1 += offset.x;
@@ -5130,7 +5308,7 @@ static void widget_instance_render_spinner_list(
 		if (definition->text_label_string_list.index != NONE)
 		{
 			short string_index = widget->parameters.list.selected_index;
-			wchar_t *string = unicode_string_list_get_string(
+			wchar_t *string = spinner_string_list_get_string(
 				definition->text_label_string_list.index,
 				string_index);
 			unsigned long length = ustrlen(string);
@@ -5151,8 +5329,9 @@ static void widget_instance_render_spinner_list(
 					search_index++)
 				{
 					struct ui_widget_search_and_replace_reference *reference =
-						UI_WIDGET_BLOCK_ELEMENT(
-							&definition->search_and_replace_functions, search_index, struct ui_widget_search_and_replace_reference);
+						(struct ui_widget_search_and_replace_reference *)
+							definition->search_and_replace_functions.address +
+						search_index;
 
 					if (reference && reference->search_string[0])
 					{
@@ -5204,6 +5383,13 @@ static void widget_instance_render_spinner_list(
 				bounds.y1 += offset.y;
 				bounds.x0 += offset.x;
 				bounds.y0 += offset.y;
+				/* port: a spinner with extra items (three digits) is wider, to the
+				left */
+				if (spinner_string_list_extra_count(definition->text_label_string_list.index))
+				{
+					bounds.x0 -= SPINNER_EXTRA_WIDTH;
+					clip.x0 -= SPINNER_EXTRA_WIDTH;
+				}
 				if (focus)
 				{
 					color.alpha = definition->text_color.alpha;
@@ -5234,9 +5420,6 @@ static void widget_instance_render_spinner_list(
 							SECONDS_PER_MILLISECOND * 3.0f) + 1.0f) * 0.5f) *
 						color.alpha;
 				}
-#ifdef HALO_VITA
-				vita_widget_text_color_observe(widget, definition, text_alpha_modifier, &color);
-#endif
 				draw_string_set_draw_mode(
 					definition->text_font.index,
 					NONE,
@@ -5253,7 +5436,6 @@ static void widget_instance_render_spinner_list(
 	return;
 }
 
-#ifdef HALO_LINUX
 /* ---------- the mouse (desktop builds)
 
 The menus were made for a controller: the d-pad moves the focus through a
@@ -5646,11 +5828,22 @@ static boolean ui_mouse_menus_active(
 	if (widget_globals.initialization_thread || progress_bar_is_active())
 		return FALSE;
 
-	return virtual_keyboard_active() || ui_mouse_menu() != NULL;
+	/* (and the scores after a game, which take A and B like the menus:
+	game_engine_update_non_deterministic) */
+	return virtual_keyboard_active() || ui_mouse_menu() != NULL || game_engine_showing_postgame();
 }
 
 /* the pointer's motion, clicks and wheel since the last frame, as the first
 player's controller events */
+/* port: a row of a list to choose from (the PC version's menus' lists of
+gametypes, maps, profiles, levels and games: port/assets/menus) */
+static boolean ui_mouse_selection_row(
+	struct widget_instance *widget)
+{
+	return widget && widget->parent && pc_menu_tag(widget->parent->definition_tag_index) &&
+		(!strncmp(widget->name, "list_item_", 10) || !strncmp(widget->name, "server_item_", 12));
+}
+
 static void ui_widgets_process_mouse(
 	void)
 {
@@ -5702,7 +5895,10 @@ static void ui_widgets_process_mouse(
 				{
 				case _ui_mouse_target_item:
 				case _ui_mouse_target_value:
-					ui_mouse_give_focus(target->widget);
+					/* (a selection list's row is chosen by a click, not
+					by passing over it on the way to its buttons) */
+					if (!ui_mouse_selection_row(target->widget))
+						ui_mouse_give_focus(target->widget);
 					break;
 				case _ui_mouse_target_list_slot:
 					ui_mouse_step_list_to_slot(target->widget);
@@ -5719,6 +5915,14 @@ static void ui_widgets_process_mouse(
 				switch (target->kind)
 				{
 				case _ui_mouse_target_item:
+					/* (a selection list's row: chosen by a click, used by
+					a click on it chosen) */
+					if (ui_mouse_selection_row(target->widget) && target->widget->parent &&
+						target->widget->parent->focused_child != target->widget)
+					{
+						ui_mouse_give_focus(target->widget);
+						break;
+					}
 					ui_mouse_give_focus(target->widget);
 					ui_mouse_press(_gamepad_analog_button_a);
 					break;
@@ -5770,8 +5974,6 @@ static void ui_widgets_process_mouse(
 	return;
 }
 
-#endif
-
 static void widget_instance_render_recursive(
 	struct widget_instance *widget,
 	rectangle2d *clip_rect,
@@ -5799,16 +6001,15 @@ static void widget_instance_render_recursive(
 		input_index++)
 	{
 		struct ui_widget_game_data_input_reference *input =
-			UI_WIDGET_BLOCK_ELEMENT(
-				&definition->game_data_inputs, input_index, struct ui_widget_game_data_input_reference);
+			(struct ui_widget_game_data_input_reference *)
+				definition->game_data_inputs.address +
+			input_index;
 
 		ui_widget_game_data_function_invoke(widget, input->function);
 	}
 	if (!widget->visible)
 		return;
-#ifdef HALO_LINUX
 	ui_mouse_note_target(widget, definition, offset);
-#endif
 	bitmap = bitmap_group_get_bitmap_from_sequence(
 		definition->background_bitmap.index,
 		0,
@@ -5827,6 +6028,19 @@ static void widget_instance_render_recursive(
 			&bitmap_group->sequences,
 			0,
 			struct bitmap_group_sequence);
+		/* port: a widget whose bounds cover the whole 640x480 design space (the
+		 * pause menu's dim, for example) should cover the whole screen too,
+		 * not just the centered 640 columns -- same as the fade_to_black
+		 * quad in render_ui_widgets(). Both the bounds and the clip are
+		 * widened symmetrically below, before the centering offset is
+		 * added. Only flat fills (the dims, and the menus' vertical
+		 * gradient, at most 16 texels wide): a picture is drawn texel for
+		 * texel, so wider bounds would shift it (the loading screen). */
+		boolean widen_to_screen =
+			bounds.x0 <= 0 && bounds.y0 <= 0 &&
+			bounds.x1 >= 640 && bounds.y1 >= 480 &&
+			bitmap->width <= 16 &&
+			halo_screen_width() > 640;
 
 		if (use_nifty_plasma_fx)
 		{
@@ -5834,6 +6048,12 @@ static void widget_instance_render_recursive(
 			ui_plasma_effect_color.red = 0.05f;
 			ui_plasma_effect_color.green = 0.05f;
 			ui_plasma_effect_color.blue = 0.05f;
+		}
+		if (widen_to_screen)
+		{
+			long extra = (halo_screen_width() - 640) / 2;
+			bounds.x0 -= (short)extra;
+			bounds.x1 = (short)(640 + extra);
 		}
 		bounds.x0 += offset.x;
 		bounds.x1 += offset.x;
@@ -5847,6 +6067,17 @@ static void widget_instance_render_recursive(
 			clip->x1 += offset.x;
 			clip->y0 += offset.y;
 			clip->y1 += offset.y;
+		}
+		if (widen_to_screen && clip)
+		{
+			/* widen the clip by the same amount (it is offset-shifted but
+			 * still 640-wide at the edges) so the dim is not clipped back
+			 * to the centered columns */
+			long extra = (halo_screen_width() - 640) / 2;
+			if (clip->x0 <= 0)
+				clip->x0 -= (short)extra;
+			if (clip->x1 >= 640)
+				clip->x1 = (short)(clip->x1 + extra);
 		}
 		if (TEST_FLAG(definition->flags, _widget_flash_background_bitmap_bit))
 		{
@@ -6064,20 +6295,16 @@ void render_ui_widgets(
 				bounds.y1 = window_bounds->y1 - window_bounds->y0;
 				offset.x = 0;
 				offset.y = 0;
-#ifdef HALO_LINUX
 				/* the mouse drives the first player's menus */
 				ui_mouse_noting_targets = widget->local_player_index == NONE ||
 					widget->local_player_index == 0;
-#endif
 				widget_instance_render_recursive(
 					widget_globals.active_widgets[widget_index],
 					&bounds,
 					offset,
 					TRUE,
 					FALSE);
-#ifdef HALO_LINUX
 				ui_mouse_noting_targets = FALSE;
-#endif
 				if (widget_globals.debug_show_path)
 				{
 					real_argb_color color = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -6107,14 +6334,9 @@ void render_ui_widgets(
 		{
 			real alpha;
 
-#ifdef HALO_LINUX
 			/* the whole screen, around the centered 640 columns */
 			bounds.x0 = (short)(-(halo_screen_width() - 640) / 2);
 			bounds.x1 = (short)(640 + (halo_screen_width() - 640) / 2);
-#else
-			bounds.x0 = 0;
-			bounds.x1 = 640;
-#endif
 			bounds.y0 = 0;
 			bounds.y1 = 480;
 			if (widget_globals.fade_to_black >= 0.95f)
@@ -6132,6 +6354,57 @@ void render_ui_widgets(
 }
 
 /* ---------- private code */
+
+
+static long spinner_string_list_extra_count(
+	long string_list_index)
+{
+	if (string_list_index != NONE && !csstrcmp(tag_get_name(string_list_index),
+		"ui\\shell\\main_menu\\settings_select\\multiplayer_setup\\playlist_edit\\slayer_edit\\var_kills_to_win"))
+	{
+		return NUMBEROF(kills_to_win_extra_strings);
+	}
+	return 0;
+}
+
+/* a spinner's items of its string list's own (the descriptions of a list of
+spinners count those: ui_widget_game_data_input_functions.c) */
+short ui_widget_spinner_own_item_count(
+	struct widget_instance *spinner)
+{
+	struct ui_widget_definition *definition = ui_widget_definition_get(spinner->definition_tag_index);
+
+	return (short)(spinner->parameters.list.number_of_items -
+		spinner_string_list_extra_count(definition->text_label_string_list.index));
+}
+
+/* the string list index of the description of a spinner's extra item, or
+NONE for an item of its own */
+short ui_widget_spinner_extra_description(
+	struct widget_instance *spinner,
+	short item_index)
+{
+	short own = ui_widget_spinner_own_item_count(spinner);
+
+	if (item_index < own)
+		return NONE;
+	return (short)(SPINNER_EXTRA_DESCRIPTION_BASE + item_index - own);
+}
+
+/* a string of a string list, or of its extra strings past the tag's own */
+static wchar_t *spinner_string_list_get_string(
+	long string_list_index,
+	short string_index)
+{
+	struct string_list *string_list = unicode_string_list_definition_get(string_list_index);
+
+	if (string_list && string_index >= string_list->strings.count &&
+		string_index - string_list->strings.count < spinner_string_list_extra_count(string_list_index))
+	{
+		return (wchar_t *)kills_to_win_extra_strings[string_index - string_list->strings.count];
+	}
+	return unicode_string_list_get_string(string_list_index, string_index);
+}
 
 static void widget_instance_render_column_list(
 	struct widget_instance *widget,
@@ -6243,10 +6516,13 @@ static void widget_instance_tab_to_next_valid_widget(
 		struct ui_widget_definition *definition =
 			ui_widget_definition_get(child->definition_tag_index);
 
-		if (definition->event_handlers.count > 0 ||
+		if ((definition->event_handlers.count > 0 ||
 			TEST_FLAG(definition->flags, _widget_pass_unhandled_events_to_children_bit) ||
 			widget->type == _ui_widget_type_spinner_list ||
-			widget->type == _ui_widget_type_column_list)
+			widget->type == _ui_widget_type_column_list) &&
+			/* port: over the PC version's labels and hidden rows */
+			!(widget->type == _ui_widget_type_column_list && pc_menu_tag(widget->definition_tag_index) &&
+				widget_instance_port_is_label(child)))
 		{
 			widget->focused_child = child;
 			break;
@@ -6282,10 +6558,13 @@ static void widget_instance_tab_to_previous_valid_widget(
 		struct ui_widget_definition *definition =
 			ui_widget_definition_get(child->definition_tag_index);
 
-		if (definition->event_handlers.count > 0 ||
+		if ((definition->event_handlers.count > 0 ||
 			TEST_FLAG(definition->flags, _widget_pass_unhandled_events_to_children_bit) ||
 			widget->type == _ui_widget_type_spinner_list ||
-			widget->type == _ui_widget_type_column_list)
+			widget->type == _ui_widget_type_column_list) &&
+			/* port: over the PC version's labels and hidden rows */
+			!(widget->type == _ui_widget_type_column_list && pc_menu_tag(widget->definition_tag_index) &&
+				widget_instance_port_is_label(child)))
 		{
 			widget->focused_child = child;
 			break;
@@ -6375,8 +6654,8 @@ static void widget_instance_process_one_event_recursive(
 					handler_index++)
 				{
 					struct ui_widget_event_handler_reference *handler =
-						UI_WIDGET_BLOCK_ELEMENT(
-							&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
+						(struct ui_widget_event_handler_reference *)
+							definition->event_handlers.address + handler_index;
 
 					if (handler->event_type == _widget_event_back_button)
 					{
@@ -6392,8 +6671,8 @@ static void widget_instance_process_one_event_recursive(
 					handler_index++)
 				{
 					struct ui_widget_event_handler_reference *handler =
-						UI_WIDGET_BLOCK_ELEMENT(
-							&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
+						(struct ui_widget_event_handler_reference *)
+							definition->event_handlers.address + handler_index;
 
 					if (handler->event_type == _widget_event_b_button)
 					{
@@ -6662,8 +6941,8 @@ static void widget_instance_process_one_event_recursive(
 
 			if (widget_deleted)
 				break;
-			handler = UI_WIDGET_BLOCK_ELEMENT(
-			&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
+			handler = (struct ui_widget_event_handler_reference *)
+				definition->event_handlers.address + handler_index;
 			switch (event->type)
 			{
 			case _event_type_left_stick:
@@ -6799,6 +7078,7 @@ static boolean ui_check_for_pause_game(
 {
 	boolean pause_pressed = FALSE;
 	boolean network_game = network_game_is_active();
+	short controller_index = NONE;
 
 	if (game_in_progress() &&
 		!cinematic_in_progress() &&
@@ -6806,190 +7086,179 @@ static boolean ui_check_for_pause_game(
 		!we_are_at_the_main_menu &&
 		widget_globals.pause_disabled_ticks == 0)
 	{
-		short controller_index;
+		long gamepad_index;
 
-		for (controller_index = 0;
-			controller_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS;
-			controller_index++)
+		for (gamepad_index = 0;
+			gamepad_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS;
+			gamepad_index++)
 		{
-			if (input_has_gamepad(controller_index) &&
-				local_player_exists(controller_index) &&
-				input_get_gamepad_state(controller_index)->
+			if (input_has_gamepad(gamepad_index) &&
+				local_player_exists(gamepad_index) &&
+				input_get_gamepad_state(gamepad_index)->
 					buttons[_gamepad_binary_button_start] == 1)
 			{
-				boolean pressed_by_first_local_player = TRUE;
-				short local_player_count = 0;
-				short pressing_local_player_index = NONE;
-				short local_player_index;
-
 				pause_pressed = TRUE;
-				for (local_player_index = local_player_get_next(NONE);
-					local_player_index != NONE;
-					local_player_index = local_player_get_next(local_player_index))
-				{
-					if (local_player_index == controller_index)
-					{
-						pressing_local_player_index = controller_index;
-						if (local_player_count >= 1)
-							pressed_by_first_local_player = FALSE;
-					}
-					local_player_count++;
-				}
-				if (network_game)
-				{
-					if (game_engine_allow_pause() &&
-						pressing_local_player_index == controller_index)
-					{
-						if (!widget_globals.active_widgets[controller_index])
-						{
-							struct network_game_client *client = global_network_game_client_get();
-							struct network_game *network_game_data =
-								network_game_client_get_game(client);
-							short machine_index =
-								network_game_client_get_machine_index(client);
-							char const *widget_name;
+				controller_index = gamepad_index;
+				break;
+			}
+		}
+	}
+	if (pause_pressed)
+	{
+		boolean pressed_by_first_local_player = TRUE;
+		short local_player_count = 0;
+		short pressing_local_player_index = NONE;
+		short local_player_index;
 
-							switch (local_player_count)
-							{
-							case 1:
-								widget_name =
-									"ui\\shell\\multiplayer_game\\pause_game\\1p_pause_game";
-								break;
-							case 2:
-								widget_name =
-									"ui\\shell\\multiplayer_game\\pause_game\\2p_pause_game";
-								break;
-							case 3:
-								widget_name = pressed_by_first_local_player == TRUE
-									? "ui\\shell\\multiplayer_game\\pause_game\\2p_pause_game"
-									: "ui\\shell\\multiplayer_game\\pause_game\\4p_pause_game";
-								break;
-							case 4:
-								widget_name =
-									"ui\\shell\\multiplayer_game\\pause_game\\4p_pause_game";
-								break;
-							default:
-								error(
-									_error_silent,
-									"invalid local player count for multiplayer game");
-								widget_name = NULL;
-								break;
-							}
-							if (widget_name &&
-								!ui_widget_load_by_name_or_tag(
-									widget_name,
-									NONE,
-									NULL,
-									controller_index,
-									NONE,
-									NONE,
-									NONE))
-							{
-								error(
-									_error_silent,
-									"failed to load multiplayer pause game window");
-							}
-						}
-						else
-						{
-							ui_widget_delete(widget_globals.active_widgets[controller_index]);
-						}
-					}
-				}
-				else
+		for (local_player_index = local_player_get_next(NONE);
+			local_player_index != NONE;
+			local_player_index = local_player_get_next(local_player_index))
+		{
+			if (local_player_index == controller_index)
+			{
+				pressing_local_player_index = controller_index;
+				if (local_player_count >= 1)
+					pressed_by_first_local_player = FALSE;
+			}
+			local_player_count++;
+		}
+		if (network_game)
+		{
+			if (game_engine_allow_pause() &&
+				pressing_local_player_index == controller_index)
+			{
+				if (!widget_globals.active_widgets[controller_index])
 				{
+					struct network_game_client *client = global_network_game_client_get();
+					struct network_game *network_game_data =
+						network_game_client_get_game(client);
+					short machine_index =
+						network_game_client_get_machine_index(client);
+					char const *widget_name;
+
 					switch (local_player_count)
 					{
-					case 0:
 					case 1:
-						if (widget_globals.active_widgets[controller_index])
-						{
-							if (game_time_get_paused() == TRUE)
-								ui_widgets_close_all();
-						}
-						else if (!ui_widget_load_by_name_or_tag(
-							"ui\\shell\\solo_game\\pause_game\\pause_game",
-							NONE,
-							NULL,
-							controller_index,
-							NONE,
-							NONE,
-							NONE))
-						{
-							error(
-								_error_silent,
-								"failed to load full screen pause game window");
-						}
+						widget_name =
+							"ui\\shell\\multiplayer_game\\pause_game\\1p_pause_game";
 						break;
 					case 2:
-						if (widget_globals.active_widgets[controller_index])
-						{
-							if (game_time_get_paused() == TRUE)
-								ui_widgets_close_all();
-						}
-						else if (!game_time_get_paused())
-						{
-							if (!ui_widget_load_by_name_or_tag(
-								"ui\\shell\\solo_game\\pause_game\\pause_game_split_screen",
-								NONE,
-								NULL,
-								controller_index,
-								NONE,
-								NONE,
-								NONE))
-							{
-								error(
-									_error_silent,
-									"failed to load split screen pause game window");
-							}
-						}
+						widget_name =
+							"ui\\shell\\multiplayer_game\\pause_game\\2p_pause_game";
+						break;
+					case 3:
+						widget_name = pressed_by_first_local_player == TRUE
+							? "ui\\shell\\multiplayer_game\\pause_game\\2p_pause_game"
+							: "ui\\shell\\multiplayer_game\\pause_game\\4p_pause_game";
+						break;
+					case 4:
+						widget_name =
+							"ui\\shell\\multiplayer_game\\pause_game\\4p_pause_game";
 						break;
 					default:
 						error(
 							_error_silent,
-							"the ui seems to be confused... assuming you are playing full-screen single player?");
-						if (widget_globals.initialized)
-						{
-							boolean widgets_active = FALSE;
-							long widget_index;
-
-							for (widget_index = 0;
-								widget_index < MAXIMUM_NUMBER_OF_LOCAL_PLAYERS;
-								widget_index++)
-							{
-								if (widget_globals.active_widgets[widget_index])
-								{
-									widgets_active = TRUE;
-									break;
-								}
-							}
-							if (widgets_active)
-							{
-								ui_widgets_close_all();
-								break;
-							}
-						}
-						if (!ui_widget_load_by_name_or_tag(
-							"ui\\shell\\solo_game\\pause_game\\pause_game",
+							"invalid local player count for multiplayer game");
+						widget_name = NULL;
+						break;
+					}
+					if (widget_name &&
+						!ui_widget_load_by_name_or_tag(
+							widget_name,
 							NONE,
 							NULL,
 							controller_index,
 							NONE,
 							NONE,
 							NONE))
-						{
-							error(
-								_error_silent,
-								"failed to load full screen pause game window");
-						}
-						break;
+					{
+						error(
+							_error_silent,
+							"failed to load multiplayer pause game window");
 					}
+				}
+				else
+				{
+					ui_widget_delete(widget_globals.active_widgets[controller_index]);
+				}
+			}
+		}
+		else
+		{
+			switch (local_player_count)
+			{
+			case 0:
+			case 1:
+				if (widget_globals.active_widgets[controller_index])
+				{
+					if (game_time_get_paused() == TRUE)
+						ui_widgets_close_all();
+				}
+				else if (!ui_widget_load_by_name_or_tag(
+					"ui\\shell\\solo_game\\pause_game\\pause_game",
+					NONE,
+					NULL,
+					controller_index,
+					NONE,
+					NONE,
+					NONE))
+				{
+					error(
+						_error_silent,
+						"failed to load full screen pause game window");
+				}
+				break;
+			case 2:
+				if (widget_globals.active_widgets[controller_index])
+				{
+					if (game_time_get_paused() == TRUE)
+						ui_widgets_close_all();
+				}
+				else if (!game_time_get_paused())
+				{
+					if (!ui_widget_load_by_name_or_tag(
+						"ui\\shell\\solo_game\\pause_game\\pause_game_split_screen",
+						NONE,
+						NULL,
+						controller_index,
+						NONE,
+						NONE,
+						NONE))
+					{
+						error(
+							_error_silent,
+							"failed to load split screen pause game window");
+					}
+				}
+				break;
+			default:
+				error(
+					_error_silent,
+					"the ui seems to be confused... assuming you are playing full-screen single player?");
+				if (!ui_widgets_active())
+				{
+					if (!ui_widget_load_by_name_or_tag(
+						"ui\\shell\\solo_game\\pause_game\\pause_game",
+						NONE,
+						NULL,
+						controller_index,
+						NONE,
+						NONE,
+						NONE))
+					{
+						error(
+							_error_silent,
+							"failed to load full screen pause game window");
+					}
+				}
+				else
+				{
+					ui_widgets_close_all();
 				}
 				break;
 			}
 		}
 	}
-#ifdef HALO_LINUX
 	/* This runs once a frame, several frames per tick on the native builds
 	(port/linux/game/render_interpolation.c): count the lock down in 30 Hz
 	ticks of real time, not in frames. */
@@ -7003,10 +7272,6 @@ static boolean ui_check_for_pause_game(
 		widget_globals.pause_disabled_ticks =
 			FLOOR(widget_globals.pause_disabled_ticks - ticks, 0);
 	}
-#else
-	widget_globals.pause_disabled_ticks =
-		FLOOR(widget_globals.pause_disabled_ticks - 1, 0);
-#endif
 
 	return pause_pressed;
 }
@@ -7026,9 +7291,7 @@ void process_ui_widgets(
 		644,
 		widget_globals.initialized);
 	widget_globals.current_system_milliseconds = system_milliseconds();
-#ifdef HALO_LINUX
 	ui_widgets_process_mouse();
-#endif
 	if (widget_globals.initialization_thread)
 	{
 		if (!thread_has_exited(widget_globals.initialization_thread))

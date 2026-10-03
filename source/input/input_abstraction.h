@@ -37,6 +37,8 @@ typedef char verify_game_input_preferences_size[
 
 void input_abstraction_initialize(
 	void);
+void input_abstraction_dispose(
+	void);
 void input_abstraction_update(
 	void);
 void input_abstraction_update_device_changes(
@@ -51,6 +53,13 @@ void input_abstraction_update_local_player_preferences(
 	struct game_input_preferences const *preferences);
 struct game_input_state *input_abstraction_get_input_state(
 	short local_player_index);
+/* port: the keyboard and mouse's own controls (input_abstraction.c) */
+boolean input_abstraction_port_reload(
+	short controller_index);
+byte input_abstraction_port_accept(
+	short controller_index);
+boolean input_abstraction_port_action_only(
+	short controller_index);
 
 /* ---------- globals */
 

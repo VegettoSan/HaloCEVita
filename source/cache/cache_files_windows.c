@@ -610,9 +610,6 @@ boolean cache_files_precache_map_begin(
 				sizeof(cache_file_globals.copying_to_map_file_name) - 1] = 0;
 			cache_file_get_map_path(cache_map_name, path);
 			error(_error_silent, "starting precaching of map '%s'", cache_map_name);
-#ifdef HALO_VITA
-            vita_log("[VITA ORIGINAL CACHE] copy BEGIN source=%s slot=%d capacity=%ld logical=%ld scratch=%ld", path, (int)map_file_index, cached_map_file_get_size(map_file_index), header.file_length, buffer_size);
-#endif
 			cache_copy_begin(
 				buffer,
 				buffer_size,
@@ -649,9 +646,6 @@ void cache_files_initialize(
 		188,
 		cache_file_globals.requests);
 	cache_file_windows_thread_create();
-#ifdef HALO_VITA
-    vita_log("[VITA ORIGINAL CACHE] initialize BEGIN six fixed slots, capacity total=732MiB, volume=Z:");
-#endif
 	cache_files_verify_language();
 	cache_files_open_cache_files();
 	cache_copy_initialize();
@@ -670,12 +664,6 @@ void cache_files_precache_map_end(
 	texture_cache_return_memory();
 	cached_map_file_set_modification_date(cache_file_globals.copying_to_map_file_index);
 	cached_map_file_read_header(cache_file_globals.copying_to_map_file_index);
-#ifdef HALO_VITA
-    {
-        struct cache_file_header *header = &cached_map_file_get(cache_file_globals.copying_to_map_file_index)->header;
-        vita_log("[VITA ORIGINAL CACHE] copy END slot=%d header=%08lx name=%.*s logical=%ld checksum=%08lx", (int)cache_file_globals.copying_to_map_file_index, header->header_signature, 32, header->name, header->file_length, header->checksum);
-    }
-#endif
 	cache_file_globals.copy_in_progress = FALSE;
 	cache_file_globals.copying_to_map_file_index = NONE;
 
@@ -778,9 +766,6 @@ boolean cache_file_open(
 		header,
 		&cached_map_file_get(map_file_index)->header,
 		sizeof(struct cache_file_header));
-#ifdef HALO_VITA
-    vita_log("[VITA ORIGINAL CACHE] open slot=%d map=%.*s build=%.*s logical=%ld tag_bytes=%ld", (int)map_file_index, 32, header->name, 32, header->build, header->file_length, header->tag_data_size);
-#endif
 
 	return TRUE;
 }
@@ -952,10 +937,6 @@ static void cache_files_open_cache_files(
 	boolean valid;
 	short map_file_index;
 
-#ifdef HALO_VITA
-    /* Do not write uninitialized stack bytes as an invalid cache header. */
-    memset(&blank_header, 0, sizeof(blank_header));
-#endif
 	cached_map_files_delete(NUMBER_OF_CACHED_MAP_FILES);
 	for (map_file_index = 0;
 		map_file_index < NUMBER_OF_CACHED_MAP_FILES;
@@ -1039,21 +1020,10 @@ static void cache_files_open_cache_files(
 			char *cache_map_name = cached_map_file_get(map_file_index)->header.name;
 
 			cached_map_file_read_header(map_file_index);
-#if !defined(HALO_LINUX) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
-			/* (the native builds keep a copied map whatever build made it;
-			the checksum below still has to match the original's) */
-			if (strcmp(map_file->header.build, CACHE_FILE_BUILD_STRING) != 0)
-			{
-				valid = FALSE;
-			}
-#endif
 			if (cache_file_read_header_from_dvd(cache_map_name, &dvd_header) &&
 				map_file->header.checksum == dvd_header.checksum &&
 				valid)
 			{
-#ifdef HALO_VITA
-                vita_log("[VITA ORIGINAL CACHE] warm VALID slot=%d path=%s map=%.*s checksum=%08lx", (int)map_file_index, path, 32, map_file->header.name, map_file->header.checksum);
-#endif
 				continue;
 			}
 		}

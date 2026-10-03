@@ -22,14 +22,6 @@ port/linux/include/stdio.h).
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#ifdef HALO_VITA
-#ifndef O_CLOEXEC
-#define O_CLOEXEC 0 /* native Vita processes do not exec inherited files */
-#endif
-#ifndef LONG_MAX
-#define LONG_MAX 2147483647L
-#endif
-#endif
 
 size_t malloc_usable_size(void *pointer);
 
@@ -357,64 +349,6 @@ unsigned int _clearfp(void)
 	unsigned int status = _statusfp();
 
 	__builtin_arm_wsr64("fpsr", __builtin_arm_rsr64("fpsr") & ~0x9fULL);
-	return status;
-}
-#elif defined(__arm__)
-/* MSVC's compiler-only barrier; clang provides it as a builtin on x86 alone.
-An out-of-line call is already a barrier for the caller. */
-void _ReadWriteBarrier(void)
-{
-	__asm__ __volatile__("" ::: "memory");
-}
-
-/* ARMv7 VFP: the rounding mode lives in FPSCR.RMode and the sticky exception
-flags in FPSCR[4:0]; reached through C99 fenv. Precision control and exception
-unmasking have no equivalent; the rest of the MSVC control word is only
-remembered. */
-static unsigned int msvc_control_word = CW_DEFAULT;
-
-unsigned int _control87(unsigned int new_value, unsigned int mask)
-{
-	if (mask)
-	{
-		msvc_control_word = (msvc_control_word & ~mask) | (new_value & mask);
-		switch (msvc_control_word & _MCW_RC)
-		{
-		case _RC_UP: fesetround(FE_UPWARD); break;
-		case _RC_DOWN: fesetround(FE_DOWNWARD); break;
-		case _RC_CHOP: fesetround(FE_TOWARDZERO); break;
-		default: fesetround(FE_TONEAREST); break;
-		}
-	}
-	return msvc_control_word;
-}
-
-unsigned int _controlfp(unsigned int new_value, unsigned int mask)
-{
-	/* _controlfp ignores the denormal mask */
-	return _control87(new_value, mask & ~_EM_DENORMAL);
-}
-
-unsigned int _statusfp(void)
-{
-	int flags = fetestexcept(FE_ALL_EXCEPT);
-	unsigned int result = 0;
-
-	/* as the x87 status word's low bits: invalid, denormal, zero divide,
-	overflow, underflow, precision */
-	if (flags & FE_INVALID) result |= 0x01;
-	if (flags & FE_DIVBYZERO) result |= 0x04;
-	if (flags & FE_OVERFLOW) result |= 0x08;
-	if (flags & FE_UNDERFLOW) result |= 0x10;
-	if (flags & FE_INEXACT) result |= 0x20;
-	return result;
-}
-
-unsigned int _clearfp(void)
-{
-	unsigned int status = _statusfp();
-
-	feclearexcept(FE_ALL_EXCEPT);
 	return status;
 }
 #else

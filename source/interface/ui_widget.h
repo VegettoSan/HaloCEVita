@@ -76,11 +76,6 @@ void set_ui_plasma_effect_color(
 	real b);
 void ui_widgets_initialize(
 	void);
-#ifdef HALO_VITA
-boolean halo_vita_ui_widgets_initialized(void);
-boolean halo_vita_ui_widgets_dispose_checkpoint(void);
-boolean halo_vita_menu_root_load(void);
-#endif
 void ui_widgets_safe_to_load(
 	boolean safe);
 void ui_widgets_set_fade_value(
@@ -139,6 +134,9 @@ void display_error_deferred(
 	short local_player_index,
 	boolean modal,
 	boolean pause_game_time);
+void display_error_text_deferred(
+	wchar_t const *text,
+	short local_player_index);
 void display_error_abort_to_dashboard_deferred(
 	short error_code,
 	boolean optional);
@@ -160,6 +158,13 @@ real_argb_color get_ui_argb_white(
 pixel32 modulate_pixel32_by_real_alpha(
 	pixel32 argb,
 	real alpha);
+/* port: a spinner's items of its string list's own, and the description of
+an extra item (ui_widget.c) */
+short ui_widget_spinner_own_item_count(
+	struct widget_instance *spinner);
+short ui_widget_spinner_extra_description(
+	struct widget_instance *spinner,
+	short item_index);
 void ui_widget_delete(
 	struct widget_instance *widget);
 void ui_widgets_close_all(

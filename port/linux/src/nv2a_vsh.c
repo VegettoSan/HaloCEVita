@@ -140,9 +140,7 @@ static void operand(struct xgpu_text *text, const DWORD *instruction, char which
 }
 
 static const char shader_prologue[] =
-#if defined(HALO_VITA)
-	"#version 120\n"
-#elif defined(HALO_ANDROID)
+#ifdef HALO_ANDROID
 	/* the #version line comes first, from the context's capabilities */
 	"precision highp float;\n"
 	"precision highp int;\n"
@@ -155,17 +153,6 @@ static const char shader_prologue[] =
 	"uniform float point_size;\n"
 	/* columns the menus shift by to center on a wide screen (d3d8_gl.c) */
 	"uniform float screen_offset;\n"
-#ifdef HALO_VITA
-	"varying vec4 xD0;\n"
-	"varying vec4 xD1;\n"
-	"varying vec4 xB0;\n"
-	"varying vec4 xB1;\n"
-	"varying vec4 xT0;\n"
-	"varying vec4 xT1;\n"
-	"varying vec4 xT2;\n"
-	"varying vec4 xT3;\n"
-	"varying float xFog;\n"
-#else
 	"out vec4 xD0;\n"
 	"out vec4 xD1;\n"
 	"out vec4 xB0;\n"
@@ -175,11 +162,6 @@ static const char shader_prologue[] =
 	"out vec4 xT2;\n"
 	"out vec4 xT3;\n"
 	"out float xFog;\n"
-#endif
-#ifndef HALO_VITA
-	/* vitaGL forwards GLSL invariant unchanged into Cg; ShaccCg rejects it
-	 * (A015, vertex_probe.cg:177). Preserve it on desktop/Android. Omitting
-	 * it on Vita leaves cross-program multipass invariance unverified. */
 	"invariant gl_Position;\n"
 	"vec4 unpack_normpacked3(uint p)\n"
 	"{\n"
@@ -188,7 +170,6 @@ static const char shader_prologue[] =
 	"	int z = int(p) >> 22;\n"
 	"	return vec4(float(x) / 1023.0, float(y) / 1023.0, float(z) / 511.0, 1.0);\n"
 	"}\n"
-#endif
 	"vec4 nv2a_rcc(float x)\n"
 	"{\n"
 	"	float r = 1.0 / x;\n"
@@ -219,28 +200,16 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 	struct xgpu_text text = { 0 };
 	unsigned long index;
 
-#ifdef HALO_VITA
-	/* Vita setup_streams supplies the same decoded values as float3 inputs.
-	 * Missing fourth component defaults to1, matching unpack_normpacked3.
-	 * Keep the NV2A arithmetic/register numbering; no GLSL integer input. */
-	packed_attribute_mask = 0;
-	platform_log("HALO_VITA vertex GLSL omits unsupported invariant qualifier; multipass position invariance unverified");
-#endif
-
 #ifdef HALO_ANDROID
 	xgpu_text_append(&text, "#version %s\n", xgpu_capabilities.shading_language);
 #endif
 	xgpu_text_append(&text, "%s", shader_prologue);
 	for (index = 0; index < XGPU_VERTEX_ATTRIBUTE_COUNT; index++)
 	{
-#ifdef HALO_VITA
-		xgpu_text_append(&text, "attribute vec4 v%lu_in;\n", index);
-#else
 		if (packed_attribute_mask & (1UL << index))
 			xgpu_text_append(&text, "layout(location = %lu) in uint v%lu_packed;\n", index, index);
 		else
 			xgpu_text_append(&text, "layout(location = %lu) in vec4 v%lu_in;\n", index, index);
-#endif
 	}
 
 	xgpu_text_append(&text, "void main()\n{\n");
@@ -263,7 +232,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		"\tvec4 oFog = vec4(1.0), oPts = vec4(point_size), oUnused = vec4(0.0);\n"
 		"\tint a0 = 0;\n"
 		"\tvec4 A, B, C, mac, ilu;\n");
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 	xgpu_text_append(&text, "\tvec4 clip_position = vec4(0.0);\n\tbool clip_captured = false;\n");
 #endif
 
@@ -317,7 +286,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		case _ilu_lit: xgpu_text_append(&text, "\tilu = nv2a_lit(C);\n"); break;
 		default: xgpu_text_append(&text, "\tilu = vec4(0.0);\n"); break;
 		}
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 		/* the screen-space conversion takes the reciprocal of the clip-space
 		position's w (rcc of r12.w); keep the position it converts */
 		if (ilu == _ilu_rcc && field(instruction, 3, 28, 2) == _mux_temporary &&
@@ -371,10 +340,11 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		/* Direct3D 8 puts pixel centres on integer screen coordinates (the
 		game offsets its screen-space quads by -0.5 to match), OpenGL on
 		half-integers */
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 		/* The conversion is screen = clip * c[-38] * rcc(w) + c[-37]; undoing
 		it by multiplying by w again is lossy near the camera plane, where
-		rcc clamps and 1/w rounds differently on each GPU. Where the clip
+		rcc clamps and 1/w rounds differently on each GPU (Mali put vertices
+		of the first-person weapon at the vanishing point). Where the clip
 		position was kept, the same result is computed without dividing. */
 		"\tif (clip_captured)\n"
 		"\t\tgl_Position = vec4((clip_position.xyz * c[%d].xyz + (c[%d].xyz + vec3(0.5 + screen_offset, 0.5, 0.0)\n"
@@ -385,7 +355,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		"\tvec3 ndc = (vec3(oPos.xy + vec2(0.5 + screen_offset, 0.5), oPos.z) - viewport_offset.xyz) / scale;\n"
 		"\tgl_Position = vec4(ndc * oPos.w, oPos.w);\n"
 #endif
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 		/* what glClipControl(GL_UPPER_LEFT, GL_ZERO_TO_ONE) does on desktop
 		GL: rows from the top, depth 0..1 */
 		"\tgl_Position.y = -gl_Position.y;\n"
@@ -402,7 +372,7 @@ char *nv2a_vertex_shader_to_glsl(const DWORD *instructions, unsigned long instru
 		"\txT3 = oT3;\n"
 		"\txFog = oFog.x;\n"
 		"}\n"
-#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#ifdef HALO_ANDROID
 		, XGPU_VERTEX_CONSTANT_BIAS - 38, XGPU_VERTEX_CONSTANT_BIAS - 37
 #endif
 		);

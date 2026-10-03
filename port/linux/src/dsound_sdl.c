@@ -33,9 +33,6 @@ skips opening a device (port_config.c).
 #include "platform.h"
 #include "sdl_platform.h"
 #include "port_config.h"
-#ifdef HALO_VITA
-#include "vita_runtime.h"
-#endif
 
 #include <SDL3/SDL.h>
 #include <math.h>
@@ -454,7 +451,6 @@ static void SDLCALL audio_callback(void *userdata, SDL_AudioStream *stream, int 
 }
 
 /* without a device, drain voices in real time */
-#ifndef HALO_VITA
 static void *silent_clock_thread(void *parameter)
 {
 	float buffer[480 * OUTPUT_CHANNELS];
@@ -476,8 +472,6 @@ static void *silent_clock_thread(void *parameter)
 	return NULL;
 }
 
-#endif
-
 static void audio_start(void)
 {
 	SDL_AudioSpec spec;
@@ -496,40 +490,18 @@ static void audio_start(void)
 		audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, audio_callback, NULL);
 		if (audio_stream)
 		{
-			#ifdef HALO_VITA
-			if (!SDL_ResumeAudioStreamDevice(audio_stream))
-				vita_fatal("original DirectSound SDL stream could not resume");
-			vita_log("[VITA AUDIO] original DirectSound mixer running: driver=%s 48000Hz stereo float32", SDL_GetCurrentAudioDriver());
-#else
 			SDL_ResumeAudioStreamDevice(audio_stream);
-#endif
 			return;
 		}
 		platform_log("cannot open an audio device (%s); sound is silent", SDL_GetError());
 	}
-#ifdef HALO_VITA
-	vita_fatal("original DirectSound SDL device unavailable; audio cannot be silently accepted");
-#else
 	{
 		pthread_t thread;
 
 		pthread_create(&thread, NULL, silent_clock_thread, NULL);
 		pthread_detach(thread);
 	}
-#endif
 }
-
-#ifdef HALO_VITA
-void halo_vita_audio_mixer_shutdown(void)
-{
-	/* Original manager disposal has released voices under mixer_lock first. */
-	if (audio_stream) SDL_DestroyAudioStream(audio_stream);
-	audio_stream = NULL;
-	audio_started = FALSE;
-	SDL_QuitSubSystem(SDL_INIT_AUDIO);
-	vita_log("[VITA AUDIO] native SDL output closed after original voice disposal");
-}
-#endif
 
 /* ---------- completion */
 
@@ -652,9 +624,6 @@ static HRESULT STDMETHODCALLTYPE stream_process(IDirectSoundStream *object, LPCX
 	struct voice_packet *entry;
 	unsigned long frames = 0;
 	short *samples;
-#ifdef HALO_VITA
-	BOOL vita_first_packet = FALSE;
-#endif
 
 	(void)output;
 	if (!input)
@@ -671,18 +640,6 @@ static HRESULT STDMETHODCALLTYPE stream_process(IDirectSoundStream *object, LPCX
 		return E_OUTOFMEMORY;
 	}
 	entry = &stream->packets[(stream->packet_head + stream->packet_count) % MAXIMUM_STREAM_PACKETS];
-	#ifdef HALO_VITA
-	if (!samples || !frames) {
-		pthread_mutex_unlock(&mixer_lock);
-		free(samples);
-		platform_log("[VITA AUDIO] original packet decode failed: bytes=%lu channels=%lu adpcm=%d", (unsigned long)input->dwMaxSize,stream->channels,stream->adpcm);
-		return E_OUTOFMEMORY;
-	}
-	{ static BOOL logged; if (!logged) {
-		logged = TRUE;
-		vita_first_packet = TRUE;
-	} }
-#endif
 	entry->packet = *input;
 	entry->samples = samples;
 	entry->frames = samples ? frames : 0;
@@ -699,10 +656,6 @@ static HRESULT STDMETHODCALLTYPE stream_process(IDirectSoundStream *object, LPCX
 	}
 	stream->packet_count++;
 	pthread_mutex_unlock(&mixer_lock);
-#ifdef HALO_VITA
-	if (vita_first_packet)
-		platform_log("[VITA AUDIO] first original packet decoded/queued: bytes=%lu frames=%lu channels=%lu rate=%lu adpcm=%d", (unsigned long)input->dwMaxSize,frames,stream->channels,(unsigned long)stream->sample_rate,stream->adpcm);
-#endif
 	return S_OK;
 }
 
@@ -767,6 +720,15 @@ ULONG WINAPI IDirectSound_Release(LPDIRECTSOUND sound)
 
 VOID WINAPI DirectSoundDoWork(void)
 {
+	static unsigned long volume_read_at = (unsigned long)-1;
+
+	/* (audio.volume read again when Settings changes it: on the game's
+	thread, not the mixer's, whose lock the config's file I/O would hold) */
+	if (volume_read_at != config_changes())
+	{
+		volume_read_at = config_changes();
+		master_volume = (float)config_real("audio.volume");
+	}
 	streams_complete_finished();
 }
 

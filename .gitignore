@@ -1,42 +1,32 @@
-# Build outputs
-build/
-build.ninja
-.ninja_log
-.ninja_deps
-compile_commands.json
-*.vpk
-*.elf
-*.self
-*.suprx
-*.skprx
-*.o
-*.a
-*.so
-*.d
-
-# Proprietary/user game data
-maps/
-assets/maps/
-*.xiso
-*.iso
-*.map
-save/
-
-# Runtime logs/config copied from console
-runtime/
-debug.txt
-config.toml
-
-# SDK/runtime binaries that must not be committed
-libshacccg.suprx
-
-# IDE / OS
-.vscode/
+# IDE folders
 .idea/
 .vs/
-.DS_Store
-Thumbs.db
 
-# Python
-__pycache__/
-*.pyc
+# Caches
+__pycache__
+.mypy_cache
+.cache/
+
+# Build files
+build/
+.ninja_*
+build.ninja
+
+# Generated configs
+compile_commands.json
+
+# The January build and the Xbox SDK (tools/xdk_headers.py reads the
+# build's PDB); never commit
+*.exe
+*.pdb
+xbox/
+!source/**/xbox/
+
+# Locally extracted proprietary game data (never commit)
+assets/
+# (but the high-res assets, drawn for the port: tools/hud_assets.py)
+!port/assets/
+original/
+
+# CI build outputs (tools/ci_build.py)
+dist/

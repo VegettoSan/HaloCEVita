@@ -323,9 +323,6 @@ static void dot_input(struct xgpu_text *text, const DWORD *state, int stage)
 	"precision highp sampler2D;\n" \
 	"precision highp sampler3D;\n" \
 	"precision highp samplerCube;\n"
-#elif defined(HALO_VITA)
-#define SAMPLE_BIAS ""
-#define SHADER_VERSION "#version 120\n"
 #else
 #define SAMPLE_BIAS ""
 #define SHADER_VERSION "#version 450 core\n"
@@ -343,26 +340,18 @@ static void sample(struct xgpu_text *text, const struct nv2a_pixel_shader_key *k
 			);
 		break;
 	case _xgpu_sampler_cube:
-#ifdef HALO_VITA
-		xgpu_text_append(text, "textureCube(tex%d, (%s).xyz)", stage, coordinates);
-#else
 		xgpu_text_append(text, "texture(tex%d, (%s).xyz" SAMPLE_BIAS ")", stage, coordinates
 #ifdef HALO_ANDROID
 			, stage
 #endif
 			);
-#endif
 		break;
 	default:
-#ifdef HALO_VITA
-		xgpu_text_append(text, "texture2D(tex%d, (%s).xy * texture_scale[%d].xy)", stage, coordinates, stage);
-#else
 		xgpu_text_append(text, "texture(tex%d, (%s).xy * texture_scale[%d].xy" SAMPLE_BIAS ")", stage, coordinates, stage
 #ifdef HALO_ANDROID
 			, stage
 #endif
 			);
-#endif
 		break;
 	}
 }
@@ -538,19 +527,6 @@ char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key)
 	DWORD final_efg = state[D3DRS_PSFINALCOMBINERINPUTSEFG];
 	int stage;
 
-#ifdef HALO_VITA
-	for (stage = 0; stage < 4; ++stage) {
-		if (key->sampler_type[stage] == _xgpu_sampler_3d) {
-			platform_log("HALO_VITA BLOCKED: sampler3D stage %d", stage);
-			return NULL;
-		}
-	}
-	if (key->count_samples) {
-		platform_log("HALO_VITA BLOCKED: visibility count shader needs query backend");
-		return NULL;
-	}
-#endif
-
 	if (combiner_count > 8)
 		combiner_count = 8;
 
@@ -567,17 +543,6 @@ char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key)
 #endif
 	xgpu_text_append(&text,
 		SHADER_VERSION
-#ifdef HALO_VITA
-		"varying vec4 xD0;\n"
-		"varying vec4 xD1;\n"
-		"varying vec4 xB0;\n"
-		"varying vec4 xB1;\n"
-		"varying vec4 xT0;\n"
-		"varying vec4 xT1;\n"
-		"varying vec4 xT2;\n"
-		"varying vec4 xT3;\n"
-		"varying float xFog;\n"
-#else
 		"in vec4 xD0;\n"
 		"in vec4 xD1;\n"
 		"in vec4 xB0;\n"
@@ -588,7 +553,6 @@ char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key)
 		"in vec4 xT3;\n"
 		"in float xFog;\n"
 		"layout(location = 0) out vec4 fragment_color;\n"
-#endif
 		XGPU_PIXEL_UNIFORMS);
 	for (stage = 0; stage < 4; stage++)
 		xgpu_text_append(&text, "uniform %s tex%d;\n", sampler_declaration(key->sampler_type[stage]), stage);
@@ -674,6 +638,8 @@ char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key)
 		xgpu_text_append(&text, ";\n\tvec4 result = vec4(fA * fB + (1.0 - fA) * fC + fD, fG);\n");
 	}
 
+	if (key->coverage_alpha)
+		xgpu_text_append(&text, "\tresult.a = mix(1.0, result.a, t0.g);\n");
 	if (key->alpha_test_function)
 	{
 		const char *comparison = comparison_operator(key->alpha_test_function);
@@ -693,10 +659,6 @@ char *nv2a_pixel_shader_to_glsl(const struct nv2a_pixel_shader_key *key)
 	if (key->count_samples)
 		xgpu_text_append(&text, "\tatomicCounterIncrement(visible_samples);\n");
 #endif
-#ifdef HALO_VITA
-	xgpu_text_append(&text, "\tgl_FragColor = clamp(result, 0.0, 1.0);\n}\n");
-#else
 	xgpu_text_append(&text, "\tfragment_color = clamp(result, 0.0, 1.0);\n}\n");
-#endif
 	return text.buffer;
 }

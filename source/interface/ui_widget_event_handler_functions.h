@@ -24,10 +24,6 @@ boolean ui_widget_event_handler_function_invoke(
 	struct event_record *event,
 	word function_index,
 	boolean *widget_deleted);
-#ifdef HALO_VITA
-void halo_vita_ui_event_reset(void);
-boolean halo_vita_ui_event_failed(void);
-#endif
 
 void reset_last_player1_profile_index(
 	void);

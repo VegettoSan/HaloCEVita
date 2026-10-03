@@ -93,19 +93,14 @@ symbols in this file:
 
 /* ---------- headers */
 
-#ifdef HALO_VITA
-#include "vita_runtime.h"
-#endif
 #include "cseries/cseries.h"
 #include "cseries/cseries_windows.h"
 #include "cseries/errors.h"
 #include "cseries/sort.h"
 #include "bitmaps/bitmap_group.h"
-#include "bitmaps/bitmaps_internal.h"
-#include "bitmaps/bitmaps_mipmap.h"
+#include "bitmaps/bitmaps.h"
 #include "cache/cache_files.h"
 #include "cache/texture_cache.h"
-#include "cache/xbox_texture_cache.h"
 #include "cache/physical_memory_map.h"
 #include "interface/interface.h"
 #include "interface/terminal.h"
@@ -265,6 +260,12 @@ static void texture_cache_delete_block_proc(
 	long block_index);
 static const char *texture_cache_name_block_proc(
 	long block_index);
+long bitmap_format_to_d3d_format(
+	short format,
+	word flags);
+long bitmap_format_to_d3d_linear_format(
+	short format,
+	word flags);
 static boolean compare(
 	struct bitmap_data *first,
 	struct bitmap_data *second);
@@ -759,23 +760,6 @@ static boolean texture_cache_start_loading_bitmap(
 		bitmap->base_address = base_address;
 		texture->bitmap = bitmap;
 		texture_cache_initialize_hardware_format(bitmap, &texture->hardware_format);
-#ifdef HALO_VITA
-		{
-			static boolean first_bitmap_logged;
-			if (!first_bitmap_logged)
-			{
-				struct bitmap_group *group = bitmap_group_get(bitmap->tag_index);
-				long bitmap_index = group && group->bitmaps.address ?
-					bitmap - (struct bitmap_data *)group->bitmaps.address : NONE;
-				first_bitmap_logged = TRUE;
-				vita_log("[VITA BITMAP] tag=%s datum=%08lx index=%ld offset=%ld size=%ld format=%d dims=%dx%dx%d mipmaps=%d type=%d destination=%p allocation=%ld",
-					tag_get_name(bitmap->tag_index), (unsigned long)bitmap->tag_index, bitmap_index,
-					bitmap->pixels_offset, bitmap->pixels_size, bitmap->format,
-					bitmap->width, bitmap->height, bitmap->depth, bitmap->mipmap_count,
-					bitmap->type, base_address, size);
-			}
-		}
-#endif
 		texture->read_request_handle = cache_file_read(
 			bitmap->tag_index,
 			bitmap->pixels_offset,
@@ -990,15 +974,23 @@ void *_texture_cache_bitmap_get_hardware_format(
 	{
 		if (system_milliseconds() - texture_cache_last_failure_time > 10000)
 		{
-			terminal_printf(
-				global_real_argb_purple,
-				"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			/* (port: chatter, shown as config.toml's game.console_log says) */
+			if (terminal_shows(_terminal_message_chatter))
+			{
+				terminal_printf(
+					global_real_argb_purple,
+					"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			}
 			error(
 				_error_silent,
 				"YOU GOT STABBED!!!! double-click \"GETSTABBED.BAT\" on your PC now!!!");
-			terminal_printf(
-				global_real_argb_purple,
-				"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			/* (port: chatter, shown as config.toml's game.console_log says) */
+			if (terminal_shows(_terminal_message_chatter))
+			{
+				terminal_printf(
+					global_real_argb_purple,
+					"!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+			}
 			lruv_debug_to_file(
 				"d:\\stabbed.txt",
 				tag_get_name(bitmap->tag_index),
