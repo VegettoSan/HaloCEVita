@@ -11,6 +11,7 @@
  */
 #include "vita_runtime.h"
 #include "halo_vita_cache.h"
+#include "halo_vita_memory.h"
 
 #define cache_files_initialize halo_vita_dvd_cache_files_initialize
 #define cache_files_dispose halo_vita_dvd_cache_files_dispose
@@ -45,6 +46,7 @@
 #undef cache_file_block_until_not_busy
 
 static boolean vita_direct_cache_open;
+static uint32_t vita_direct_cache_tag_size;
 static char vita_direct_cache_name[32];
 static char vita_direct_cache_path[320];
 
@@ -85,7 +87,11 @@ static boolean vita_direct_cache_header(
      * informational string; keep all structural/version/range checks. */
     if (header->header_signature != 'head' || header->footer_signature != 'foot' ||
         header->version != 5 || header->file_length < 0 ||
-        header->file_length > 0x11600000 || !memchr(header->name, 0, sizeof(header->name)) ||
+        header->file_length > 0x11600000 || header->tag_data_offset < 0x800 ||
+        header->tag_data_size < 36 || (uint32_t)header->tag_data_size > HALO_VITA_TAG_CAPACITY ||
+        header->tag_data_offset > header->file_length ||
+        header->tag_data_size > header->file_length - header->tag_data_offset ||
+        !memchr(header->name, 0, sizeof(header->name)) ||
         !memchr(header->build, 0, sizeof(header->build)))
         return FALSE;
     if (_stricmp(header->name, map_name)) {
@@ -96,9 +102,15 @@ static boolean vita_direct_cache_header(
     return TRUE;
 }
 
+size_t halo_vita_cache_direct_tag_size(void)
+{
+    return vita_direct_cache_open ? (size_t)vita_direct_cache_tag_size : 0;
+}
+
 void cache_files_initialize(void)
 {
     vita_direct_cache_open = FALSE;
+    vita_direct_cache_tag_size = 0;
     vita_direct_cache_name[0] = 0;
     vita_direct_cache_path[0] = 0;
     vita_log("[VITA MAP] original cache API uses direct logical-map backend; Xbox z:\\cacheNNN.map disabled");
@@ -193,9 +205,11 @@ boolean cache_file_open(const char *scenario_name, struct cache_file_header *hea
     vita_direct_cache_name[sizeof(vita_direct_cache_name) - 1] = 0;
     csstrncpy(vita_direct_cache_path, path, sizeof(vita_direct_cache_path) - 1);
     vita_direct_cache_path[sizeof(vita_direct_cache_path) - 1] = 0;
+    vita_direct_cache_tag_size = (uint32_t)candidate.tag_data_size;
     vita_direct_cache_open = TRUE;
-    vita_log("[VITA MAP] original cache_file_open direct PASS: name=%s path=%s logical_bytes=%ld type=%d",
-        vita_direct_cache_name, vita_direct_cache_path, candidate.file_length, (int)candidate.scenario_type);
+    vita_log("[VITA MAP] original cache_file_open direct PASS: name=%s path=%s logical_bytes=%ld tag_bytes=%u type=%d",
+        vita_direct_cache_name, vita_direct_cache_path, candidate.file_length,
+        vita_direct_cache_tag_size, (int)candidate.scenario_type);
     return TRUE;
 }
 
@@ -206,6 +220,7 @@ void cache_file_close(void)
     vita_log("[VITA MAP] original cache_file_close direct: name=%s", vita_direct_cache_name);
     vita_cache_resource_unbind();
     vita_direct_cache_open = FALSE;
+    vita_direct_cache_tag_size = 0;
     vita_direct_cache_name[0] = 0;
     vita_direct_cache_path[0] = 0;
 }
