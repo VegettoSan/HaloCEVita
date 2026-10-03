@@ -61,6 +61,12 @@ int halo_vita_cache_index_probe(void *tags, size_t length);
 int halo_vita_cache_mount_menu(void *tags, size_t length);
 int halo_vita_cache_validate_menu(void);
 int halo_vita_cache_unmount_menu(void);
+/* Map transition retirement differs from a diagnostic rollback: original
+ * texture/sound caches legitimately mutate compiled runtime fields while the
+ * menu is live. Restore the relocation journal and release ownership, but do
+ * not demand the retiring image's original full CRC immediately before it is
+ * overwritten by scenario_tags_load(). */
+int halo_vita_cache_release_menu_for_map_change(void);
 int halo_vita_ui_runtime_initialize(void);
 int halo_vita_ui_runtime_dispose(void);
 int halo_vita_menu_root_checkpoint(void);
