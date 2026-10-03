@@ -561,6 +561,19 @@ int vita_xapi_read_at(void *handle, void *buffer, uint32_t count,
     *done = (uint32_t)result;
     vita_xapi_last_error_set(0); return 1;
 }
+int vita_xapi_write_at(void *handle, const void *buffer, uint32_t count,
+    uint64_t offset, uint32_t *done)
+{
+    int result;
+    if (done) *done = 0;
+    if (!done || (!buffer && count) || count > 0x7fffffffU || offset > INT64_MAX) {
+        vita_xapi_last_error_set(87); return 0;
+    }
+    result = sceIoPwrite((SceUID)(intptr_t)handle, buffer, count, (SceOff)offset);
+    if (result < 0) { vita_xapi_last_error_set(5); return 0; }
+    *done = (uint32_t)result;
+    vita_xapi_last_error_set(0); return 1;
+}
 int vita_xapi_fd_times(void *handle, uint64_t times[3])
 {
     SceIoStat stat;

@@ -55,6 +55,7 @@ int sceIoOpen(const char *path,int flags,int mode);
 int sceIoClose(int fd);
 int sceIoRead(int fd,void *buffer,unsigned long count);
 int sceIoPread(int fd,void *buffer,unsigned long count,SceOff offset);
+int sceIoPwrite(int fd,const void *buffer,unsigned long count,SceOff offset);
 int sceIoWrite(int fd,const void *buffer,unsigned long count);
 SceOff sceIoLseek(int fd,SceOff offset,int whence);
 int sceIoMkdir(const char *path,int mode);
@@ -125,6 +126,10 @@ int sceIoClose(int fd){return close(fd);}
 int sceIoRead(int fd,void *p,unsigned long n){return read(fd,p,n);}
 int sceIoPread(int fd,void *p,unsigned long n,SceOff o){return pread(fd,p,n,o);}
 int xapi_test_write_limit, xapi_test_fail_write;
+int sceIoPwrite(int fd,const void *p,unsigned long n,SceOff o){
+ if(xapi_test_fail_write)return -1;
+ if(xapi_test_write_limit && n>(unsigned)xapi_test_write_limit)n=xapi_test_write_limit;
+ return pwrite(fd,p,n,o);}
 int sceIoWrite(int fd,const void *p,unsigned long n){
  if(xapi_test_fail_write)return -1;
  if(xapi_test_write_limit && n>(unsigned)xapi_test_write_limit)n=xapi_test_write_limit;
@@ -238,6 +243,25 @@ def main():
         assert xapi.vita_xapi_read_at(handle,offset_bytes,4,999,C.byref(offset_count))
         assert offset_count.value == 0
         assert xapi.SetFilePointer(handle, 0, None, 1) == 3
+        xapi.vita_xapi_write_at.argtypes = [C.c_void_p,C.c_void_p,C.c_uint32,C.c_uint64,C.POINTER(C.c_uint32)]
+        assert xapi.vita_xapi_write_at(handle,C.create_string_buffer(b'ab'),2,0,C.byref(offset_count))
+        assert offset_count.value == 2
+        assert xapi.SetFilePointer(handle, 0, None, 1) == 3
+        limit = C.c_int.in_dll(xapi,'xapi_test_write_limit')
+        limit.value = 1
+        assert xapi.vita_xapi_write_at(handle,C.create_string_buffer(b'cd'),2,2,C.byref(offset_count))
+        assert offset_count.value == 1
+        limit.value = 0
+        fail = C.c_int.in_dll(xapi,'xapi_test_fail_write')
+        fail.value = 1
+        offset_count.value = 123
+        assert not xapi.vita_xapi_write_at(handle,offset_bytes,1,0,C.byref(offset_count))
+        assert offset_count.value == 0 and xapi.vita_xapi_last_error_get() == 5
+        fail.value = 0
+        assert not xapi.vita_xapi_write_at(handle,None,1,0,C.byref(offset_count))
+        assert xapi.vita_xapi_last_error_get() == 87
+        assert not xapi.vita_xapi_write_at(handle,offset_bytes,1,1<<63,C.byref(offset_count))
+        assert xapi.vita_xapi_last_error_get() == 87
         assert xapi.SetFilePointer(handle, 2, None, 0) == 2
         assert xapi.WriteFile(handle, C.create_string_buffer(b'XY'), 2, C.byref(count), None)
         assert xapi.SetFilePointer(handle, 0, None, 0) == 0
