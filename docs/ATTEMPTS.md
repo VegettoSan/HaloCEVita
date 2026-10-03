@@ -1273,3 +1273,29 @@ Build219 research compiled the full configured game units for ARM, reaching link
 - Exact CI hard-float compiler/sysroot archive11258832341 retrieved and checksum validated. Unpacked fresh to avoid stale hard-linked compiler aliases from the independent SoftFP snapshot. Local complete00.36 ELF/SELF/VPK now builds and native verifier PASS, including original lifetime/input/UI/render/scenario getters, no recovery focus/world/audio substitutes, valid six-entry VPK, current banner/SFO and no unexpected unresolved imports. Local precommit VPK digest01c025c3d43c82eb2dc863c076acfea11c237e73b03be20f23ea13fabb97df52; final delivery will identify its own pushed source/CI artifact.
 - Real supplied ui.map validates485 widgets,4 fonts,122 string lists,195 bitmap groups/384 bitmaps and3543 relocated pointers; original root9 widgets and creation callbacks86/23. Bloodgulch safely rejects use as a Main Menu cache. Both original supplied SHA256s unchanged. An initial tool invocation used numbered upload filenames, which the harness did not classify as ui.map; corrected only the test aliases, never source maps.
 - Removed the redundant optional closure/temporary SDK export job: original closure is now required shipping CI. No complete console/menu/world claim; full scenario/BSP new-map activation and real Vita testing remain outstanding.
+
+
+### A118 — Original renderer audit and native00.39 candidate (2026-10-03)
+
+- Compared imported21714ac and current upstream23b542 function boundaries through
+  UI, rasterizer, D3D8, NV2A translators, textures, indexed draw, target and Present;
+  see RENDERER_AUDIT_00.39.md for current implementation/capability matrix.
+- Applied upstream SetIndices base retention and indexed-stream offset; actual
+  C regression covers bases0/100/65536, minimum index, empty/no-data paths.
+- Hardened exact register-prefix adapter with comment-aware parsing, invalid/
+  dynamic index/capacity/vector-limit rejection and removal of unused declarations.
+  Actual translators/adapter pass nine combiner variants with body byte identity.
+  Added exact effective native compiler-source dumps and source-dump regression.
+- Deleted the separate Vita DXT1 decoder; all DXT formats now select the existing
+  upstream decoder/upload chain. Actual DXT mask/texture upload contracts pass,
+  preserving original alpha, mip count and transfer ownership.
+- Build271/272 rejected obsolete staged-owner symbols. Updated verifier to require
+  selected original menu/new-map owners and retain native-reader disassembly gate;
+  no stub or unresolved symbol hidden.
+- All26 workflow host commands pass locally; supplied ui.map transaction checks
+  pass485 widgets/3543 pointers; Bloodgulch safely rejects Main Menu usage. Maps
+  unchanged. Exact CI SDK native00.39 build and package verifier pass. Final CI
+  provenance/download is recorded separately after completion.
+- Hardware: no attached Vita. White panels, position, fades, transitions/FPS remain
+  unverified. No clip-position retry or symptom correction. Complete gameplay
+  main-loop/world and volume/sampler/depth capability acceptance remain pending.

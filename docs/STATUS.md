@@ -1,6 +1,19 @@
 # Project status
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
+
+Current source **00.39 / A118: LINKS locally**. The [function comparison](RENDERER_AUDIT_00.39.md)
+retains original UI, rasterizer, NV2A shader equations and presentation. It restores
+upstream indexed base-vertex handling, bounds exact native register-array storage,
+records effective compiler sources, and removes the duplicate Vita DXT1 decoder
+in favor of the original DXT1/3/5 decoder. All26 required host commands and the
+exact-SDK native package verifier pass locally. Final CI provenance is recorded
+in BUILD.md after download; console acceptance is pending. Shipping now selects
+original `main_menu_load`/new-map owners rather than the staged subset.
+Full gameplay-loop/world activation and reported visual faults remain unaccepted.
+The00.38 clip-position experiment had no hardware visual improvement and was not retried.
+
+The following entries are historical milestones, not the current implementation.
 
 V5 source00.36 (A111–A113): default target now selects original
 `game_initialize`, complete UI callback tables, original XInput/event collection,

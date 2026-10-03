@@ -1,5 +1,12 @@
 # Known issues / open risks
 
+2026-10-03 / A118 /00.39: corrections are documented in
+[RENDERER_AUDIT_00.39.md](RENDERER_AUDIT_00.39.md). White panels, text/geometry
+placement and navigation stability remain open until this exact CI binary is
+observed on Vita. Original menu/new-map owners are selected; full gameplay-loop/
+world execution, volume textures and unsupported sampler/depth capabilities
+remain unaccepted. Native linking does not establish their closure.
+
 Use stable IDs so attempts and commits can reference the same problem.
 
 ## KI-001 — Source baseline imported (resolved)

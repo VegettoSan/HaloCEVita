@@ -266,3 +266,14 @@ A107: D3DDevice_Present already composes Halo's 640x480 target with its aspect-p
 Date: 2026-10-02
 
 Use `game_initialize`, original UI/event tables and `process_ui_widgets` with original pregame rendering. Keep the00.35 staged selector available only as recovery. Restore subsystem lifetime before tags/root and preserve original modal/timeouts/deferred filesystem processing. Keep the proven Vita map reader instead of running retail DVD/HDD precaching, which creates fixed Xbox cache files and does not understand the supplied compressed maps. This does not stand in for complete original scenario/BSP new-map activation. Source reuse for native networking/ARM CRT is attributed in docs/UPSTREAM.md and licensed with retained GPL-3.0 terms; no external executable or renderer is packaged.
+
+
+## D063 — Original decoder/equations with native representation boundaries
+
+2026-10-03 / A118: remove independent Vita DXT1 decoding. DXT1/3/5 mipmaps use
+the existing upstream decoder and native BGRA uploader. Specialize storage
+declarations of original NV2A register arrays only, retaining indices/equations
+exactly; reject unrepresentable references/native limits and dump final compiler
+input. Preserve upstream indexed-base semantics instead of compensating in
+widget data. Package gates follow selected original lifetime owners without
+fake functions or unselected recovery requirements.
