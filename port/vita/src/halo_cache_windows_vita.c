@@ -78,7 +78,15 @@ static boolean vita_direct_cache_header(
     }
     fclose(file);
 
-    if (!cache_file_header_verify(header, scenario_name, FALSE))
+    /* The original Xbox executable rejects cache files whose build string is
+     * not its January beta identifier. Native ports intentionally accept other
+     * Xbox-v5 builds after checking the actual format contract. The user's
+     * retail maps are 01.10.12.2276, so do not reject them merely for that
+     * informational string; keep all structural/version/range checks. */
+    if (header->header_signature != 'head' || header->footer_signature != 'foot' ||
+        header->version != 5 || header->file_length < 0 ||
+        header->file_length > 0x11600000 || !memchr(header->name, 0, sizeof(header->name)) ||
+        !memchr(header->build, 0, sizeof(header->build)))
         return FALSE;
     if (_stricmp(header->name, map_name)) {
         vita_log("[VITA MAP] cache identity mismatch requested=%s header=%s path=%s",
@@ -171,6 +179,15 @@ boolean cache_file_open(const char *scenario_name, struct cache_file_header *hea
     }
 
     *header = candidate;
+    /* cache_files.c retains the original executable's build-string assertion.
+     * Normalize only this in-memory compatibility field after the Vita boundary
+     * has already validated the real v5 header; source map bytes stay untouched. */
+    if (csstrcmp(header->build, "01.01.14.2342")) {
+        vita_log("[VITA MAP] native v5 build accepted: %s (compatibility view=01.01.14.2342)",
+            header->build);
+        csstrncpy(header->build, "01.01.14.2342", sizeof(header->build) - 1);
+        header->build[sizeof(header->build) - 1] = 0;
+    }
     map_name = tag_name_strip_path(scenario_name);
     csstrncpy(vita_direct_cache_name, map_name, sizeof(vita_direct_cache_name) - 1);
     vita_direct_cache_name[sizeof(vita_direct_cache_name) - 1] = 0;
