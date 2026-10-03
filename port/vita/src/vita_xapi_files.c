@@ -546,3 +546,63 @@ done:
     if (!ok && dst>=0 && !exists) sceIoRemove(target);
     free(buffer); vita_xapi_last_error_set(error); return ok;
 }
+
+/* Native metadata/positioned-I/O boundary for the original cache worker. */
+int vita_xapi_read_at(void *handle, void *buffer, uint32_t count,
+    uint64_t offset, uint32_t *done)
+{
+    int result;
+    if (!done || (!buffer && count) || count > 0x7fffffffU || offset > INT64_MAX) {
+        vita_xapi_last_error_set(87); return 0;
+    }
+    *done = 0;
+    result = sceIoPread((SceUID)(intptr_t)handle, buffer, count, (SceOff)offset);
+    if (result < 0) { vita_xapi_last_error_set(6); return 0; }
+    *done = (uint32_t)result;
+    vita_xapi_last_error_set(0); return 1;
+}
+int vita_xapi_fd_times(void *handle, uint64_t times[3])
+{
+    SceIoStat stat;
+    if (!times || sceIoGetstatByFd((SceUID)(intptr_t)handle, &stat) < 0) {
+        vita_xapi_last_error_set(6); return 0;
+    }
+    if (sceRtcGetWin32FileTime(&stat.st_ctime,&times[0]) < 0 ||
+        sceRtcGetWin32FileTime(&stat.st_atime,&times[1]) < 0 ||
+        sceRtcGetWin32FileTime(&stat.st_mtime,&times[2]) < 0) {
+        vita_xapi_last_error_set(87); return 0;
+    }
+    vita_xapi_last_error_set(0); return 1;
+}
+int vita_xapi_set_fd_times(void *handle, const uint64_t *creation,
+    const uint64_t *access, const uint64_t *write)
+{
+    SceIoStat stat; unsigned int bits = 0;
+    memset(&stat, 0, sizeof(stat));
+    if (creation) {
+        if (sceRtcSetWin32FileTime(&stat.st_ctime,*creation) < 0) goto invalid;
+        bits |= SCE_CST_CT;
+    }
+    if (access) {
+        if (sceRtcSetWin32FileTime(&stat.st_atime,*access) < 0) goto invalid;
+        bits |= SCE_CST_AT;
+    }
+    if (write) {
+        if (sceRtcSetWin32FileTime(&stat.st_mtime,*write) < 0) goto invalid;
+        bits |= SCE_CST_MT;
+    }
+    if (bits && sceIoChstatByFd((SceUID)(intptr_t)handle,&stat,bits) < 0) {
+        vita_xapi_last_error_set(5); return 0;
+    }
+    vita_xapi_last_error_set(0); return 1;
+invalid:
+    vita_xapi_last_error_set(87); return 0;
+}
+void platform_translate_path(const char *name, char *out, unsigned long size)
+{
+    uint32_t error; int exists;
+    if (!out || !size) return;
+    out[0] = 0;
+    if (!resolve_xbox_path(name,out,size,1,1,&exists,&error))
+        vita_xapi_last_error_set(error);
+}

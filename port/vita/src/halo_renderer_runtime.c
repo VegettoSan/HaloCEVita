@@ -231,6 +231,26 @@ void halo_vita_renderer_dispose_before_root(void)
     vita_log("[VITA 040] original pre-root renderer disposal PASS");
 }
 
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+int halo_vita_renderer_render_menu_frame(void)
+{
+    if (!vita_renderer_ready || !global_d3d_device) return 0;
+    halo_vita_main_render_time_update();
+    ++vita_menu_frame_count;
+    if (vita_first_menu_frame)
+        vita_log("[VITA ORIGINAL FRAME] main_pregame_render begin");
+    main_pregame_render();
+    render_frame_present(NULL, NULL);
+#ifdef HALO_VITA_MENU_AUDIO
+    halo_vita_menu_audio_frame();
+#endif
+    if (vita_first_menu_frame) {
+        vita_log("[VITA ORIGINAL FRAME] main_pregame_render/render_frame_present returned");
+        vita_first_menu_frame = FALSE;
+    }
+    return 1;
+}
+#else
 int halo_vita_renderer_render_menu_frame(void)
 {
     struct rasterizer_frame_begin_parameters frame_parameters;
@@ -364,3 +384,5 @@ int halo_vita_renderer_render_menu_frame(void)
     }
     return 1;
 }
+
+#endif

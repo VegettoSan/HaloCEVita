@@ -19,6 +19,7 @@
 #undef vsnprintf
 #undef vsprintf
 
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 boolean input_has_gamepad(short index)
 {
     struct vita_gamepad_sample sample;
@@ -43,6 +44,8 @@ boolean transport_network_available(void)
     return FALSE;
 }
 
+#endif
+
 unsigned long system_milliseconds(void) { return (unsigned long)(vita_time_us() / 1000u); }
 void *system_malloc(long size) { return size > 0 ? malloc((size_t)size) : NULL; }
 void *system_realloc(void *pointer, long size)
@@ -60,6 +63,7 @@ void stack_walk(short levels)
 	vita_log("stack_walk: ARM unwinding unavailable; retain ELF and console crash dump");
 }
 /* Bring-up diagnostic sink. Full errors.c/UI integration remains pending. */
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 void error(short priority, const char *format, ...)
 {
 	char message[2048]; va_list arguments;
@@ -68,6 +72,8 @@ void error(short priority, const char *format, ...)
 	va_end(arguments);
 	vita_log("Halo error[%d]: %s", priority, message);
 }
+#endif
+
 void platform_log(const char *format, ...)
 {
 	char message[2048]; va_list arguments;
@@ -174,6 +180,7 @@ static const char *translate_format(const char *format, char *buffer, size_t siz
 	}
 	buffer[length] = 0; return buffer;
 }
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 int halo_linux_vsprintf(char *buffer, const char *format, va_list arguments)
 {
 	char translated[1024];
@@ -228,10 +235,20 @@ const char *config_string(const char *name) { (void)name; return ""; }
 int config_boolean(const char *name) { return !strcmp(name, "audio.enabled"); }
 double config_real(const char *name) { return !strcmp(name, "audio.volume") ? 1.0 : 0.0; }
 #ifdef HALO_VITA_MENU_AUDIO
+#endif
+
+#endif
 BOOL platform_sdl_initialize(void) { return halo_vita_audio_device_initialize() ? TRUE : FALSE; }
+
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+void platform_show_message(const char *title, const char *message)
+{
+    vita_log("%s: %s", title ? title : "Halo", message ? message : "");
+}
 #endif
 
 /* Original native CRT comparison needed by saved-game directory identity. */
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 int _strnicmp(const char *string1, const char *string2, size_t count)
 {
 	for (; count; count--, string1++, string2++)
@@ -244,3 +261,4 @@ int _strnicmp(const char *string1, const char *string2, size_t count)
 	}
 	return 0;
 }
+#endif

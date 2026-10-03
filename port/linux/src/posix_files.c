@@ -15,6 +15,10 @@ the host ABI and _FILE_OFFSET_BITS=64.
 #include <unistd.h>
 
 #include "posix.h"
+#ifdef __vita__
+#include <psp2/io/stat.h>
+#include <psp2/rtc.h>
+#endif
 
 static void split64(unsigned long long value, posix_ulong *low, posix_ulong *high)
 {
@@ -30,6 +34,12 @@ static void fill_information(const struct stat *st, struct posix_file_informatio
 	if (!(st->st_mode & S_IWUSR))
 		information->flags |= _posix_file_is_read_only;
 	split64((unsigned long long)st->st_size, &information->size_low, &information->size_high);
+#ifdef __vita__
+    /* newlib exposes second-resolution stat timestamps on Vita. */
+    information->modification_seconds = (posix_ulong)st->st_mtime;
+    information->access_seconds = (posix_ulong)st->st_atime;
+    information->creation_seconds = (posix_ulong)st->st_ctime;
+#else
 	information->modification_seconds = (posix_ulong)st->st_mtim.tv_sec;
 	information->modification_nanoseconds = (posix_ulong)st->st_mtim.tv_nsec;
 	information->access_seconds = (posix_ulong)st->st_atim.tv_sec;
@@ -37,6 +47,8 @@ static void fill_information(const struct stat *st, struct posix_file_informatio
 	/* Linux has no portable creation time; the change time is the closest */
 	information->creation_seconds = (posix_ulong)st->st_ctim.tv_sec;
 	information->creation_nanoseconds = (posix_ulong)st->st_ctim.tv_nsec;
+#endif
+
 }
 
 int posix_stat(const char *path, struct posix_file_information *information)
@@ -63,6 +75,22 @@ int posix_set_file_times(const char *path,
 	posix_ulong access_seconds, posix_ulong access_nanoseconds,
 	posix_ulong modification_seconds, posix_ulong modification_nanoseconds)
 {
+#ifdef __vita__
+    SceIoStat stat;
+    unsigned int bits = 0;
+    memset(&stat, 0, sizeof(stat));
+    if (access_seconds) {
+        if (sceRtcSetTime64_t(&stat.st_atime, access_seconds) < 0) return -1;
+        stat.st_atime.microsecond = access_nanoseconds / 1000;
+        bits |= SCE_CST_AT;
+    }
+    if (modification_seconds) {
+        if (sceRtcSetTime64_t(&stat.st_mtime, modification_seconds) < 0) return -1;
+        stat.st_mtime.microsecond = modification_nanoseconds / 1000;
+        bits |= SCE_CST_MT;
+    }
+    return bits ? sceIoChstat(path, &stat, bits) : 0;
+#else
 	struct timespec times[2];
 
 	times[0].tv_sec = (time_t)access_seconds;
@@ -70,6 +98,8 @@ int posix_set_file_times(const char *path,
 	times[1].tv_sec = (time_t)modification_seconds;
 	times[1].tv_nsec = modification_seconds ? (long)modification_nanoseconds : UTIME_OMIT;
 	return utimensat(AT_FDCWD, path, times, 0);
+#endif
+
 }
 
 int posix_seek(int descriptor, posix_long offset_low, posix_long offset_high, int whence,

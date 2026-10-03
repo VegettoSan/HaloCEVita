@@ -70,3 +70,8 @@ Do not merge upstream blindly once Vita-specific changes exist. Prefer:
 ## Licensing
 
 Preserve upstream `LICENSE.md` and all third-party licenses/notices when source is imported. Do not remove third-party attribution simply because the root project uses CC0.
+
+
+## Focused native Vita platform reuse (2026-10-02, V5 reintegration)
+
+Source reference BirchWoodGod/halo-ce-vita at5ceb8e89f2c1219046d070a3f306348a5da30c85 supplies the native SceNet socket adapter (host/vita_net.c, excluding diagnostic probes) and ARMv7 fenv/MSVC control-word adaptation. The socket unit now logs through our native logger. No donor frontend, executable, maps, GXM renderer or shaders are imported. These adapted portions retain GPL-3.0-only attribution; full source license is LICENSES/BirchWoodGod-GPL-3.0.txt. The combined executable containing them is distributed under GPL-3.0, with this public repository providing its corresponding modified source; existing compatible permissive notices remain intact.

@@ -1,3 +1,4 @@
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 /* Diagnostic-only contracts reached by the original Xbox texture cache.
  * Keep failure information useful on Vita without pulling the PC terminal,
  * console, BSP, player and object-debug subsystems into Main Menu bring-up. */
@@ -51,3 +52,5 @@ void scenario_debug_to_file(FILE *stream)
         fprintf(stream, "<no scenario loaded>\n");
     }
 }
+
+#endif

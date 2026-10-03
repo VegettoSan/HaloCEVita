@@ -17,3 +17,24 @@ int halo_interpolation_enabled(void)
 {
 	return 0;
 }
+
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+#include <string.h>
+#include <stdint.h>
+typedef int BOOL;
+#ifndef FALSE
+#define FALSE 0
+#endif
+struct platform_ui_pointer;
+void platform_video_window_size(int *width, int *height)
+{
+    *width = 960; *height = 544;
+}
+/* Vita has no desktop mouse. Native controller input stays in XInput. */
+void platform_ui_pointer_set_active(BOOL active) { (void)active; }
+BOOL platform_ui_pointer_read(struct platform_ui_pointer *pointer)
+{
+    (void)pointer;
+    return FALSE;
+}
+#endif

@@ -4629,7 +4629,7 @@ void main_screen_shell_load(
 	boolean load_main_menu = TRUE;
 
 	ui_widgets_inhibit_processing(FALSE);
-#ifndef HALO_VITA_MENU_BRINGUP
+#if !defined(HALO_VITA_MENU_BRINGUP) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 	/* Staged Vita already initialized saved-game/event/keyboard owners before
 	 * its first root. Returning to this shell must not start Bink/attract mode
 	 * or repeat full-platform initialization while no world runtime exists. */
@@ -4660,7 +4660,7 @@ void main_screen_shell_load(
 #endif
 	if (load_main_menu)
 	{
-#ifndef HALO_VITA_MENU_BRINGUP
+#if !defined(HALO_VITA_MENU_BRINGUP) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 		attract_mode_reset_timer();
 #endif
 		ui_widgets_close_all();

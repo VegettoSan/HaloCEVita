@@ -681,7 +681,7 @@ void ui_widget_game_data_function_invoke(
 		0x10A,
 		widget);
 
-#ifdef HALO_VITA
+#if defined(HALO_VITA) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	/* The mounted retail ui.map Main Menu graph uses 0, 8 and 21.
 	 * Invoke the original handlers for those indices. Unexpected indices
 	 * fail explicitly until their game dependencies are integrated. */

@@ -1633,7 +1633,7 @@ struct persistent_game_data_info persistant_game_data_info = { 0 };
 
 struct ui_widget_event_handler_function_table
 {
-#ifndef HALO_VITA
+#if !defined(HALO_VITA) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 	ui_widget_event_handler_function functions[102];
 #endif
 	char const *names[102];
@@ -1641,7 +1641,7 @@ struct ui_widget_event_handler_function_table
 
 static struct ui_widget_event_handler_function_table event_handler_function_list =
 {
-#ifndef HALO_VITA
+#if !defined(HALO_VITA) || defined(HALO_VITA_ORIGINAL_RUNTIME)
 	{
 		widget_event_function_null,
 		widget_event_function_list_widget_goto_next_item,
@@ -2446,32 +2446,32 @@ static boolean main_menu_initialize(
 	struct event_record *event,
 	boolean *widget_deleted)
 {
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] player_ui_clear_multiplayer_joins begin");
 #endif
 	player_ui_clear_multiplayer_joins();
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] player_ui_clear_multiplayer_variant begin");
 #endif
 	player_ui_clear_multiplayer_variant();
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] dispose_global_network_game_client begin");
 #endif
 	dispose_global_network_game_client();
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] dispose_global_network_game_server begin");
 #endif
 	dispose_global_network_game_server();
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] network_game_accept_remote_connections begin");
 #endif
 	network_game_accept_remote_connections(FALSE);
 	player_spawn_count = 1;
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] player_ui_end_editing_profile begin");
 #endif
 	player_ui_end_editing_profile();
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	vita_log("[VITA 027] menu music check begin");
 #endif
 	if (!ui_main_menu_music_active())
@@ -3556,7 +3556,7 @@ boolean ui_widget_event_handler_function_invoke(
 		"(widget != NULL) && (widget_deleted != NULL)");
 	if ((short)function_index >= 0 && function_index < 102)
 	{
-#ifdef HALO_VITA
+#if defined(HALO_VITA) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 		/* The reachable ui.map Main Menu graph uses 0,23,86,87,101.
 		 * Creation needs 23/86. Interactive 87/101 remain explicit
 		 * blockers until their game transitions are connected. */

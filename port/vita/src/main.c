@@ -7,18 +7,7 @@
 #include <string.h>
 
 #ifdef HALO_VITA_MENU_UPDATE_PROBE
-/* The optional closure probe must exercise January's real per-frame UI owner,
- * not an undeclared placeholder. Keep the call isolated behind the research
- * switch so the staged shipping shell remains on its narrower verified path
- * until the full dependency closure is proven on Vita. */
-void process_ui_widgets(void);
-int halo_vita_menu_update_checkpoint(void)
-{
-	vita_log("[VITA UI UPDATE] original process_ui_widgets begin");
-	process_ui_widgets();
-	vita_log("[VITA UI UPDATE] original process_ui_widgets returned");
-	return 1;
-}
+int halo_vita_menu_update_checkpoint(void);
 #endif
 
 int main(void)
@@ -115,7 +104,7 @@ int main(void)
 	}
 	vita_log("[VITA 032] original Main Menu root active; original renderer=%s",
 		renderer ? "READY" : "DISABLED");
-#ifdef HALO_VITA_MENU_UPDATE_PROBE
+#if defined(HALO_VITA_MENU_UPDATE_PROBE) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	if (!halo_vita_menu_update_checkpoint()) goto cleanup;
 #endif
 #else

@@ -77,6 +77,7 @@ enum
     _vita_bitmap_cached_bit = 7,
 };
 
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 struct scenario *global_scenario_get(void)
 {
     match_assert("c:\\halo\\SOURCE\\scenario\\scenario.c", 183, vita_ui_scenario);
@@ -87,6 +88,12 @@ struct game_globals *scenario_get_game_globals(void)
 {
     return vita_ui_game_globals;
 }
+
+#else
+extern struct scenario *global_scenario;
+extern struct game_globals *global_game_globals;
+extern long global_scenario_index;
+#endif
 
 static int halo_vita_ui_game_globals_initialize(void)
 {
@@ -133,6 +140,11 @@ static int halo_vita_ui_game_globals_initialize(void)
         return 0;
     }
     vita_ui_game_globals = globals;
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    global_scenario = vita_ui_scenario;
+    global_game_globals = globals;
+    global_scenario_index = scenario_index;
+#endif
     vita_log("[VITA 031] real ui scenario/globals mounted: scnr=%08lx matg=%08lx interface_refs=%ld iface_map3=%08lx path=%s",
         (unsigned long)scenario_index, (unsigned long)index,
         globals->interface_tag_references.count,

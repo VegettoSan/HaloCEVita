@@ -19,11 +19,18 @@ get_filename_component(ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../.." ABSOLUTE)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 file(GLOB MUSL_MATH_SOURCES CONFIGURE_DEPENDS ${ROOT}/port/third_party/musl-math/src/*.c)
 
+set(VITA_UI_WIDGET_SOURCE src/halo_ui_widget_vita.c)
+set(VITA_UI_HANDLER_SOURCE src/halo_ui_event_handlers_vita.c)
+if(HALO_VITA_ORIGINAL_RUNTIME)
+  set(VITA_UI_WIDGET_SOURCE src/halo_ui_original.c)
+  set(VITA_UI_HANDLER_SOURCE ${ROOT}/source/interface/ui_widget_event_handler_functions.c)
+endif()
+
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
   src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
-  src/vita_memory_watch.c src/halo_ui_widget_vita.c src/halo_ui_events.c
-  src/halo_ui_kernel.c src/halo_ui_file_search.c src/halo_ui_event_handlers_vita.c
+  src/vita_memory_watch.c ${VITA_UI_WIDGET_SOURCE} src/halo_ui_events.c
+  src/halo_ui_kernel.c src/halo_ui_file_search.c ${VITA_UI_HANDLER_SOURCE}
   ${ROOT}/source/cseries/cseries.c
   ${ROOT}/source/cseries/debug_memory.c
   ${ROOT}/source/cseries/profile.c
@@ -137,12 +144,28 @@ if(HALO_VITA_ORIGINAL_RUNTIME)
     string(JSON ORIGINAL_SOURCE GET "${ORIGINAL_CONFIG}" projects 0 objects ${I} name)
     string(JSON ORIGINAL_STATUS GET "${ORIGINAL_CONFIG}" projects 0 objects ${I} status)
     if(ORIGINAL_SOURCE MATCHES "\\.c$" AND NOT ORIGINAL_STATUS STREQUAL "MISSING"
-        AND NOT ORIGINAL_SOURCE MATCHES "source/interface/(ui_widget|event_manager|ui_widget_event_handler_functions)\\.c$")
+        AND NOT ORIGINAL_SOURCE MATCHES "source/interface/(ui_widget|event_manager|ui_widget_event_handler_functions)\\.c$"
+        AND NOT ORIGINAL_SOURCE MATCHES "source/cseries/(cseries_windows|stack_walk_windows)\\.c$")
       if(NOT "${ROOT}/${ORIGINAL_SOURCE}" IN_LIST EXISTING_CORE_SOURCES)
         target_sources(halo_core PRIVATE "${ROOT}/${ORIGINAL_SOURCE}")
       endif()
     endif()
   endforeach()
+  target_sources(halo_core PRIVATE
+    src/vita_original_file_api.c
+    ${ROOT}/port/linux/src/bink_null.c
+    ${ROOT}/port/linux/src/msvc_crt.c
+    ${ROOT}/port/linux/src/xnet.c
+    ${ROOT}/port/linux/src/port_config.c
+    ${ROOT}/port/linux/game/network_distributed.c
+    ${ROOT}/port/linux/game/network_objects.c
+    ${ROOT}/port/linux/game/network_damage.c
+    ${ROOT}/port/linux/game/render_interpolation.c)
+  target_include_directories(halo_core PRIVATE ${ROOT}/port/third_party/tomlc17)
+  set_source_files_properties(src/vita_original_file_api.c ${ROOT}/port/linux/src/bink_null.c
+    ${ROOT}/port/linux/src/msvc_crt.c ${ROOT}/port/linux/src/xnet.c
+    ${ROOT}/port/linux/src/port_config.c
+    PROPERTIES COMPILE_DEFINITIONS HALO_LINUX_PLATFORM_LAYER)
   target_compile_definitions(halo_core PRIVATE HALO_VITA_ORIGINAL_RUNTIME=1)
   set_source_files_properties(${ROOT}/source/shell/shell_xbox.c
     PROPERTIES COMPILE_DEFINITIONS main=halo_original_main)
@@ -226,6 +249,16 @@ target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_APP_VERSION="${VITA_APP_
 if(HALO_VITA_MENU_BRINGUP)
   target_compile_definitions(halo_core PRIVATE HALO_VITA_MENU_BRINGUP=1)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_BRINGUP=1)
+endif()
+if(HALO_VITA_ORIGINAL_RUNTIME)
+  target_sources(HaloCE.elf PRIVATE src/vita_native_net.c
+    ${ROOT}/port/linux/src/posix_files.c
+    ${ROOT}/port/third_party/tomlc17/tomlc17.c)
+  set_source_files_properties(${ROOT}/port/linux/src/posix_files.c
+    PROPERTIES COMPILE_DEFINITIONS _GNU_SOURCE)
+  target_include_directories(HaloCE.elf PRIVATE ${ROOT}/port/linux/src ${ROOT}/port/third_party/tomlc17)
+  target_link_libraries(HaloCE.elf PRIVATE SceNet_stub SceNetCtl_stub)
+  target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_ORIGINAL_RUNTIME=1)
 endif()
 if(HALO_VITA_MENU_UPDATE_PROBE)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_UPDATE_PROBE=1)
