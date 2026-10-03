@@ -107,17 +107,23 @@ int halo_vita_main_pump_deferred_map_change(void)
         main_get_current_solo_level() == NONE)
         return 0;
 
+    /* Validation is intentionally one-shot per rejected map name. The staged
+     * shell pumps this function every frame; repeating full header diagnostics
+     * at 30 Hz would hide the first useful failure in debug.txt. A new map
+     * selection is validated normally. */
+    if (!csstrcmp(missing_map, requested))
+        return 0;
+
     /* Check the direct Vita map before tearing down a working menu. Missing
      * a10 therefore remains a recoverable data/setup condition, not a black
      * screen caused by releasing ui.map too early. */
     if (!cache_files_precache_map_loaded(requested)) {
-        if (csstrcmp(missing_map, requested)) {
-            csstrncpy(missing_map, requested, NUMBEROF(missing_map) - 1);
-            missing_map[NUMBEROF(missing_map) - 1] = 0;
-            vita_log("[VITA MAP] Campaign request waiting for valid map: %s", requested);
-        }
+        csstrncpy(missing_map, requested, NUMBEROF(missing_map) - 1);
+        missing_map[NUMBEROF(missing_map) - 1] = 0;
+        vita_log("[VITA MAP] Campaign request waiting for valid map: %s", requested);
         return 0;
     }
+    missing_map[0] = 0;
 
     game_options_new((struct game_options *)&options);
     csstrncpy(options.map_name, requested, NUMBEROF(options.map_name) - 1);
