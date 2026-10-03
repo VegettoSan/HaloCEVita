@@ -1572,3 +1572,38 @@ covers it. Native gates and final package remain pending; no console acceptance.
 - Added actual ARM verifier gates for retained widget graph/created handlers,
   conditional dispatch, render input and keyboard consumers.31 required host
   commands PASS locally; final native CI/package and console acceptance pending.
+
+
+### A131 — Exact00.42 native CI285 package and delivery (2026-10-03)
+
+- Published61568b4beab186e8d0d5a73b39065903700f63a7 directly to main. CI
+  Build285/run37151755499 all31 required host commands, real-SDK native build/
+  verifier and publication SUCCESS. Actual ARM text and font data access gates
+  remain PASS; new widget-load/created/conditional/render-input/keyboard block
+  accessor disassembly gates PASS. Original UI/NV2A/cache lifetimes retained.
+- Artifact11283804934,16557716 bytes, GitHub ZIP SHA-256
+ 2fb1f41bb7da00b48a407595f376ada5f2409cdd08fea464e2769d3883d12393
+  matches independently downloaded bytes. Clean-source manifest, all counts/
+  hashes,88 original required symbols and typed-accessor/private font owners,
+  absent recovery cache owners, ARM32 hardfp/VFP, SELF, SFO/banner00.42, exact
+  six owned VPK entries, indexed PNG CRCs/dimensions and LiveArea XML PASS.
+  Release digests match every executable/symbol file.
+- VPK2620054 bytes SHA-256
+  e911c9ef358a403d98b3156b44c5f1c72f502bd94456bda126dcaa7fda9b1f73;
+  ELF38992444 bytes SHA-256
+  2215f9d6652614102bdb0261c27d2daba1765fb75e3be74722e4729e2f7b115c;
+  map6790524 bytes SHA-256
+  f43334e52a72417bdbb4e0d2dd2dfffe093b845e93d1021025833b4ceca608fa.
+  Matching symbols and exact CI package remain in release vita-build-285.
+- Delivered unchanged CI VPK as HaloCEVita-00.42-Build285.vpk. State LINKS /
+  HOST VERIFIED / NATIVE BUILD VERIFIED.00.42 REAL VITA VERIFIED remains
+  pending.00.41 hardware passes prior language boundary then stops at root
+  child reference; no root/frame/visible menu acceptance. Final docs-only
+  checkpoint changes no executable. No local SDK or other port VPK substituted.
+- Both read-only source maps retain hashes35e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833
+  and50fe52406f075d975e24100a65b26ff696458023dd3509878953052ab0ef858f. No
+  map/core/retail data included in git or VPK. Imported desktop/Android CI309
+  still fails separately and is not a native Vita result.
+- BUILD.md records next original main_menu_load/root/frame/input/profile/
+  keyboard/music/warm/log/photo/dump checks. Original640x480 render policy,
+  white panels/full menu/stability/main_loop/Campaign/world limitations remain.

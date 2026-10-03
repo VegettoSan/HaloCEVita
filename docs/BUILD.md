@@ -1,4 +1,41 @@
-## Current native test package —00.41 (2026-10-03)
+## Current native test package —00.42 (2026-10-03)
+
+Native CI source `61568b4beab186e8d0d5a73b39065903700f63a7`.
+[Vita Build285](https://github.com/VegettoSan/HaloCEVita/actions/runs/37151755499)
+contracts, native ARM/accessor/ELF-SELF-VPK verifier and publication SUCCESS.
+[Install exact CI HaloCE.vpk](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-285/HaloCE.vpk),
+2620054 bytes, SHA-256 `e911c9ef358a403d98b3156b44c5f1c72f502bd94456bda126dcaa7fda9b1f73`.
+[Matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-285):
+ELF38992444 bytes SHA-256 `2215f9d6652614102bdb0261c27d2daba1765fb75e3be74722e4729e2f7b115c`;
+map6790524 bytes SHA-256 `f43334e52a72417bdbb4e0d2dd2dfffe093b845e93d1021025833b4ceca608fa`.
+Artifact11283804934:16557716 bytes, ZIP SHA-256
+`2fb1f41bb7da00b48a407595f376ada5f2409cdd08fea464e2769d3883d12393`.
+Independent clean-source manifest, all file counts/digests,88 required original
+symbols, ARM32 hardfp/VFP, SELF, SFO/banner00.42, exact six VPK entries, indexed
+PNG CRCs/dimensions and LiveArea XML PASS. Release digests match. Later docs-only
+commits do not change this executable. State LINKS; real Vita acceptance pending. All31 required host commands pass locally and in CI.
+00.41 reaches beyond the previous language fault but aborts on the original
+Main Menu child block (A129).00.42 routes child/event/condition/search/input
+blocks and virtual keyboard keys through existing original typed accessors.
+Original UI traversal, callbacks, geometry, focus, text, keyboard and rendering
+remain the owners. No tag image scanning or manual replacement menu.
+
+Install00.42 over HCEV00001 and retain maps/original Z: slots. First confirm
+`[VITA ORIGINAL] main_menu_load PASS`, original Main Menu root and frame/draw/
+Present after the saved-game filesystem-check marker. Record what becomes
+visible; test a warm launch, repeated D-pad/Cross/Circle entry/back and profile/
+Settings/name keyboard (Start confirms). Test sustained music and Select exit.
+Return fresh complete debug.txt, gamestate.txt and any new dump, plus photo/video
+if it draws. The last .tmp dump has complete PC/register/module notes but lacks
+most memory/stack segments; use a completed dump when available. No extra maps
+needed.
+
+This package targets the identified compiled UI-block address contract. Console
+acceptance, full menu, white panels, stability, Campaign/world and complete
+original main_loop remain unaccepted. Original Z: slots need732MiB plus maps/
+saves; authored640x480 render policy remains unchanged.
+
+## Historical native test package —00.41 (2026-10-03)
 
 Native CI source `864668d8650c8ad3ed92c1909116550704442180` (functional correction
 `8313c1b840f8f5e836fad882ded53be98440b0ba`); [Vita Build284](https://github.com/VegettoSan/HaloCEVita/actions/runs/37148267284)

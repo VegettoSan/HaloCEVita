@@ -2,11 +2,18 @@
 
 Last updated: 2026-10-03
 
-Current source **00.42 / A129–A130: HOST VERIFIED; native CI pending**.
+Current source **00.42 / A129–A131: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 00.41 hardware passes original language initialization but aborts on a serialized
 Main Menu child reference. Native widget/keyboard consumers now use existing
 original typed block access and active-image resolver. Original behavior and
-renderer ownership remain intact. Root/frame/menu/hardware acceptance pending.
+renderer ownership remain intact. Build285/run37151755499 on61568b4 passes all31
+host commands, actual ARM accessor gates, native verification and publication.
+Downloaded archive/clean-source manifest/all digests/ABI/SELF/SFO00.42/LiveArea
+and release comparison pass. VPK2620054 bytes SHA-256
+e911c9ef358a403d98b3156b44c5f1c72f502bd94456bda126dcaa7fda9b1f73.
+Exact package/symbols: [Build285](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-285).
+00.42 root/frame/menu/hardware acceptance pending.00.41 is BOOTS through language,
+movie skip and original saved-game checks, then child-reference abort.
 
 Previous source **00.41 / A126–A128: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Exact00.40 core identifies a serialized tag_data pointer dereference in original

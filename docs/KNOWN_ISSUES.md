@@ -365,7 +365,13 @@ resource/audio behavior and repeated complete menu acceptance are still pending.
 00.41 passes the prior language fault, then data-aborts on the Main Menu child
 list804917cc (A129).00.42 routes all five widget block families and keyboard keys
 through original typed accessors on Vita. Actual host recursion/initialization/
-keyboard consumers and negative legacy fixtures pass; native CI and real Vita
-root/frame/full-menu acceptance remain pending. Supplied .tmp core has complete
+keyboard consumers and negative legacy fixtures pass. CI285 all31 host commands,
+actual ARM widget/keyboard accessor gates, native package verification and release
+publication pass. Real Vita root/frame/full-menu acceptance remains pending. Supplied .tmp core has complete
 register/module notes but lacks most memory/stack segments. No full menu, visual
 white-panel fix, stability or gameplay claim follows from the source correction.
+
+A129 refines KI-070:00.41 hardware advances beyond ASCII language initialization
+into original shell/filesystem checks. This supports the text-data correction;
+Unicode/fonts still need actual menu rendering acceptance. The next observed
+fault belongs to compiled widget traversal (KI-071), not repeated localization.
