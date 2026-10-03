@@ -25,7 +25,7 @@ struct.pack_into('<I',logical,8,len(logical));logical=bytes(logical)
 encoded=logical[:2048]+zlib.compress(logical[2048:])
 err=C.create_string_buffer(160)
 with tempfile.TemporaryDirectory() as tmp:
- path=Path(tmp)/'ui.map';cache=Path(str(path)+'.vita-logical.tmp')
+ path=Path(tmp)/'ui.map';cache=Path(tmp)/'cache0.vita-logical.tmp'
  for source in (encoded,logical):
   path.write_bytes(source);before=hashlib.sha256(source).hexdigest();writes.value=inflates.value=0
   assert r.vita_cache_resource_bind(str(path).encode(),len(logical))
