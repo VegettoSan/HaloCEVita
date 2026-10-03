@@ -72,7 +72,7 @@ int main(void)
 #endif
 	vita_log("[VITA 011] native Halo core probe complete; platform=%d core=%d maps=%d graphics=%d shaders=%d", platform, core, maps, graphics, shaders);
 #ifdef HALO_VITA_ORIGINAL_RUNTIME
-    if (!halo_vita_original_shell_initialize()) goto cleanup;
+	if (!halo_vita_original_shell_initialize()) goto cleanup;
 #endif
 	arena = vita_memory_initialize();
 	if (arena) memory = halo_vita_memory_initialize();
@@ -83,15 +83,26 @@ int main(void)
 		vita_log("cache checkpoint skipped: memory=%d maps=%d", memory, maps);
 	}
 #ifdef HALO_VITA_ORIGINAL_RUNTIME
-    if (!memory || !maps || !halo_vita_original_game_initialize()) goto cleanup;
+	if (!memory || !maps || !halo_vita_original_game_initialize()) goto cleanup;
 #endif
-	#ifdef HALO_VITA_MENU_BRINGUP
-	if (memory && maps) menu_cache = vita_cache_probe(0, core, 0);
-	#else
-	if (memory && maps) menu_cache = vita_cache_probe(graphics, core, shaders);
-	#endif
-	if (menu_cache < 0) goto cleanup;
+
 #ifdef HALO_VITA_MENU_BRINGUP
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+	/* The retail Xbox path does not mount ui.map through a special UI probe.
+	 * main_menu_load owns the complete sequence:
+	 * main_load_ui_scenario -> game_precache_new_map -> main_new_map ->
+	 * game_load/scenario_tags_load -> game_initialize_for_new_map ->
+	 * main_screen_shell_load. Vita adapts only cache/path/pointer/GPU boundaries. */
+	vita_log("[VITA ORIGINAL] handing ui.map to original main_menu_load; staged mount/partial per-map initialization disabled");
+	if (!halo_vita_original_main_menu_load()) goto cleanup;
+	menu_cache = 1;
+	root_active = 1;
+	renderer = 1;
+	vita_graphics_cache_status(1);
+	vita_log("[VITA 032] original Main Menu root active through full main_menu_load/new-map lifecycle; renderer=READY");
+#else
+	if (memory && maps) menu_cache = vita_cache_probe(0, core, 0);
+	if (menu_cache < 0) goto cleanup;
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 	if (menu_cache) renderer = halo_vita_renderer_initialize();
 	if (!renderer) {
@@ -110,12 +121,20 @@ int main(void)
 	}
 	vita_log("[VITA 032] original Main Menu root active; original renderer=%s",
 		renderer ? "READY" : "DISABLED");
-#if defined(HALO_VITA_MENU_UPDATE_PROBE) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
+#if defined(HALO_VITA_MENU_UPDATE_PROBE)
 	if (!halo_vita_menu_update_checkpoint()) goto cleanup;
 #endif
-#else
-	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): UI cache/runtime-init checkpoint=%d; Main Menu root/events, scenario/BSP/resources and original renderer pending", menu_cache);
 #endif
+#else
+	#ifdef HALO_VITA_ORIGINAL_RUNTIME
+	vita_log("Full Halo main NOT ENTERED: original runtime initialized but menu bring-up is disabled");
+	#else
+	if (memory && maps) menu_cache = vita_cache_probe(graphics, core, shaders);
+	if (menu_cache < 0) goto cleanup;
+	vita_log("Full Halo main NOT ENTERED (milestone 010 withheld): UI cache/runtime-init checkpoint=%d; Main Menu root/events, scenario/BSP/resources and original renderer pending", menu_cache);
+	#endif
+#endif
+
 	/* Keep the process available and let the original renderer own visible menu
 	 * frames once the root and D3D8/vitaGL bridge are ready. */
 	for (;;) {
@@ -149,9 +168,6 @@ int main(void)
 		}
 #endif
 #endif
-#ifdef HALO_VITA_MENU_AUDIO
-		/* Square now belongs to the original UI/keyboard, not the audio probe. */
-#endif
 		if (command == 1) {
 #ifndef HALO_VITA_MENU_BRINGUP
 			maps = vita_maps_verify();
@@ -161,27 +177,29 @@ int main(void)
 #ifdef HALO_VITA_MENU_BRINGUP
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 		if (root_active && !scenario_active) {
-			int transition;
 			halo_vita_ui_process_shell_frame();
-#ifdef HALO_VITA_ORIGINAL_RUNTIME
-			/* Original UI handlers own the map selection. Pump only after one
-			 * complete UI update so main_set_map_name() has committed the retail
-			 * selection. The handoff stops at game_load/scenario/BSP; gameplay
-			 * initialization intentionally remains the next milestone. */
-			transition = halo_vita_main_pump_deferred_map_change();
-			if (transition < 0) {
-				vita_log("[VITA MAP] scenario activation checkpoint FAILED");
-				break;
-			}
-			if (transition > 0) {
-				scenario_active = 1;
-				root_active = 0;
-				vita_log("[VITA MAP] scenario/BSP checkpoint retained; menu frame loop suspended");
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
+			{
+				int transition = halo_vita_main_pump_deferred_map_change();
+				if (transition < 0) {
+					vita_log("[VITA MAP] scenario activation checkpoint FAILED");
+					break;
+				}
+				if (transition > 0) {
+					scenario_active = 1;
+					root_active = 0;
+					vita_log("[VITA MAP] scenario/BSP checkpoint retained; menu frame loop suspended");
+				}
 			}
 #endif
 		}
-		if (renderer && root_active && !scenario_active &&
-			!halo_vita_renderer_render_menu_frame()) break;
+		if (renderer && root_active && !scenario_active) {
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+			if (!halo_vita_original_render_menu_frame()) break;
+#else
+			if (!halo_vita_renderer_render_menu_frame()) break;
+#endif
+		}
 #endif
 #else
 		if (graphics) vita_graphics_frame(maps, core, shaders);
@@ -190,26 +208,28 @@ int main(void)
 		if (elapsed < 33333) sceKernelDelayThread((unsigned)(33333 - elapsed));
 	}
 cleanup:
-#ifdef HALO_VITA_MENU_AUDIO
+#if defined(HALO_VITA_MENU_AUDIO) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	halo_vita_menu_audio_dispose();
 #endif
-#ifdef HALO_VITA_MENU_RENDER_PROBE
-    if (!root_active && !scenario_active) halo_vita_renderer_dispose_before_root();
+#if defined(HALO_VITA_MENU_RENDER_PROBE) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
+	if (!root_active && !scenario_active) halo_vita_renderer_dispose_before_root();
 #endif
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+	/* Full original ui.map ownership crosses game/scenario/render/audio systems.
+	 * The bring-up process exits as one unit until shell_dispose/main_loop
+	 * teardown is promoted; never run staged teardown over that live graph. */
+	if (memory)
+		vita_log("[VITA ORIGINAL] process exit retains full original ui.map/new-map lifetime; staged teardown disabled");
+	ui_disposed = 0;
+#else
 	if (scenario_active) {
-		/* game_load now owns scenario_tags_load + first BSP. Do not run the
-		 * staged-menu teardown over that live ownership; the process checkpoint
-		 * exits as a unit until full game_initialize_for_new_map is wired. */
 		vita_log("[VITA MAP] active scenario/BSP retained until process exit; full new-map lifetime is next milestone");
 		ui_disposed = 0;
 	} else if (root_active) {
-		#ifdef HALO_VITA_ORIGINAL_RUNTIME
-        vita_log("[VITA ORIGINAL] test shell exits with active lifetime owners; native process releases retained cache/arena");
-#else
-        vita_log("UI root/cache/arena retained until process exit; active-widget teardown not yet linked");
-#endif
+		vita_log("UI root/cache/arena retained until process exit; active-widget teardown not yet linked");
 		ui_disposed = 0;
 	} else ui_disposed = halo_vita_ui_runtime_dispose();
+#endif
 	if (ui_disposed) {
 		if (!halo_vita_cache_unmount_menu()) vita_log("UI cache restoration failed during shutdown");
 	} else if (!scenario_active) vita_log("UI cache and arena retained until process exit because widgets remain active");
