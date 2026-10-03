@@ -10,6 +10,10 @@
 #define CACHE_HEADER_SIZE 2048u
 #define MAX_LOGICAL_SIZE (512u * 1024u * 1024u)
 #define RESOURCE_PATH_CAPACITY 320u
+/* The Xbox path also separates source maps (d:\\maps) from its writable z:\\
+ * cache slots. Keep Vita's derived seekable logical copy out of maps/ for the
+ * same ownership reason: maps/ contains only user-supplied source .map files. */
+#define RESOURCE_SCRATCH_PATH "ux0:data/HaloCE/cache0.vita-logical.tmp"
 
 struct vita_cache_header_state {
 	unsigned char bytes[CACHE_HEADER_SIZE];
@@ -233,8 +237,6 @@ int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 	resource_bind_error[0] = 0;
 	if (!path || !*path || logical_size < CACHE_HEADER_SIZE || logical_size > MAX_LOGICAL_SIZE)
 		return fail(resource_bind_error, sizeof(resource_bind_error), "invalid resource map/size");
-	if (strlen(path) + sizeof(".vita-logical.tmp") > sizeof(resource_map_path))
-		return fail(resource_bind_error, sizeof(resource_bind_error), "resource path too long");
 	source = fopen(path, "rb");
 	if (!source) return fail(resource_bind_error, sizeof(resource_bind_error), "resource source open failed");
 	if (!cache_header_read(source, &state, resource_bind_error, sizeof(resource_bind_error))) goto done;
@@ -242,7 +244,10 @@ int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 		fail(resource_bind_error, sizeof(resource_bind_error), "resource logical size changed"); goto done;
 	}
 	if (state.compressed) {
-		snprintf(resource_map_path, sizeof(resource_map_path), "%s.vita-logical.tmp", path);
+		/* Always rebuild this process-owned slot from the selected source map.
+		 * It is never considered a map candidate by vita_map_path(). */
+		remove(RESOURCE_SCRATCH_PATH);
+		memcpy(resource_map_path, RESOURCE_SCRATCH_PATH, sizeof(RESOURCE_SCRATCH_PATH));
 		copy = fopen(resource_map_path, "w+b");
 		if (!copy) { fail(resource_bind_error, sizeof(resource_bind_error), "logical resource scratch open failed"); goto done; }
 		resource_file_owned = 1;
