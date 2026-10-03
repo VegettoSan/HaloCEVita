@@ -28,7 +28,7 @@ endif()
 
 # Keep libc/Vita APIs separate from the game's 16-bit wchar and MSVC macros.
 add_library(halo_core STATIC
-  src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/xinput_vita.c src/xbox_memory_vita.c
+  src/halo_core.c src/halo_menu_tags.c src/halo_services.c src/vita_cache_bridge.c src/vita_tag_pointer.c src/xinput_vita.c src/xbox_memory_vita.c
   src/vita_memory_watch.c ${VITA_UI_WIDGET_SOURCE} src/halo_ui_events.c
   src/halo_ui_kernel.c src/halo_ui_file_search.c ${VITA_UI_HANDLER_SOURCE}
   ${ROOT}/source/cseries/cseries.c
