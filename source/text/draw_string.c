@@ -511,7 +511,13 @@ static void bitmap_draw_character(
 {
 	short format = draw_character_software_globals.bitmap->format;
 	short coverage_scale = (short)(color >> 24);
+#ifdef HALO_VITA
+	byte *glyph_pixels = tag_data_get_pointer(&font->pixels,
+		character->pixels_offset,
+		(long)character->bitmap_width * character->bitmap_height);
+#else
 	byte *glyph_pixels = (byte *)font->pixels.address + character->pixels_offset;
+#endif
 	word destination_color;
 	short row;
 

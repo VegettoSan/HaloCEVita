@@ -2,7 +2,14 @@
 
 Last updated: 2026-10-03
 
-Current source **00.40 / A120–A125: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
+Current source **00.41 / A126: HOST VERIFIED; native CI pending**.
+Exact00.40 core identifies a serialized tag_data pointer dereference in original
+localization startup. ASCII/Unicode and original software/hardware font pixels
+now use Halo's existing typed accessor/native image resolver. Negative old-path
+faults and corrected actual C consumers pass. Console root/frame/visual/stability
+acceptance is pending; original cache ownership and renderer behavior remain.
+
+Previous source **00.40 / A120–A125: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Default cache/maps now belong to Halo's original six-slot manager, streaming
 worker and resource request/completion worker. Vita supplies general Xbox I/O,
 issuing-thread Ex completion and checked native pointer/GPU registration.
@@ -14,7 +21,7 @@ all29 host commands, real-SDK ELF/SELF/VPK verifier and release publication.
 Downloaded archive/manifest/88 symbols/ABI/SELF/SFO/LiveArea and release digests
 are independently verified. VPK2620309 bytes SHA-256c3579250c33400f952a5cb663114e4ab6f50e739afd13b8d194295556302baa5.
 Exact package and matching symbols: [Build282](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-282).
-BUILD.md records provenance and console test. No00.40 BOOTS/RENDERS/gameplay claim.
+BUILD.md records provenance and console test. 00.40 now BOOTS through original ui cache/tag/BSP completion; language initialization crashes (A126). No00.40 menu RENDERS/gameplay claim.
 
 [Complete A/B/C/D audit](DECOMP_ALIGNMENT_AUDIT_00.40.md) records selected owners,
 remaining harness/shell/main_loop/teardown work, actual vitaGL/VA incompatibilities

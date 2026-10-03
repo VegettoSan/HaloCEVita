@@ -712,7 +712,13 @@ cache_hardware_format_character(
 		hardware_character->x0 = hardware_character_cache.x0;
 		hardware_character->y0 = hardware_character_cache.y0;
 
+#ifdef HALO_VITA
+		source = tag_data_get_pointer(&font->pixels,
+			font_character->pixels_offset,
+			(long)font_character->bitmap_width * font_character->bitmap_height);
+#else
 		source = (byte *)font->pixels.address + font_character->pixels_offset;
+#endif
 
 		for (y = 0; y < font_character->bitmap_height; y++)
 		{

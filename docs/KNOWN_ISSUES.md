@@ -341,3 +341,13 @@ full-header identity. Header publication follows original I/O completion without
 an extra power-loss/fsync guarantee. No performance, STABLE, complete main_loop,
 a10/gameplay, or existing white-panel fix claim. Recovery-only owners remain as
 rollback until console acceptance; default native verifier rejects their linkage.
+
+
+## KI-070 — Compiled text data bypassed the native typed accessor
+
+00.40 hardware stops in string_list_get_string at Xbox80489668 after original
+ui cache/tag/BSP completion (A126).00.41 routes ASCII/Unicode and both original
+font pixel consumers through tag_data_get_pointer. Four negative host fixtures
+reproduce old faults and fixed consumers preserve original bytes/cache/ownership.
+Native CI and real-console language/new-map/root/frame acceptance remain pending;
+this does not prove a visible or stable full menu or repair white panels.

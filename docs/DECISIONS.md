@@ -293,3 +293,15 @@ The historical worker accepted a stream longer than its header: narrow Vita
 publication validation and a status snapshot race fix prevent valid headers for
 failed/incomplete copies without replacing the worker. No main_loop/gameplay or
 real-console acceptance follows from host/native build success.
+
+
+## D065 — Inline text/font data uses the original typed data accessor on Vita
+
+2026-10-03 / A126: original string and font consumers dereference tag_data.address
+directly under upstream's Xbox VA model. Vita's original-manager route keeps
+nested compiled fields serialized. Guard only these shared call sites with
+HALO_VITA and use existing tag_data_get_pointer, whose active image/owner/span
+resolver already defines translation and recovery/runtime passthrough. Keep
+original language, UTF16, terminators, glyph coverage and atlas cache. Do not
+reactivate eager menu relocation, rewrite arbitrary words, mutate pointers or
+translate external bitmap/sound resources as if they were inline tag data.

@@ -1439,3 +1439,42 @@ original cache closure/package,280/281 remain in progress at this checkpoint.
   pending. Fixed732MiB Z: preallocation, original resource/APC timing, UI/music,
   visual faults, main_loop/Campaign/world/teardown are not accepted from CI.
   BUILD.md records cold/warm/input/profile/keyboard/log/photo test instructions.
+
+
+### A126 —00.40 hardware data abort in original localization;00.41 typed text consumers (2026-10-03)
+
+- User reports crash and supplies debug/gamestate/core. Exact Build282 ELF
+  SHA-25647c923db3332e974c0f5b3a1378adb485eae759a102281dc957f5a91dc07b8b4
+  matches the installed00.40 source. Core SHA-256
+  e87ab7a8148d4f19c8b009087b7558335eb970661cb5eea0e9e55246cb3496ce.
+  Main thread reason0x30004, PC81033b8a -> relocated ELF8101bb8a ->
+  string_list_get_string source/text/text_group.c:237. Register r0=80489668
+  is a serialized Xbox tag address, not a native Vita pointer. Stack words
+  corroborate draw_string_initialize_for_new_map/interface_initialize_for_new_map/
+  game_initialize_for_new_map/main_new_map; these are candidates, not an unwound trace.
+- Log proves original copy END ui logical33582080/checksumcdc1a39a, original
+  cache open tag_bytes1642244,983 tags, scenario e1740000, and2048-byte BSP
+  registration. Native tag base864a6000. Crash occurs in language initialization
+  before main_menu_load success/root/frame; the cache copy is not its cause.
+- Read-only map metadata identifies datum e26400f0, localization list entry0,
+  two-byte tag_data at Xbox80489668. Original ASCII and Unicode getters read
+  entry->string.address directly after a correctly translated block lookup.
+  Upstream23b5426 does the same because its virtual-address model differs.
+  Native accessor translation would return86589668 for this run.
+- Under HALO_VITA route both getters and the original software/hardware font
+  pixel consumers through existing tag_data_get_pointer with the exact string
+  or glyph span. Preserve missing-string behavior,16-bit Unicode, terminator
+  writes, glyph coverage/atlas equations, font cache and other platform code.
+  No pointer field mutation, whole-image scan, new cache owner or UI substitute.
+- python3 tools/vita_text_pointer_regression.py PASS: actual old consumers
+  fault on a protected serialized page in four child processes; actual fixed
+  consumers execute original tag accessors plus the real Vita pointer resolver.
+  Native text/UTF16/terminators, software glyph bytes, hardware atlas bytes and
+  cache hit, rejected span before write, recovery/runtime pointer ownership PASS.
+  Host projections do not establish ARM ABI/GPU/hardware acceptance.
+- Read-only ui font metadata:4 fonts/896 original glyph records (8 empty); all inline
+  pixel spans and offsets fit the original tag_data (empty placeholders can have negative width and zero height). No retail asset,
+  map, gamestate or core is committed. All30 required host commands PASS.
+  00.41 native CI and console acceptance pending.
+- Corrected the00.40 audit resolution entry: current source and supplied log
+  use640x480 internal, not320x240. No resolution code changed.
