@@ -42,6 +42,7 @@ jobs:
           python3 tools/vita_original_cache_regression.py
           python3 tools/vita_original_cache_owner_regression.py
           python3 tools/vita_text_pointer_regression.py
+          python3 tools/vita_widget_pointer_regression.py
           python3 tools/vita_resource_seek_regression.py
           python3 tools/vita_stream_regression.py
           python3 tools/vita_renderer_contract_regression.py

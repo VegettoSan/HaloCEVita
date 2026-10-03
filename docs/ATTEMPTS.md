@@ -1523,3 +1523,52 @@ covers it. Native gates and final package remain pending; no console acceptance.
   keyboard/music/log/photo/core checks. White panels, all windows, stability,
   Campaign/world and complete main_loop remain unaccepted. No maps/assets/core
   included in git or the VPK.
+
+
+### A129 —00.41 hardware passes language startup; child-widget pointer data abort (2026-10-03)
+
+- Fresh user log banner00.41 completes original ui cache/tag/BSP, then advances
+  past the A126 localization fault into original shell/movie/filesystem-check
+  initialization. No main_menu_load PASS/root/frame before the new data abort.
+  Unsupported Bink is a logged existing capability, not the core's fault PC.
+- Supplied psp2core .tmp is partial:71376 gzip bytes decode to138352 bytes while
+  its ELF table describes later segments outside the available file. All initial
+  thread/register/module notes are complete and sufficient to identify the PC.
+  Do not infer absent stack/memory contents or claim an unwound backtrace.
+  Core SHA-25682690751524691165bb37823acf5b41cce54690977fcb37682a78722bb9bd42b.
+- Exact CI284 ELF3dd3f5985d0dbd993031cfe6596017a489bdd6c0dd2f08b81e430a16641d3d90:
+  main-thread reason30004, runtime PC8102aa04 -> ELF8100aa04 -> original
+  ui_widget_load_children_recursive source/interface/ui_widget.c:3384.
+  r5 native definition86591308; r2/r11 serialized child list804917cc.
+- Read-only ui metadata identifies root datum e285010f, ui\shell\main_menu\main_menu,
+  definition Xbox80491308, three child references at804917cc. Source directly
+  uses definition->child_widgets.address before reading flags. Current upstream
+  23b5426 uses the same direct traversal under its different Xbox VA model.
+  Native typed accessor would return865917cc. No retail file is modified.
+
+### A130 —00.42 typed widget blocks and keyboard boundaries (2026-10-03)
+
+- Route all10 direct widget block expressions through a local typed macro: Vita
+  uses original TAG_BLOCK_GET_ELEMENT/tag_block_get_element_with_size and existing
+  compiled-image resolver; other platforms retain original direct arithmetic.
+  Covers children, created/deleted/button events, conditions, search/replace and
+  render game-data inputs. Original callbacks, graph, offsets, focus, ordering,
+  geometry, flags, text and resource ownership remain original.
+- Original virtual keyboard has the same direct key-list contract. Its native
+  key macro and both render loops use the same typed block accessor. Preserve
+  44-key layout, characters, modifier precedence and original rendering.
+- python3 tools/vita_widget_pointer_regression.py executes actual original child
+  recursion, initializer/add-child and character lookup against real original
+  tag-block accessor plus actual Vita resolver. Legacy child/keyboard access
+  faults in protected-page child processes; fixed recursion/creation order,
+  controller override/fallback, offsets, focus, partial failure/NONE, generated
+  spinner suppression, description detach, bounds, recovery/heap and all eight
+  UTF16 keyboard modifier combinations PASS. Callback/pool/font/GPU boundaries
+  are host fixtures, not whole-engine or ARM/hardware acceptance.
+- Existing actual event dispatcher regression includes the production macro and
+  retains original non-native behavior. Read-only ui metadata validates all five
+  typed block families across485 widget definitions:51 inputs,243 event handlers,
+  1 search reference,5 conditions,543 child references;44 keyboard keys.
+- Added actual ARM verifier gates for retained widget graph/created handlers,
+  conditional dispatch, render input and keyboard consumers.31 required host
+  commands PASS locally; final native CI/package and console acceptance pending.

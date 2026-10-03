@@ -8,7 +8,8 @@ ROOT = Path(__file__).resolve().parents[1]
 s = (ROOT/'source/interface/ui_widget.c').read_text()
 a=s.index('static void event_handler_dispatch(',s.index('static void event_handler_dispatch(')+1)
 b=s.index('static boolean ui_widget_load_children_recursive(',a)
-actual=s[a:b]
+block_macro=s[s.index('#ifdef HALO_VITA\n#define UI_WIDGET_BLOCK_ELEMENT'):s.index('/* ---------- structures */',s.index('#ifdef HALO_VITA\n#define UI_WIDGET_BLOCK_ELEMENT'))]
+actual=block_macro+s[a:b]
 code=r'''
 #include <assert.h>
 #include <stdlib.h>

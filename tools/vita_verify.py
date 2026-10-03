@@ -135,6 +135,24 @@ if original_runtime:
     code = run('objdump', '-d', '--disassemble=tag_data_get_pointer', elf)
     assert re.search(r'\bblx?\b.*<halo_vita_cache_resolve_compiled_pointer>', code), (
         'tag_data accessor bypasses the active compiled-image resolver')
+    # A129: initialization may inline child recursion, so inspect the retained
+    # original owner functions together. They contain the original bitmap
+    # sequence lookup plus the corrected child and created-handler lookups.
+    owners = ('ui_widget_load_children_recursive', 'widget_instance_initialize',
+              'ui_widget_load_by_name_or_tag')
+    names = re.findall(r'^[0-9a-f]+ [Tt] (\S+)$', symbols, re.M)
+    owners = [name for name in names if any(name == owner or name.startswith(owner + '.')
+                                          for owner in owners)]
+    owner_code = '\n'.join(run('objdump', '-d', '--disassemble=' + owner, elf)
+                           for owner in owners)
+    assert len(re.findall(r'\bblx?\b.*<tag_block_get_element_with_size>', owner_code)) >= 3, (
+        'original widget loading bypasses typed child/created-handler boundaries')
+    for consumer in ('event_handler_dispatch', 'widget_instance_render_recursive',
+                     'virtual_keyboard_get_character'):
+        code = run('objdump', '-d', '--disassemble=' + consumer, elf)
+        assert re.search(r'\bblx?\b.*<tag_block_get_element_with_size>', code), (
+            consumer + ' bypasses compiled widget/keyboard block translation')
+    print('PASS: ARM original widget load/created events/conditions/render inputs/keyboard use typed tag_block accessor')
 else:
     assert re.search(r'\bblx?\b.*<vita_cache_resource_read>', resource_disassembly), 'recovery cache reader missing'
 undefined = run('nm', '-u', elf)

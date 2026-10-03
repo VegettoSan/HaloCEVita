@@ -305,3 +305,13 @@ resolver already defines translation and recovery/runtime passthrough. Keep
 original language, UTF16, terminators, glyph coverage and atlas cache. Do not
 reactivate eager menu relocation, rewrite arbitrary words, mutate pointers or
 translate external bitmap/sound resources as if they were inline tag data.
+
+
+## D066 — Widget and keyboard traversal retains original owners with typed block access
+
+2026-10-03 / A129–A130: original widget and keyboard code uses direct compiled
+block addresses under upstream's Xbox VA model. Vita's existing lazy translation
+requires these consumers to use original TAG_BLOCK_GET_ELEMENT. Apply only at
+known typed block expressions; retain original graph/callback/focus/controller/
+text/keyboard traversal and other-platform direct arithmetic. Do not restore the
+recovery UI, eager pointer scanning or hardcoded root construction to hide faults.

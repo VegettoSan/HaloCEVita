@@ -197,8 +197,13 @@ enum ui_audio_feedback_sound
 
 #define virtual_keyboard_definition_get(index) \
 	((struct virtual_keyboard_definition *)tag_get(VIRTUAL_KEYBOARD_TAG, (index)))
+#ifdef HALO_VITA
+#define virtual_keyboard_key_get(definition, index) \
+	TAG_BLOCK_GET_ELEMENT(&(definition)->keys, (index), struct virtual_keyboard_key)
+#else
 #define virtual_keyboard_key_get(definition, index) \
 	((struct virtual_keyboard_key *)(definition)->keys.address + (index))
+#endif
 
 /* ---------- structures */
 
@@ -740,13 +745,12 @@ static void virtual_keyboard_render_internal(
 
 	draw_string_set_draw_mode(virtual_keyboard_globals.keyboard->font_tag.index, NONE, 2, 0, &text_color);
 	{
-		struct virtual_keyboard_key *keys = virtual_keyboard_globals.keyboard->keys.address;
 		wchar_t string[24] = {0};
 		long key_index;
 
 		for (key_index = 0; key_index < NUMBER_OF_CONFIGURABLE_VIRTUAL_KEYS; key_index++)
 		{
-			struct virtual_keyboard_key *key = &keys[key_index];
+			struct virtual_keyboard_key *key = virtual_keyboard_key_get(virtual_keyboard_globals.keyboard, key_index);
 			struct font_character *font_character;
 			long bitmap_index;
 			struct bitmap_data *bitmap;
@@ -793,7 +797,7 @@ static void virtual_keyboard_render_internal(
 		{
 			for (; key_index < NUMBER_OF_VIRTUAL_KEYS; key_index++)
 			{
-				struct virtual_keyboard_key *key = &keys[key_index];
+				struct virtual_keyboard_key *key = virtual_keyboard_key_get(virtual_keyboard_globals.keyboard, key_index);
 				wchar_t *label = unicode_string_list_get_string(
 					virtual_keyboard_globals.keyboard->special_key_labels_string_list_tag.index,
 					(short)(key_index - NUMBER_OF_CONFIGURABLE_VIRTUAL_KEYS));

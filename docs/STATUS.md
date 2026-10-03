@@ -2,7 +2,13 @@
 
 Last updated: 2026-10-03
 
-Current source **00.41 / A126–A128: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
+Current source **00.42 / A129–A130: HOST VERIFIED; native CI pending**.
+00.41 hardware passes original language initialization but aborts on a serialized
+Main Menu child reference. Native widget/keyboard consumers now use existing
+original typed block access and active-image resolver. Original behavior and
+renderer ownership remain intact. Root/frame/menu/hardware acceptance pending.
+
+Previous source **00.41 / A126–A128: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Exact00.40 core identifies a serialized tag_data pointer dereference in original
 localization startup. ASCII/Unicode and original software/hardware font pixels
 now use Halo's existing typed accessor/native image resolver. Negative old-path

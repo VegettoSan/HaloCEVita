@@ -933,6 +933,16 @@ this TU owns the complete January layout used below. */
 #define ui_widget_definition_get(tag_index) \
 	((struct ui_widget_definition *)tag_get(UI_WIDGET_DEFINITION_TAG, (tag_index)))
 
+/* Native compiled widget blocks keep serialized Xbox addresses. Preserve
+ * original traversal/behavior and translate only at the typed block boundary. */
+#ifdef HALO_VITA
+#define UI_WIDGET_BLOCK_ELEMENT(block, index, type) \
+	TAG_BLOCK_GET_ELEMENT((block), (index), type)
+#else
+#define UI_WIDGET_BLOCK_ELEMENT(block, index, type) \
+	((type *)(block)->address + (index))
+#endif
+
 /* ---------- structures */
 
 struct stack_memory_pool_block;
@@ -2103,7 +2113,8 @@ void ui_widget_delete(
 		handler_index++)
 	{
 		struct ui_widget_event_handler_reference *handler =
-			(struct ui_widget_event_handler_reference *)definition->event_handlers.address + handler_index;
+			UI_WIDGET_BLOCK_ELEMENT(
+				&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
 
 		if (handler->event_type == _widget_event_deleted &&
 			TEST_FLAG(handler->flags, _event_handler_run_function_bit))
@@ -3287,8 +3298,8 @@ static void event_handler_dispatch(
 				conditional_index++)
 			{
 				struct ui_widget_conditional_reference *conditional =
-					(struct ui_widget_conditional_reference *)definition->conditional_widgets.address +
-					conditional_index;
+					UI_WIDGET_BLOCK_ELEMENT(
+						&definition->conditional_widgets, conditional_index, struct ui_widget_conditional_reference);
 
 				if (function_failed == TRUE &&
 					TEST_FLAG(
@@ -3378,7 +3389,8 @@ static boolean ui_widget_load_children_recursive(
 		child_index++)
 	{
 		struct ui_widget_child_reference *reference =
-			(struct ui_widget_child_reference *)definition->child_widgets.address + child_index;
+			UI_WIDGET_BLOCK_ELEMENT(
+				&definition->child_widgets, child_index, struct ui_widget_child_reference);
 		short controller_index = widget->local_player_index;
 
 		if (TEST_FLAG(reference->flags, _child_widget_use_custom_controller_index_bit))
@@ -3536,7 +3548,8 @@ static void widget_instance_initialize(
 		handler_index++)
 	{
 		struct ui_widget_event_handler_reference *handler =
-			(struct ui_widget_event_handler_reference *)definition->event_handlers.address + handler_index;
+			UI_WIDGET_BLOCK_ELEMENT(
+				&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
 
 		if (handler->event_type == _widget_event_created)
 		{
@@ -4943,9 +4956,8 @@ static void widget_instance_render_text_box(
 		search_index++)
 	{
 		struct ui_widget_search_and_replace_reference *reference =
-			(struct ui_widget_search_and_replace_reference *)
-				definition->search_and_replace_functions.address +
-			search_index;
+			UI_WIDGET_BLOCK_ELEMENT(
+				&definition->search_and_replace_functions, search_index, struct ui_widget_search_and_replace_reference);
 
 		if (reference && reference->search_string[0])
 		{
@@ -5139,9 +5151,8 @@ static void widget_instance_render_spinner_list(
 					search_index++)
 				{
 					struct ui_widget_search_and_replace_reference *reference =
-						(struct ui_widget_search_and_replace_reference *)
-							definition->search_and_replace_functions.address +
-						search_index;
+						UI_WIDGET_BLOCK_ELEMENT(
+							&definition->search_and_replace_functions, search_index, struct ui_widget_search_and_replace_reference);
 
 					if (reference && reference->search_string[0])
 					{
@@ -5788,9 +5799,8 @@ static void widget_instance_render_recursive(
 		input_index++)
 	{
 		struct ui_widget_game_data_input_reference *input =
-			(struct ui_widget_game_data_input_reference *)
-				definition->game_data_inputs.address +
-			input_index;
+			UI_WIDGET_BLOCK_ELEMENT(
+				&definition->game_data_inputs, input_index, struct ui_widget_game_data_input_reference);
 
 		ui_widget_game_data_function_invoke(widget, input->function);
 	}
@@ -6365,8 +6375,8 @@ static void widget_instance_process_one_event_recursive(
 					handler_index++)
 				{
 					struct ui_widget_event_handler_reference *handler =
-						(struct ui_widget_event_handler_reference *)
-							definition->event_handlers.address + handler_index;
+						UI_WIDGET_BLOCK_ELEMENT(
+							&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
 
 					if (handler->event_type == _widget_event_back_button)
 					{
@@ -6382,8 +6392,8 @@ static void widget_instance_process_one_event_recursive(
 					handler_index++)
 				{
 					struct ui_widget_event_handler_reference *handler =
-						(struct ui_widget_event_handler_reference *)
-							definition->event_handlers.address + handler_index;
+						UI_WIDGET_BLOCK_ELEMENT(
+							&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
 
 					if (handler->event_type == _widget_event_b_button)
 					{
@@ -6652,8 +6662,8 @@ static void widget_instance_process_one_event_recursive(
 
 			if (widget_deleted)
 				break;
-			handler = (struct ui_widget_event_handler_reference *)
-				definition->event_handlers.address + handler_index;
+			handler = UI_WIDGET_BLOCK_ELEMENT(
+			&definition->event_handlers, handler_index, struct ui_widget_event_handler_reference);
 			switch (event->type)
 			{
 			case _event_type_left_stick:
