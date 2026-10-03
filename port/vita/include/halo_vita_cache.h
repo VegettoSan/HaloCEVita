@@ -31,6 +31,12 @@ void vita_cache_resource_unbind(void);
 int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes);
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size);
+/* Original cache tag blocks/data/references retain serialized Xbox addresses
+ * below their already-relocated roots. This resolver is used only by original
+ * tag accessors: runtime/native owners pass through unchanged, while owners in
+ * an activated tag/BSP image resolve against its validated Xbox->Vita span. */
+void *halo_vita_cache_resolve_compiled_pointer(const void *owner,
+	const void *serialized_pointer, size_t bytes);
 struct vita_menu_relocation;
 struct vita_menu_stats {
     uint32_t widgets, fonts, string_lists, bitmap_groups, pointers;
