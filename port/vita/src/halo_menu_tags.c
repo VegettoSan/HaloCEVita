@@ -353,6 +353,11 @@ int halo_vita_menu_root_checkpoint(void)
         vita_log("MAIN MENU BLOCKED: ui scenario/game globals not mounted before root creation");
         return 0;
     }
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    main_menu_active(TRUE);
+    main_screen_shell_load();
+    return halo_vita_ui_original_root_ready();
+#else
     halo_vita_ui_render_clock_update();
     if (!vita_ui_shell_services_initialized) {
         saved_game_files_initialize();
@@ -368,6 +373,7 @@ int halo_vita_menu_root_checkpoint(void)
     player_ui_initialize();
     vita_log("original player_ui_initialize PASS");
     return halo_vita_menu_root_load() ? 1 : 0;
+#endif
 }
 
 int halo_vita_menu_update_checkpoint(void)

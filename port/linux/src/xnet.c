@@ -214,6 +214,10 @@ static void incoming_address(struct sockaddr *address, const int *address_length
 static const struct sockaddr *peer_outgoing_address(int stream, const struct sockaddr *address,
 	int address_length, struct sockaddr_in *storage)
 {
+#ifdef HALO_VITA
+	(void)stream; (void)address; (void)address_length; (void)storage;
+	return NULL; /* no desktop invite overlay on Vita */
+#else
 	unsigned long ip;
 	unsigned short port;
 
@@ -227,12 +231,14 @@ static const struct sockaddr *peer_outgoing_address(int stream, const struct soc
 	storage->sin_addr.s_addr = ip;
 	storage->sin_port = port;
 	return (const struct sockaddr *)storage;
+#endif
 }
 
 /* traffic from an internet play peer's stand-in comes from the peer, and
 from the network.address address from 127.0.0.1 */
 static void peer_incoming_address(int stream, struct sockaddr *address, const int *address_length)
 {
+#ifndef HALO_VITA
 	if (address && address_length && *address_length >= (int)sizeof(struct sockaddr_in) &&
 		address->sa_family == AF_INET)
 	{
@@ -247,6 +253,9 @@ static void peer_incoming_address(int stream, struct sockaddr *address, const in
 			return;
 		}
 	}
+#else
+	(void)stream;
+#endif
 	incoming_address(address, address_length);
 }
 
@@ -293,7 +302,9 @@ int WSAAPI WSAStartup(WORD version_requested, LPWSADATA data)
 
 	/* here, before the game's network threads start */
 	net_settings_read();
+#ifndef HALO_VITA
 	p2p_initialize(local_address_setting(&local) ? local : loopback_address());
+#endif
 	if (data)
 	{
 		memset(data, 0, sizeof(*data));
@@ -327,7 +338,9 @@ SOCKET WSAAPI halo_ws_socket(int family, int type, int protocol)
 
 int WSAAPI halo_ws_closesocket(SOCKET socket)
 {
+#ifndef HALO_VITA
 	p2p_socket_closed((int)socket);
+#endif
 	return winsock_result(posix_socket_close((int)socket));
 }
 
@@ -387,8 +400,10 @@ int WSAAPI halo_ws_listen(SOCKET socket, int backlog)
 	int result = posix_socket_listen((int)socket, backlog);
 
 	/* the game listens for connections while it hosts */
+#ifndef HALO_VITA
 	if (result == 0)
 		p2p_socket_listening((int)socket);
+#endif
 	return winsock_result(result);
 }
 
@@ -448,8 +463,12 @@ int WSAAPI halo_ws_sendto(SOCKET socket, const char *buffer, int length, int fla
 		}
 		/* and to every internet play peer (after the send above, which binds
 		the socket if it was not) */
+#ifdef HALO_VITA
+		peer_count = 0;
+#else
 		peer_count = p2p_broadcast_targets(((const struct sockaddr_in *)address)->sin_port, targets, ports,
 			P2P_BROADCAST_PEERS);
+#endif
 		for (index = 0; index < peer_count; index++)
 		{
 			int sent;
@@ -850,9 +869,11 @@ INT WSAAPI XNetXnAddrToInAddr(const XNADDR *address, const XNKID *key_identifier
 
 	(void)key_identifier;
 	/* an internet play peer's XNADDR carries its identifier */
+#ifndef HALO_VITA
 	if (p2p_peer_address(address->abEnet, &peer))
 		result->s_addr = peer;
 	else
+#endif
 		*result = address->ina;
 	return 0;
 }
@@ -875,7 +896,14 @@ DWORD WSAAPI XNetGetTitleXnAddr(XNADDR *address)
 	memset(address, 0, sizeof(*address));
 	address->bSizeOfStruct = sizeof(*address);
 	address->ina.s_addr = ip;
+#ifdef HALO_VITA
+	{
+		extern int vita_native_local_mac(unsigned char *);
+		if (!vita_native_local_mac(address->abEnet)) return XNET_GET_XNADDR_PENDING;
+	}
+#else
 	memcpy(address->abEnet, p2p_identifier(), sizeof(address->abEnet));
+#endif
 	return ip ? (XNET_GET_XNADDR_ETHERNET | XNET_GET_XNADDR_DHCP) : XNET_GET_XNADDR_ETHERNET;
 }
 

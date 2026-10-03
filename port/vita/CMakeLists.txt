@@ -269,6 +269,8 @@ if(HALO_VITA_MENU_RENDER_PROBE)
 endif()
 if(HALO_VITA_MENU_AUDIO)
   target_compile_definitions(HaloCE.elf PRIVATE HALO_VITA_MENU_AUDIO=1)
+endif()
+if(HALO_VITA_MENU_AUDIO AND NOT HALO_VITA_ORIGINAL_RUNTIME)
   # These world/debug owners are unavailable in the staged UI-only runtime.
   # Fail explicitly if a spatial/object path escapes the 2D menu contract.
   foreach(OWNER compute_sound_obstruction track_object_impulse_sound
@@ -287,9 +289,9 @@ target_compile_options(HaloCE.elf PRIVATE -std=gnu11 -Wall -Wextra -O2 -g -ffunc
 # headroom as the original renderer grows.
 target_link_options(HaloCE.elf PRIVATE
   -Wl,-q -Wl,--gc-sections
-  -Wl,--section-start=.init_array=0x81280000
-  -Wl,--section-start=.fini_array=0x8128001c
-  -Wl,-Tdata=0x81290000
+  -Wl,--section-start=.init_array=0x81600000
+  -Wl,--section-start=.fini_array=0x8160001c
+  -Wl,-Tdata=0x81610000
   "-Wl,-Map=${CMAKE_CURRENT_BINARY_DIR}/HaloCE.elf.map")
 target_link_libraries(HaloCE.elf PRIVATE halo_core
   -Wl,--start-group vitaGL vitashark SceShaccCgExt SDL3 pthread stdc++ mathneon m z

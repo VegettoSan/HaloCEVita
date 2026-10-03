@@ -133,7 +133,7 @@ jobs:
 
       - name: Retain exact native dependency sysroot for local closure builds
         if: always()
-        run: tar -czf build/vita-full-ui-probe/native-sysroot.tar.gz -C /usr/local/vitasdk arm-vita-eabi/include arm-vita-eabi/lib
+        run: tar -czf build/vita-full-ui-probe/native-sysroot.tar.gz -C /usr/local/vitasdk bin lib libexec share arm-vita-eabi
       - name: Upload native dependency sysroot
         if: always()
         uses: actions/upload-artifact@v4

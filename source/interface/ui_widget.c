@@ -3051,7 +3051,7 @@ static void event_handler_dispatch(
 	if (TEST_FLAG(handler->flags, _event_handler_run_scenario_script_bit) &&
 		handler->script[0])
 	{
-#ifdef HALO_VITA_MENU_BRINGUP
+#if defined(HALO_VITA_MENU_BRINGUP) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 		vita_log("[VITA UI BLOCKED] scenario script '%s' requires world runtime", handler->script);
 		vita_menu_dispatch_blocked = TRUE;
 		*calling_widget_deleted = FALSE;

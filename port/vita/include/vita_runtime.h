@@ -55,6 +55,9 @@ void halo_vita_ui_process_shell_frame(void);
 int vita_xapi_file_attributes(const char *xbox_path, uint32_t *attributes, uint32_t *error);
 uint32_t vita_xapi_last_error_get(void);
 void vita_xapi_last_error_set(uint32_t error);
+int halo_vita_original_shell_initialize(void);
+int halo_vita_original_game_initialize(void);
+int halo_vita_ui_original_root_ready(void);
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 int halo_vita_renderer_initialize(void);
 void halo_vita_renderer_dispose_before_root(void);

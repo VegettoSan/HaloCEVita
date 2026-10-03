@@ -32,7 +32,9 @@ int vita_cache_probe(int graphics, int core, int shaders)
 	if (!tags) return 0;
 	/* A recheck replaces the same arena bytes. Restore the old image and its
 	 * resource-file binding first. */
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 	if (!halo_vita_ui_runtime_dispose()) return -1;
+#endif
 	if (!halo_vita_cache_unmount_menu()) return 0;
 	vita_cache_resource_unbind();
 	vita_graphics_cache_status(-1);

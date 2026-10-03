@@ -18,6 +18,10 @@
 #include "rasterizer/rasterizer.h"
 #include "rasterizer/xbox/rasterizer_xbox.h"
 #include "vita_runtime.h"
+#include "input/input.h"
+#include "sound/sound_manager.h"
+#include "errors.h"
+#include "cache/cache_files.h"
 #include "halo_ui_pointer.h"
 
 /* Keep vitaGL headers out of Halo's MSVC-semantics translation unit. The
@@ -104,6 +108,30 @@ static void vita_probe_real_menu_target(void)
 }
 #endif
 
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+int halo_vita_original_shell_initialize(void)
+{
+    /* cseries and native GL are owned by main; game-state owns one allocation.
+     * Restore shell.c's remaining owners before game_initialize. */
+    errors_initialize();
+    /* Native logical map mount owns cache I/O; Xbox HDD precaching would
+     * create fixed DVD cache files and cannot read compressed Xbox maps. */
+    real_math_initialize();
+    return 1;
+}
+int halo_vita_original_game_initialize(void)
+{
+    vita_log("[VITA ORIGINAL] rasterizer/input/sound/game lifetime initialization begin");
+    if (!rasterizer_initialize() || !global_d3d_device) return 0;
+    vita_rasterizer_initialized = TRUE;
+    input_initialize();
+    sound_initialize();
+    game_initialize();
+    vita_log("[VITA ORIGINAL] game_initialize returned; complete UI/game lifetime owners ready");
+    return halo_vita_ui_widgets_initialized();
+}
+#endif
+
 int halo_vita_renderer_initialize(void)
 {
     if (vita_renderer_ready) return 1;
@@ -123,7 +151,7 @@ int halo_vita_renderer_initialize(void)
      * not pre-create the texture cache because rasterizer_initialize() creates
      * it itself. */
     vita_log("[VITA 035] original Xbox rasterizer initialization begin");
-    if (!rasterizer_initialize()) {
+    if (!vita_rasterizer_initialized && !rasterizer_initialize()) {
         vita_log("MAIN MENU BLOCKED: original Xbox rasterizer initialization failed");
         return 0;
     }
@@ -162,11 +190,17 @@ int halo_vita_renderer_initialize(void)
      * The clock remains inactive and no local players/input are created. */
     if (!vita_shell_state_ready) {
         vita_log("[VITA 036S] original pregame clock/player/cinematic state begin");
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
         game_time_initialize();
+#endif
         game_time_initialize_for_new_map();
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
         players_initialize();
+#endif
         players_initialize_for_new_map();
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
         cinematic_initialize();
+#endif
         cinematic_initialize_for_new_map();
         vita_shell_state_ready = TRUE;
         vita_log("[VITA 036S] original pregame state PASS; windows=%d", main_get_window_count());
@@ -182,7 +216,9 @@ int halo_vita_renderer_initialize(void)
      * original subsystem transitions instead of fabricating an LRUV cache. */
     if (!vita_decals_ready) {
         vita_log("[VITA 036D] original decals initialization begin");
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
         decals_initialize();
+#endif
         decals_initialize_for_new_map();
         vita_decals_ready = TRUE;
         vita_log("[VITA 036D] original decals initialization/new-map PASS");

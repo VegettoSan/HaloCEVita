@@ -71,6 +71,9 @@ int main(void)
 	vita_log("HALO_VITA_MENU_BRINGUP=1: proven GPU/file probes skipped");
 #endif
 	vita_log("[VITA 011] native Halo core probe complete; platform=%d core=%d maps=%d graphics=%d shaders=%d", platform, core, maps, graphics, shaders);
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    if (!halo_vita_original_shell_initialize()) goto cleanup;
+#endif
 	arena = vita_memory_initialize();
 	if (arena) memory = halo_vita_memory_initialize();
 	vita_free_memory(&user, &cdram, &phycont);
@@ -79,6 +82,9 @@ int main(void)
 		vita_graphics_cache_status(0);
 		vita_log("cache checkpoint skipped: memory=%d maps=%d", memory, maps);
 	}
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    if (!memory || !maps || !halo_vita_original_game_initialize()) goto cleanup;
+#endif
 	#ifdef HALO_VITA_MENU_BRINGUP
 	if (memory && maps) menu_cache = vita_cache_probe(0, core, 0);
 	#else
@@ -117,6 +123,7 @@ int main(void)
 		command = vita_controls_poll();
 		if (command < 0) break;
 #ifdef HALO_VITA_MENU_BRINGUP
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 		if (root_active) {
 			struct vita_gamepad_sample menu_pad;
 			if (vita_read_gamepad(&menu_pad)) {
@@ -140,6 +147,7 @@ int main(void)
 				menu_input_sample_valid = 1;
 			}
 		}
+#endif
 #endif
 #ifdef HALO_VITA_MENU_AUDIO
 		/* Square now belongs to the original UI/keyboard, not the audio probe. */

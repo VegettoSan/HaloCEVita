@@ -51,9 +51,13 @@ int halo_vita_menu_audio_initialize(void)
         }
     }
     vita_log("[VITA AUDIO] original sound classes/cache/manager initialization begin: permutations=%ld", permutations);
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
     sound_classes_initialize();
+#endif
     sound_classes_initialize_for_new_map();
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
     sound_initialize();
+#endif
     if (!sound_is_active()) vita_fatal("original sound manager initialization failed");
     sound_cache_open();
     sound_initialize_for_new_map();

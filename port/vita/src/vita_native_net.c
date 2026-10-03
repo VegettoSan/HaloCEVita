@@ -479,3 +479,11 @@ int pause(void)
 {
     for (;;) sceKernelDelayThread(1000000);
 }
+
+int vita_native_local_mac(unsigned char *bytes)
+{
+    SceNetEtherAddr address;
+    if (!net_ready() || sceNetGetMacAddress(&address,0) < 0) return 0;
+    memcpy(bytes,address.data,6);
+    return 1;
+}

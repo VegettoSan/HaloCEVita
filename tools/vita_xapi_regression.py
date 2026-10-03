@@ -29,6 +29,9 @@ typedef struct { unsigned st_mode; int64_t st_size; SceDateTime st_ctime,st_atim
 #define SCE_S_IWOTH S_IWOTH
 #define SCE_CST_SIZE 1
 #define SCE_CST_MODE 2
+#define SCE_CST_CT 4
+#define SCE_CST_AT 8
+#define SCE_CST_MT 16
 int sceIoGetstatByFd(int fd, SceIoStat *stat);
 int sceIoChstatByFd(int fd, SceIoStat *stat, int mask);
 int sceIoChstat(const char *path, SceIoStat *stat, int mask);
@@ -51,6 +54,7 @@ typedef int64_t SceOff;
 int sceIoOpen(const char *path,int flags,int mode);
 int sceIoClose(int fd);
 int sceIoRead(int fd,void *buffer,unsigned long count);
+int sceIoPread(int fd,void *buffer,unsigned long count,SceOff offset);
 int sceIoWrite(int fd,const void *buffer,unsigned long count);
 SceOff sceIoLseek(int fd,SceOff offset,int whence);
 int sceIoMkdir(const char *path,int mode);
@@ -119,12 +123,14 @@ int sceIoGetstat(const char *path, SceIoStat *result) {
 int sceIoOpen(const char *p,int flags,int mode) {char t[1024];return translate(p,t,sizeof(t))?open(t,flags,mode):-1;}
 int sceIoClose(int fd){return close(fd);}
 int sceIoRead(int fd,void *p,unsigned long n){return read(fd,p,n);}
+int sceIoPread(int fd,void *p,unsigned long n,SceOff o){return pread(fd,p,n,o);}
 int xapi_test_write_limit, xapi_test_fail_write;
 int sceIoWrite(int fd,const void *p,unsigned long n){
  if(xapi_test_fail_write)return -1;
  if(xapi_test_write_limit && n>(unsigned)xapi_test_write_limit)n=xapi_test_write_limit;
  return write(fd,p,n);}
 int sceRtcGetWin32FileTime(const SceDateTime *t,uint64_t *out){*out=t->filetime;return 0;}
+int sceRtcSetWin32FileTime(SceDateTime *t,uint64_t value){t->filetime=value;return 0;}
 SceOff sceIoLseek(int fd,SceOff o,int w){return lseek(fd,o,w);}
 int sceIoMkdir(const char *p,int mode){char t[1024];return translate(p,t,sizeof(t))?mkdir(t,mode):-1;}
 int sceIoRemove(const char *p){char t[1024];return translate(p,t,sizeof(t))?unlink(t):-1;}
@@ -152,7 +158,7 @@ def main():
         (headers / 'stat.h').write_text(STAT_HEADER)
         (headers / 'fcntl.h').write_text(FCNTL_HEADER)
         (headers / 'devctl.h').write_text(DEVCTL_HEADER)
-        (headers.parent / 'rtc.h').write_text('#include \"io/stat.h\"\nint sceRtcGetWin32FileTime(const SceDateTime *t,uint64_t *out);\n')
+        (headers.parent / 'rtc.h').write_text('#include \"io/stat.h\"\nint sceRtcGetWin32FileTime(const SceDateTime *t,uint64_t *out);\nint sceRtcSetWin32FileTime(SceDateTime *t,uint64_t value);\n')
         (work / 'mock.c').write_text(MOCK)
         library = work / 'xapi.so'
         subprocess.run(['gcc', '-std=c11', '-D_DEFAULT_SOURCE', '-shared', '-fPIC',
