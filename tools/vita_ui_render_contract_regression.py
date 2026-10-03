@@ -110,19 +110,17 @@ texture_get = renderer.find("xgpu_texture_get(", stage_comment)
 require(stage_comment >= 0 and stage_select > stage_comment and texture_get > stage_select,
         "Vita must select each GL texture unit before a texture cache miss/upload")
 
-# DXT3/DXT5 are already decoded by xbox_textures.c on Vita. DXT1 was the last
-# native compressed path. Xbox cache blocks must not cross the vitaGL boundary
-# under an assumed GPU compressed layout: the Vita shim decodes DXT1 to BGRA,
-# retaining c0<=c1 punch-through alpha, then performs an ordinary TexImage2D.
-require("#define glCompressedTexImage2D halo_vita_glCompressedTexImage2D" in vita_gl,
-        "Vita compressed uploads must pass through the checked DXT boundary")
-require("internal_format != GL_COMPRESSED_RGBA_S3TC_DXT1_EXT" in vita_gl_compat,
-        "Vita compressed boundary must explicitly admit only the expected DXT1 path")
-require("palette[3] = 0;" in vita_gl_compat,
-        "DXT1 punch-through alpha must remain transparent")
-require("glTexImage2D(target, level, GL_RGBA8" in vita_gl_compat and
-        "GL_BGRA, GL_UNSIGNED_BYTE, pixels" in vita_gl_compat,
-        "DXT1 must be decoded to ordinary BGRA before vitaGL sampling")
+# All three DXT formats use the existing upstream decoder and uploader.
+# A second Vita DXT1 decoder would duplicate that semantic owner.
+textures = (ROOT / "port/linux/src/xbox_textures.c").read_text()
+vita_decode = textures.split("#elif defined(HALO_VITA)", 1)[1].split("#endif", 1)[0]
+require("decode_compressed = description->compressed;" in vita_decode,
+        "Vita must use upstream's original decoder for all DXT formats")
+require("halo_vita_glCompressedTexImage2D" not in vita_gl + vita_gl_compat,
+        "duplicate Vita DXT1 decoder must remain removed")
+require("dxt_decode_level(information.kind, source" in textures and
+        "GL_BGRA, GL_UNSIGNED_BYTE, converted" in textures,
+        "decoded DXT must retain original mip/face upload ownership")
 
 # The current NV2A fragment translator never reads the legacy B0/B1 vertex
 # outputs. Vita has a tight varying budget, so the compiler boundary removes

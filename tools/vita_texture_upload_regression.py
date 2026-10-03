@@ -81,7 +81,7 @@ static void decode_level(const struct xgpu_texture_description *d, unsigned long
 }
 static void dxt_decode_level(unsigned char kind, const unsigned char *src,
     unsigned long w, unsigned long h, unsigned long depth, unsigned long *dst) {
-    assert((kind==_texel_dxt3 || kind==_texel_dxt5) && expected->compressed && depth==1);
+    assert((kind==_texel_dxt1 || kind==_texel_dxt3 || kind==_texel_dxt5) && expected->compressed && depth==1);
     unsigned long level=0;
     while(src!=base+xgpu_texture_level_offset(expected,level)) {level++;assert(level<expected->levels);}
     assert(w==level_dimension(expected->width,level) && h==level_dimension(expected->height,level));
@@ -125,12 +125,12 @@ int main(void) {
     glPixelStorei(GL_UNPACK_ALIGNMENT,1); assert(glGetError()==0x500);
     assert(xgpu_texture_face_size(&d)==10920);
     assert(xgpu_texture_level_offset(&d,1)==8192 && xgpu_texture_level_offset(&d,2)==10240);
-    upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(compressed_calls==6 && !decoded_calls && !gl_error && row_length==0);
+    upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(!compressed_calls && decoded_calls==6 && !gl_error && row_length==0);
     assert(draw_waits==1&&transfer_waits==7&&!pending_transfer&&!unsafe_realloc);
     /* Repeated resource refresh must finish each mip before next mutation. */
     for(int n=0;n<32;n++)upload(2,GL_TEXTURE_2D,&d,data,NULL);
     assert(!pending_transfer&&!unsafe_realloc);
-    d.format=0xc; compressed_calls=0; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(compressed_calls==6);
+    d.format=0xc; compressed_calls=0; decoded_calls=0; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(decoded_calls==6 && !compressed_calls);
     d.format=0xf; compressed_calls=0; decoded_calls=0; upload(2,GL_TEXTURE_2D,&d,data,NULL); assert(decoded_calls==6 && !compressed_calls);
     d.format=0xe; compressed_calls=0; decoded_calls=0;
     upload(2,GL_TEXTURE_2D,&d,data,NULL);assert(decoded_calls==6 && !compressed_calls);
@@ -149,7 +149,7 @@ int main(void) {
     d.width=0; FAIL(upload(2,GL_TEXTURE_2D,&d,data,NULL));
     d.width=3; d.depth=2; FAIL(upload(2,GL_TEXTURE_3D,&d,data,NULL));
     assert(!unsafe_realloc);
-    puts("PASS actual upload: native DXT1 and decoded DXT3/5 bytes/mips, repeated refresh, separate draw/transfer waits, BGRA staging and transfer/GL failure rejection");
+    puts("PASS actual upload: original decoded DXT1/3/5 bytes/mips, repeated refresh, separate draw/transfer waits, BGRA staging and transfer/GL failure rejection");
 #endif
 }
 '''

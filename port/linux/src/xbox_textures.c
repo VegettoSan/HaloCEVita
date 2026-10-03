@@ -602,12 +602,10 @@ static void upload(GLuint texture, GLenum target, const struct xgpu_texture_desc
 #ifdef HALO_ANDROID
 	decode_compressed = description->compressed && !xgpu_capabilities.s3tc;
 #elif defined(HALO_VITA)
-	/* A087: decoded DXT3 restores option lettering on hardware. The logo
-	 * still has a gray rectangle although its DXT5 source is mostly alpha0.
-	 * Use the same original decoder for alpha-bearing DXT3/DXT5 so both
-	 * preserve authored coverage at the checked BGRA upload boundary. */
-	decode_compressed = description->compressed &&
-		(information.kind == _texel_dxt3 || information.kind == _texel_dxt5);
+	/* Reuse upstream's existing complete DXT decoder for every compressed
+	 * format. Vita receives the original BGRA texels, mip/face offsets and
+	 * punch-through alpha; no separate platform decoder is needed. */
+	decode_compressed = description->compressed;
 #endif
 	#ifdef HALO_VITA
 	if (!description->width || !description->height || !description->depth ||
