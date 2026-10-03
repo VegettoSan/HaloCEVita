@@ -123,6 +123,18 @@ if original_runtime:
     for obsolete in ('vita_cache_prepare_slot', 'vita_cache_resource_bind', 'vita_cache_resource_read',
                      'halo_vita_main_pump_deferred_map_change'):
         assert not re.search(r'\b[Tt]\s+' + obsolete + r'$', symbols, re.M), 'recovery owner linked: ' + obsolete
+    # A126: verify the shipping ARM consumers cross the typed data boundary.
+    # The software bitmap text path is covered by host execution but is GC'd
+    # from this target; the hardware font cache is the retained renderer owner.
+    for consumer in ('string_list_get_string', 'unicode_string_list_get_string',
+                     'cache_hardware_format_character'):
+        code = run('objdump', '-d', '--disassemble=' + consumer, elf)
+        assert re.search(r'\bblx?\b.*<tag_data_get_pointer>', code), (
+            consumer + ' bypasses the native typed tag_data accessor')
+        print('PASS: ARM ' + consumer + ' calls original tag_data_get_pointer')
+    code = run('objdump', '-d', '--disassemble=tag_data_get_pointer', elf)
+    assert re.search(r'\bblx?\b.*<halo_vita_cache_resolve_compiled_pointer>', code), (
+        'tag_data accessor bypasses the active compiled-image resolver')
 else:
     assert re.search(r'\bblx?\b.*<vita_cache_resource_read>', resource_disassembly), 'recovery cache reader missing'
 undefined = run('nm', '-u', elf)

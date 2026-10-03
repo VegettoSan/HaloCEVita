@@ -1478,3 +1478,13 @@ original cache closure/package,280/281 remain in progress at this checkpoint.
   00.41 native CI and console acceptance pending.
 - Corrected the00.40 audit resolution entry: current source and supplied log
   use640x480 internal, not320x240. No resolution code changed.
+
+
+### A127 — Verify typed text boundary in the actual shipping ARM ELF (2026-10-03)
+
+00.41 source8313c1b publishes A126; Build283/run37148116793 starts and all30
+required host commands pass. Added native verifier disassembly gates for retained
+ASCII/Unicode getters and original hardware font cache: each must call original
+tag_data_get_pointer, which must call the active compiled-image resolver. The
+software font path is not linked in this shipping closure; actual C host execution
+covers it. Native gates and final package remain pending; no console acceptance.
