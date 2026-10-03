@@ -42,6 +42,8 @@ typedef const XMEDIAPACKET *LPCXMEDIAPACKET;
 typedef struct {DWORD dwFlags,dwInputSize;} XMEDIAINFO,*LPXMEDIAINFO;
 typedef void (*LPFNXMEDIAOBJECTCALLBACK)(void *,void *,DWORD);
 typedef void *LPVOID;
+struct fixture_event {DWORD *status,*done;DWORD bytes;unsigned wakes;};
+static BOOL SetEvent(void *handle){struct fixture_event *e=handle;assert(e && *e->status==XMEDIAPACKET_STATUS_SUCCESS && *e->done==e->bytes);e->wakes++;return TRUE;}
 static int fail_allocation;
 static void *fixture_malloc(size_t n){return fail_allocation?NULL:malloc(n);}
 #define malloc fixture_malloc
@@ -91,7 +93,8 @@ struct sdl_stream voice={0};streams=&voice;voice.reference_count=2;
 voice.channels=2;voice.frequency=voice.sample_rate=44100;voice.volume=voice.mix_left=voice.mix_right=1;
 voice.callback=finished;voice.context=(void *)1;
 DWORD status=99,done=99;
-XMEDIAPACKET packet={source,sizeof(source),&done,&status,NULL,(void *)2,NULL};
+struct fixture_event event={&status,&done,sizeof(source),0};
+XMEDIAPACKET packet={source,sizeof(source),&done,&status,NULL,(void *)2,&event};
 assert(stream_process(&voice.object,&packet,NULL)==S_OK && voice.packet_count==1 && !done && status==XMEDIAPACKET_STATUS_PENDING);
 assert(voice.packets[0].samples!=source && !memcmp(source,voice.packets[0].samples,sizeof(source)));
 /* Reuse caller/cache bytes immediately: decoded packet owns an independent copy. */
@@ -101,7 +104,12 @@ assert(!callback_calls && status==XMEDIAPACKET_STATUS_PENDING);
 assert(output[2*16]>0.1f && output[2*16+1]<-0.1f);
 consumer_thread=pthread_self();streams_complete_finished();
 assert(callback_calls==1 && !voice.packet_count && done==sizeof(source) && status==XMEDIAPACKET_STATUS_SUCCESS);
-voice.callback=NULL;packet.pdwStatus=NULL;packet.pdwCompletedSize=NULL;
+assert(!event.wakes); /* Original callback takes precedence over event. */
+voice.callback=NULL;
+assert(stream_process(&voice.object,&packet,NULL)==S_OK);
+mix(output,480);assert(!event.wakes);streams_complete_finished();
+assert(event.wakes==1 && !voice.packet_count && done==sizeof(source) && status==XMEDIAPACKET_STATUS_SUCCESS);
+packet.hCompletionEvent=NULL;packet.pdwStatus=NULL;packet.pdwCompletedSize=NULL;
 for(unsigned i=0;i<MAXIMUM_STREAM_PACKETS;i++)assert(stream_process(&voice.object,&packet,NULL)==S_OK);
 assert(stream_process(&voice.object,&packet,NULL)==E_OUTOFMEMORY);
 assert(stream_get_status(&voice.object,&status)==S_OK && !status);
@@ -113,7 +121,7 @@ fail_allocation=1;assert(stream_process(&voice.object,&packet,NULL)==E_OUTOFMEMO
 /* Successful startup is audible-device-only; each device failure stops explicitly. */
 audio_start();audio_start();assert(initialized==1 && open_calls==1 && resume_calls==1);
 for(int i=1;i<=3;i++){audio_started=FALSE;device_failure=i;if(!setjmp(failed)){audio_start();assert(!"silent device accepted");}}
-puts("PASS actual original SDL mixer: mono/stereo Xbox ADPCM, PCM stereo/resample, independent cache packet copy, nonzero output, callback on consumer outside lock,64-packet bound/flush,device failure");}
+puts("PASS actual original SDL mixer: mono/stereo Xbox ADPCM, PCM stereo/resample, independent cache packet copy, nonzero output, callback/event precedence and completion on consumer,64-packet bound/flush,device failure");}
 '''
 out=root/'build/vita/tests/audio-mixer';out.mkdir(parents=True,exist_ok=True)
 p=out/'mixer.c';p.write_text(code);exe=out/'mixer'

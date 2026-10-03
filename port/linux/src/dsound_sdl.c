@@ -562,13 +562,7 @@ static void stream_complete_head(struct sdl_stream *stream, DWORD status, DWORD 
 	}
 	else if (packet.hCompletionEvent)
 	{
-		#ifdef HALO_VITA
-		/* Halo's original stream channels use callbacks. XDK event packets
-		 * require a real event owner, which this staged runtime lacks. */
-		vita_fatal("DirectSound completion event requires native XDK event integration");
-#else
 		SetEvent(packet.hCompletionEvent);
-#endif
 	}
 }
 

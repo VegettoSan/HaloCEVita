@@ -1386,3 +1386,15 @@ manager initialization/copy/open/warm logs, after each corresponding operation;
 no independent cache decisions. Original worker tests and all29 required host
 commands passed in A121, also in CI279's contracts job. Native279 is compiling at
 this checkpoint; neither change has real-Vita acceptance.
+
+
+### A123 — Restore original DirectSound packet event completion (2026-10-03)
+
+Audit found a staged Vita fatal replacement for packet.hCompletionEvent despite
+real SetEvent now being provided by halo_ui_kernel's original native pthread
+services. Restored upstream SetEvent; packet/status/callback ordering remains in
+dsound_sdl. Expanded actual mixer regression proves completion only on the
+consumer, status/byte count before event notification and callback precedence
+when both are supplied. PASS; required xapi event contracts also PASS. The staged
+world/audio guards are already unselected in the default original runtime.
+No audio-selection/volume/trigger logic changed; console audio acceptance pending.
