@@ -110,6 +110,26 @@ void halo_vita_menu_audio_feedback_probe(void)
     ui_play_audio_feedback_sound(feedback);
     feedback = feedback == 3 ? 1 : feedback + 1;
 }
+
+int halo_vita_menu_audio_release_for_game(void)
+{
+    if (!ready) return 1;
+    /* The process-lifetime sound manager/classes belong to game_initialize().
+     * Retire only the staged ui.map per-map state. The next original
+     * game_initialize_for_new_map() will rebuild these same owners for a10. */
+    halo_vita_menu_audio_stop();
+    sound_stop_all();
+    sound_dispose_from_old_map();
+    sound_classes_dispose_from_old_map();
+    sound_cache_close();
+    ready = FALSE;
+    frame_started = FALSE;
+    music_index = NONE;
+    music_started = FALSE;
+    vita_log("[VITA AUDIO] staged ui.map per-map audio released; process sound lifetime retained");
+    return 1;
+}
+
 void halo_vita_menu_audio_dispose(void)
 {
     if (!ready) return;
