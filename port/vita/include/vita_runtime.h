@@ -64,7 +64,6 @@ int halo_vita_main_pump_deferred_map_change(void);
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 int halo_vita_renderer_initialize(void);
 void halo_vita_renderer_dispose_before_root(void);
-int halo_vita_renderer_release_staged_map(void);
 int halo_vita_renderer_render_menu_frame(void);
 #endif
 #endif
