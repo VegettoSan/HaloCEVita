@@ -42,6 +42,7 @@ int halo_vita_menu_audio_ready(void);
 int halo_vita_menu_audio_start(uint32_t definition_index);
 void halo_vita_menu_audio_stop(void);
 void halo_vita_menu_audio_frame(void);
+int halo_vita_menu_audio_release_for_game(void);
 void halo_vita_menu_audio_dispose(void);
 void halo_vita_menu_audio_feedback_probe(void);
 void halo_vita_audio_mixer_shutdown(void);
@@ -52,15 +53,18 @@ void halo_vita_ui_render_clock_update(void);
 int halo_vita_ui_activate_main_menu_state(void);
 int halo_vita_ui_process_menu_action(short action);
 void halo_vita_ui_process_shell_frame(void);
+int halo_vita_ui_runtime_release_staged_map(void);
 int vita_xapi_file_attributes(const char *xbox_path, uint32_t *attributes, uint32_t *error);
 uint32_t vita_xapi_last_error_get(void);
 void vita_xapi_last_error_set(uint32_t error);
 int halo_vita_original_shell_initialize(void);
 int halo_vita_original_game_initialize(void);
 int halo_vita_ui_original_root_ready(void);
+int halo_vita_main_pump_deferred_map_change(void);
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 int halo_vita_renderer_initialize(void);
 void halo_vita_renderer_dispose_before_root(void);
+int halo_vita_renderer_release_staged_map(void);
 int halo_vita_renderer_render_menu_frame(void);
 #endif
 #endif
