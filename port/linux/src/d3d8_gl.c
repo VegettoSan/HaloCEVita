@@ -346,6 +346,10 @@ struct gl_device
 		DWORD data;
 		UINT stride;
 	} streams[16];
+	/* SetIndices' base vertex: added to every index of an indexed draw (the
+	dynamic vertex buffers keep each buffer's vertices at an offset into one
+	vertex buffer, and their triangles count from 0: contrails, lightning). */
+	UINT base_vertex_index;
 
 	/* the current value of each input register (SetVertexData) */
 	float attributes[XGPU_VERTEX_ATTRIBUTE_COUNT][4];
@@ -3873,7 +3877,7 @@ void WINAPI D3DDevice_SetStreamSource(UINT stream_number, D3DVertexBuffer *strea
 
 void WINAPI D3DDevice_SetIndices(D3DIndexBuffer *index_data, UINT base_vertex_index)
 {
-	(void)base_vertex_index;
+	device.base_vertex_index = base_vertex_index;
 	D3D__IndexData = index_data ? (WORD *)index_data->Data : NULL;
 }
 
@@ -3918,7 +3922,9 @@ void WINAPI D3DDevice_DrawIndexedVertices(D3DPRIMITIVETYPE primitive_type, UINT 
 		mirror_range((unsigned long)index_data, vertex_count * sizeof(WORD), &index_buffer, &index_offset, &generation);
 	index_extent(index_data, vertex_count, generation, mirrored, &minimum, &maximum);
 	trace_draw("indexed", primitive_type, vertex_count, NULL);
-	setup_streams(minimum, maximum - minimum + 1);
+	/* Upstream: index i addresses vertex base + i. The uploaded indices
+	 * still subtract minimum, since the attributes start at base + minimum. */
+	setup_streams(device.base_vertex_index + minimum, maximum - minimum + 1);
 	gl_check_errors("vertex streams");
 	if (mirrored)
 	{
