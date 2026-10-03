@@ -118,30 +118,43 @@ VOID WINAPI XPhysicalProtect(LPVOID address, SIZE_T size, DWORD protect)
 {
 	if (!VirtualProtect(address, size, protect, NULL)) vita_log("XPhysicalProtect requested policy not enforced");
 }
-int halo_vita_memory_initialize(void)
+
+int halo_vita_memory_prepare_original_shell(void)
 {
 	void *extra;
 	if (memory_live) return 1;
+
 	physical_memory_allocate();
 	memory_live = 1;
 	physical_memory_verify();
-
-	/* Let the original game-state initializer own its allocation exactly once.
-	 * It binds the already placed physical-memory region, creates the backing
-	 * save file through the Vita XAPI bridge and allocates the real header. */
-	vita_log("[VITA 033] original game-state initialization begin");
-	game_state_initialize();
-	state_live = 1;
-	vita_log("[VITA 034] original game-state initialized on placed arena");
-
-	vita_log("Halo physical_memory_allocate/verify returned: game=%p tags=%p texture=%p sound=%p",
+	vita_log("[VITA SHELL] original physical-memory map prepared without game_state owner: game=%p tags=%p texture=%p sound=%p",
 		physical_memory_get_game_state_base_address(), physical_memory_get_tag_cache_base_address(),
 		physical_memory_get_texture_cache_base_address(), physical_memory_get_sound_cache_base_address());
+
+	/* Retain the proven allocator/alignment/protection contract in both staged
+	 * and original-shell routes. This allocation is outside Halo's fixed regions
+	 * and is released immediately. */
 	extra = XPhysicalAlloc(8192, PLATFORM_ANY_PHYSICAL_ADDRESS, 16384, PAGE_READWRITE);
 	if (!extra || ((uintptr_t)extra - halo_vita_memory_base()) % 16384) return 0;
 	memset(extra, 0x5a, 8192); XPhysicalFree(extra);
 	if (XQueryMemoryProtect(extra) != PAGE_NOACCESS) return 0;
 	vita_log("[VITA 014] Halo physical memory PASS; protection query tracks allocations, no page-fault enforcement");
+	return 1;
+}
+
+int halo_vita_memory_initialize(void)
+{
+	if (state_live) return 1;
+	if (!halo_vita_memory_prepare_original_shell()) return 0;
+
+	/* The staged 00.36 path still needs the game-state owner before its special
+	 * ui.map mount. An eventual shell_initialize()+main_loop target deliberately
+	 * calls only halo_vita_memory_prepare_original_shell(), because shell.c owns
+	 * this exact game_state_initialize() transition itself. */
+	vita_log("[VITA 033] original game-state initialization begin");
+	game_state_initialize();
+	state_live = 1;
+	vita_log("[VITA 034] original game-state initialized on placed arena");
 	return 1;
 }
 void halo_vita_memory_dispose(void)
