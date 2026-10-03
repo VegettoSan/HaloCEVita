@@ -59,6 +59,8 @@ uint32_t vita_xapi_last_error_get(void);
 void vita_xapi_last_error_set(uint32_t error);
 int halo_vita_original_shell_initialize(void);
 int halo_vita_original_game_initialize(void);
+int halo_vita_original_main_menu_load(void);
+int halo_vita_original_render_menu_frame(void);
 int halo_vita_ui_original_root_ready(void);
 int halo_vita_main_pump_deferred_map_change(void);
 #ifdef HALO_VITA_MENU_RENDER_PROBE
