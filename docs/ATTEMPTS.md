@@ -1299,3 +1299,31 @@ Build219 research compiled the full configured game units for ARM, reaching link
 - Hardware: no attached Vita. White panels, position, fades, transitions/FPS remain
   unverified. No clip-position retry or symptom correction. Complete gameplay
   main-loop/world and volume/sampler/depth capability acceptance remain pending.
+
+
+### A119 — Exact00.39 CI Build277 delivery (2026-10-03)
+
+- Vita Build277/run37133289890 source28f6a50f10862d8799efd4c13e37cf726d156883
+  completes all26 host commands, native original renderer build/verifier and
+  prerelease publication successfully. Artifact11277564115 is16505394 bytes;
+  GitHub ZIP digest92e61d460e150dd8dbc503730fbd54d4341c7bb867efb3643b0604795f58c984
+  matches the downloaded ZIP. No local executable substituted.
+- Independently verified clean exact source manifest, every file byte count/hash,
+  VPK's six owned entries/no retail assets, SELF, SFO/banner00.39/HCEV00001,
+  ELF32 ARM hard-float/VFP registers, all82 required public core symbols, local
+  original main_new_map owner, optional weak SDK imports only, public resource
+  reader disassembly. VPK2611844 bytes SHA-256
+  b4b3e020d93e07edad4907a874c4f0a8661384003c4a5d7a798765959a6b4a02.
+  ELF38864796 bytes SHA-256
+  6c665232784fa3a17bd789905a506494b049028052ff44c68e00d774cea50dae.
+- Release vita-build-277 retains matching ELF/map and identical VPK digest.
+  Supplied ui.map SHA35e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833
+  and Bloodgulch SHA50fe52406f075d975e24100a65b26ff696458023dd3509878953052ab0ef858f
+  remain unchanged; neither is packaged/published.
+- Separate imported desktop/Android workflow still fails before compilation on
+  missing port/android/guest/runtime build dependency, absent from initial8669b0f
+  too. It is not a successful full-platform CI or Vita rendering claim.
+- Console status: no attached Vita, exact00.39 untested. White panels/placement/
+  navigation/FPS and full gameplay remain pending. BUILD.md supplies cold/warm,
+  input/keyboard and original/effective-shader evidence collection instructions.
+  This final documentation checkpoint does not rebuild the verified binary.

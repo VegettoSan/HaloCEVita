@@ -1,4 +1,31 @@
-## Current native test package —00.32 (2026-10-01)
+## Current native test package —00.39 (2026-10-03)
+
+[Vita Build #277 /00.39](https://github.com/VegettoSan/HaloCEVita/actions/runs/37133289890),
+exact executable source `28f6a50f10862d8799efd4c13e37cf726d156883`: all26 required
+host contracts, native build/package verifier and prerelease publication PASS.
+[Install the exact CI HaloCE.vpk](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-277/HaloCE.vpk),
+2611844 bytes, SHA-256 `b4b3e020d93e07edad4907a874c4f0a8661384003c4a5d7a798765959a6b4a02`.
+[Matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-277)
+are retained in the same release. Independent artifact/digest, clean-source
+manifest, every member hash/size, ELF32 ARM hard-float, SELF, SFO/banner00.39,
+82 required symbols, original new-map owner and native-reader disassembly PASS.
+State **LINKS**, console acceptance pending. Later documentation-only commits
+do not change this executable. See [audit](RENDERER_AUDIT_00.39.md).
+
+Install over the existing app, retain original `ux0:data/HaloCE/maps/ui.map`
+and the same overclock, confirm banner00.39. Capture the first cold menu and
+then repeated D-pad entry/back in Campaign, Settings and profile/name windows.
+Cross activates, Circle returns; Start confirms original keyboard, Select exits
+the test app. Observe cold/warm placement, panels/fades, labels, music, FPS and
+freezes for at least60 seconds. Campaign entry is a UI test; complete campaign/
+gameplay is not accepted. No white-panel or placement fix is claimed yet.
+
+Return fresh `ux0:data/HaloCE/debug.txt`, all `halo_vertex*.glsl` and
+`halo_pixel*.glsl` including `_native` dumps, cold/after-input photos,
+`gamestate.txt` and crash dump if created. Preserve these exact ELF/map symbols
+for this binary. Original and effective shader sources now have separate names.
+
+## Historical native test package —00.32 (2026-10-01)
 
 [Vita Build #174 /00.32](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-174), exact executable source `75d5893b64e1797051572d518918726fca39cece`: required native build/verifier, host contracts and publication PASS (A102). [Install HaloCE.vpk](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-174/HaloCE.vpk),1671406 bytes, SHA-256 `b7411f358e17a36cfe55322170ab1ecec4950417f4909ab0cc9144f155da4659`. Matching ELF/map are in that release. Independent hashes, clean-source manifest, ELF32 ARM hard-float, SELF, exact VPK members and SFO00.32/HCEV00001 PASS. This is LINKS, with real-Vita acceptance pending. Later documentation commits do not change the binary.
 

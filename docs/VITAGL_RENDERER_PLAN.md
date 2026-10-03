@@ -2,6 +2,17 @@
 
 Last research pass: 2026-09-29
 
+2026-10-03 /00.39/A118 implementation checkpoint:
+[function audit](RENDERER_AUDIT_00.39.md). Exact register-array prefixes now
+replace generic declarations at the native boundary; register indices and shader
+equations remain unchanged, with invalid/native-overbudget sources rejected.
+The existing reflected-array updater is tested in CI. Original DXT1/3/5 decode
+and BGRA upload now have one owner; the separate Vita DXT1 decoder is removed.
+Current upstream indexed-base behavior is restored. The older compaction/direct
+DXT/volume-atlas proposals below are research history, not authorization to
+replace original semantics. No volume fallback has been accepted, and console
+visual acceptance remains pending.
+
 This document is the renderer/shader engineering plan for the native PS Vita port. It is intentionally separate from `STATUS.md`: the local working tree and hardware logs may be ahead of the public GitHub branch. Before changing renderer code, inspect the current local tree first.
 
 ## 1. Goal and non-goals

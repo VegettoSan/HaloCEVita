@@ -41,9 +41,11 @@ it does not establish successful scenario/BSP/world execution on console.
 - Exact CI SDK native00.39 ELF/SELF/VPK builds and passes `tools/vita_verify.py`.
   Build271/272 failed on obsolete recovery-symbol requirements. The gate now
   requires selected original map/UI/input/resource owners and excludes only
-  unselected staged owners removed by section GC. Mandatory public `cache_file_read`
+  unreferenced recovery/cleanup owners removed by section GC. Mandatory public `cache_file_read`
   disassembly still verifies a call to `vita_cache_resource_read`.
-- Final CI source/run/version and VPK SHA-256 are recorded in BUILD.md after download.
+- Final CI Build277 on28f6a50 passes all required jobs; exact00.39 VPK SHA-256
+  `b4b3e020d93e07edad4907a874c4f0a8661384003c4a5d7a798765959a6b4a02`
+  and independently checked source/run/version are recorded in BUILD.md.
   The local package is not the deliverable.
 
 ## Hardware status and remaining boundaries

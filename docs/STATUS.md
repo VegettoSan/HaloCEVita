@@ -2,13 +2,14 @@
 
 Last updated: 2026-10-03
 
-Current source **00.39 / A118: LINKS locally**. The [function comparison](RENDERER_AUDIT_00.39.md)
+Current source **00.39 / A118–A119: LINKS, exact CI Build277 verified and delivered**. The [function comparison](RENDERER_AUDIT_00.39.md)
 retains original UI, rasterizer, NV2A shader equations and presentation. It restores
 upstream indexed base-vertex handling, bounds exact native register-array storage,
 records effective compiler sources, and removes the duplicate Vita DXT1 decoder
 in favor of the original DXT1/3/5 decoder. All26 required host commands and the
-exact-SDK native package verifier pass locally. Final CI provenance is recorded
-in BUILD.md after download; console acceptance is pending. Shipping now selects
+exact-SDK native package verifier pass locally and in CI. Native build and publication
+PASS on28f6a50; independently downloaded VPK hash b4b3e020 matches the clean-source
+manifest and release. Complete provenance is in BUILD.md; console acceptance is pending. Shipping now selects
 original `main_menu_load`/new-map owners rather than the staged subset.
 Full gameplay-loop/world activation and reported visual faults remain unaccepted.
 The00.38 clip-position experiment had no hardware visual improvement and was not retried.

@@ -1,5 +1,15 @@
 # Graphics compatibility matrix
 
+Current source update (2026-10-03,00.39/A118): see
+[original renderer audit](RENDERER_AUDIT_00.39.md). DXT1/3/5 use the existing
+upstream decoder/native BGRA upload rather than a separate Vita DXT1 decoder.
+Uniform array storage uses exact referenced prefixes with original register
+indices/equations; effective compiler source is dumped separately. Indexed
+draws retain upstream base-vertex semantics. All26 required host commands and
+native package verification pass locally; hardware visual acceptance remains
+pending. The generated API table and chronological notes below are historical
+capability evidence, not a claim of complete renderer fidelity.
+
 Generated from actual installed artifacts by `VITASDK=/usr/local/vitasdk-hardfp python3 tools/vita_gl_audit.py`.
 
 - Header: `/usr/local/vitasdk-hardfp/arm-vita-eabi/include/vitaGL.h`, SHA-256 `ba68004be9faf49fa4b0526ecbcdf26c3b4b8d001f85e119ce35db26a3f70e3a`.
