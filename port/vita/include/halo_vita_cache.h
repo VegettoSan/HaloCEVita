@@ -31,6 +31,10 @@ void vita_cache_resource_unbind(void);
 int vita_cache_resource_range_valid(uint32_t logical_offset, size_t bytes);
 int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t bytes,
 	char *error, size_t error_size);
+/* Nonzero only while the original cache_file_open/scenario_tags_load lifetime
+ * owns a direct Vita map. The manual ui.map bring-up mount intentionally does
+ * not claim this lifetime. */
+size_t halo_vita_cache_direct_tag_size(void);
 /* Original cache tag blocks/data/references retain serialized Xbox addresses
  * below their already-relocated roots. This resolver is used only by original
  * tag accessors: runtime/native owners pass through unchanged, while owners in
