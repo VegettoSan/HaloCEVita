@@ -1372,3 +1372,17 @@ build and real Vita acceptance remain separate. Required CI includes both tests.
   Version00.40; native CI and real Vita acceptance pending at this checkpoint.
 - Maps remain unmodified and uncommitted. No UI coordinates, shader equations,
   opacity, controller navigation or independent map transition introduced.
+
+
+### A122 — Native warm-slot recovery and original-owner observations (2026-10-03)
+
+Direct review found a second imported Xbox build guard in
+cache_files_open_cache_files, separate from cache_file_header_verify. Native Vita
+now accepts the same retail builds as Linux without rewriting build bytes, while
+Halo still checks source checksum/language/fixed capacity. Extended actual C
+manager execution: historical guard loses a retail warm slot; native guard keeps
+it; checksum mismatch clears it. PASS for both fixtures. Added bounded original
+manager initialization/copy/open/warm logs, after each corresponding operation;
+no independent cache decisions. Original worker tests and all29 required host
+commands passed in A121, also in CI279's contracts job. Native279 is compiling at
+this checkpoint; neither change has real-Vita acceptance.
