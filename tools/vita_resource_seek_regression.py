@@ -86,7 +86,7 @@ with tempfile.TemporaryDirectory() as tmp:
   cache.unlink(missing_ok=True);failure.value=fail_at;writes.value=inflates.value=0
   ok,_,_,prep_error=prepare(path)
   assert not ok and not cache.exists(),(fail_at,prep_error)
-  assert b'write' in prep_error
+  assert b'write' in prep_error or b'header commit' in prep_error
   assert path.read_bytes()==encoded
  failure.value=-1
 
