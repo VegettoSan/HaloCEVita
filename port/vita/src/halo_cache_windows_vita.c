@@ -169,26 +169,46 @@ static boolean vita_direct_cache_header(
     char map_file[48];
     const char *map_name;
     FILE *file;
+    int name_terminated, build_terminated;
 
-    if (!scenario_name || !header || !path || !path_capacity)
+    if (!scenario_name || !header || !path || !path_capacity) {
+        vita_log("[VITA MAP] direct-map validation rejected invalid arguments: scenario=%p header=%p path=%p capacity=%lu",
+            scenario_name, header, path, (unsigned long)path_capacity);
         return FALSE;
+    }
     map_name = tag_name_strip_path(scenario_name);
-    if (!map_name || !map_name[0] || csstrlen(map_name) >= 32)
+    if (!map_name || !map_name[0] || csstrlen(map_name) >= 32) {
+        vita_log("[VITA MAP] direct-map validation rejected scenario name: %s",
+            scenario_name ? scenario_name : "<null>");
         return FALSE;
-    if (_snprintf(map_file, sizeof(map_file), "%s.map", map_name) < 0)
+    }
+    if (_snprintf(map_file, sizeof(map_file), "%s.map", map_name) < 0) {
+        vita_log("[VITA MAP] direct-map filename formatting failed: scenario=%s name=%s",
+            scenario_name, map_name);
         return FALSE;
+    }
     map_file[sizeof(map_file) - 1] = 0;
-    if (!vita_map_path(map_file, path, path_capacity))
+    if (!vita_map_path(map_file, path, path_capacity)) {
+        vita_log("[VITA MAP] direct-map file not found: scenario=%s expected=%s root=" HALO_VITA_DATA_ROOT "maps/",
+            scenario_name, map_file);
         return FALSE;
+    }
 
     file = fopen(path, "rb");
-    if (!file)
+    if (!file) {
+        vita_log("[VITA MAP] direct-map fopen failed: scenario=%s path=%s", scenario_name, path);
         return FALSE;
+    }
     if (fread(header, 1, sizeof(*header), file) != sizeof(*header)) {
         fclose(file);
+        vita_log("[VITA MAP] direct-map short header: scenario=%s path=%s expected=%lu",
+            scenario_name, path, (unsigned long)sizeof(*header));
         return FALSE;
     }
     fclose(file);
+
+    name_terminated = memchr(header->name, 0, sizeof(header->name)) != NULL;
+    build_terminated = memchr(header->build, 0, sizeof(header->build)) != NULL;
 
     /* The original Xbox executable rejects cache files whose build string is
      * not its January beta identifier. Native ports intentionally accept other
@@ -201,14 +221,28 @@ static boolean vita_direct_cache_header(
         header->tag_data_size < 36 || (uint32_t)header->tag_data_size > HALO_VITA_TAG_CAPACITY ||
         header->tag_data_offset > header->file_length ||
         header->tag_data_size > header->file_length - header->tag_data_offset ||
-        !memchr(header->name, 0, sizeof(header->name)) ||
-        !memchr(header->build, 0, sizeof(header->build)))
+        !name_terminated || !build_terminated) {
+        vita_log("[VITA MAP] direct-map header rejected: scenario=%s path=%s head=%08lx foot=%08lx version=%ld logical=%ld tag_off=%ld tag_bytes=%ld tag_cap=%lu name_term=%d build_term=%d header_name=%.*s build=%.*s",
+            scenario_name, path,
+            (unsigned long)header->header_signature,
+            (unsigned long)header->footer_signature,
+            header->version, header->file_length,
+            header->tag_data_offset, header->tag_data_size,
+            (unsigned long)HALO_VITA_TAG_CAPACITY,
+            name_terminated, build_terminated,
+            (int)sizeof(header->name), header->name,
+            (int)sizeof(header->build), header->build);
         return FALSE;
+    }
     if (_stricmp(header->name, map_name)) {
         vita_log("[VITA MAP] cache identity mismatch requested=%s header=%s path=%s",
             map_name, header->name, path);
         return FALSE;
     }
+    vita_log("[VITA MAP] direct-map header PASS: scenario=%s path=%s name=%s build=%s logical=%ld tag_off=%ld tag_bytes=%ld type=%d",
+        scenario_name, path, header->name, header->build,
+        header->file_length, header->tag_data_offset, header->tag_data_size,
+        (int)header->scenario_type);
     return TRUE;
 }
 
