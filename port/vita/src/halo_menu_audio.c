@@ -13,9 +13,12 @@
 #include "tag_files/tag_files.h"
 #include "tag_files/tag_groups.h"
 
-/* Public original implementation has no declarations for these in its header. */
+/* Public original implementation has no declarations for these in its header.
+ * Keep the dispose prototype here as well: the standalone regression supplies
+ * a narrow sound_classes shim rather than the full game header. */
 boolean sound_is_active(void);
 boolean halo_vita_sound_menu_refresh(long definition_index, short refresh_state);
+void sound_classes_dispose_from_old_map(void);
 static boolean ready;
 static boolean frame_started;
 static long music_index = NONE;
