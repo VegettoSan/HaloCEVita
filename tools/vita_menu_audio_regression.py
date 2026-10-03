@@ -15,6 +15,15 @@ original = renderer[renderer.index('#ifdef HALO_VITA_ORIGINAL_RUNTIME\nint halo_
 original, recovery = original.split('\n#else\nint halo_vita_renderer_render_menu_frame', 1)
 assert original.index('render_frame_present(NULL, NULL);') < original.index('halo_vita_menu_audio_frame();')
 assert recovery.index('rasterizer_present(NULL, NULL);') < recovery.index('halo_vita_menu_audio_frame();')
+# Map handoff must retire per-map sound owners without tearing down the
+# process-lifetime manager/classes that game_initialize() owns.
+release = body[body.index('int halo_vita_menu_audio_release_for_game'):body.index('void halo_vita_menu_audio_dispose')]
+assert 'sound_dispose_from_old_map();' in release
+assert 'sound_classes_dispose_from_old_map();' in release
+assert 'sound_cache_close();' in release
+assert 'sound_dispose();' not in release
+assert 'sound_classes_dispose();' not in release
+assert 'halo_vita_audio_mixer_shutdown();' not in release
 code=r'''
 #include <assert.h>
 #include <stdint.h>
@@ -43,6 +52,7 @@ static struct sound_permutation perm={NONE,0,{36,4096}};
 static struct sound_pitch_range range={1,{1,&perm}};
 static struct sound_definition definition={{1,&range}};
 static int running,active,registered,classes,initialized,opened,rendered,closed,destroyed;
+static int class_map_disposed;
 static int refresh_calls,feedback_calls,phase[32],feedbacks[8],idled,yields;
 static int paused,pause_calls;static long render_clock;
 static long ids[32];static jmp_buf failure;
@@ -56,6 +66,7 @@ static const char *tag_get_name(long i){assert(i==12 || i==13);return "synthetic
 static void sound_cache_sound_new(long i,struct sound_permutation *p){assert(i==12 && !initialized && p==&perm);registered++;}
 static void sound_classes_initialize(void){assert(registered==1);classes=1;}
 static void sound_classes_initialize_for_new_map(void){assert(classes);}
+static void sound_classes_dispose_from_old_map(void){assert(classes);class_map_disposed++;}
 static void sound_initialize(void){assert(classes && !initialized);initialized=active=1;}
 static void sound_cache_open(void){assert(active);opened=1;}
 static void sound_initialize_for_new_map(void){assert(opened);}
@@ -96,10 +107,10 @@ halo_vita_menu_audio_start(13);assert(phase[2]==_looping_sound_refresh_stop && i
 halo_vita_menu_audio_frame();assert(phase[3]==_looping_sound_refresh_start && ids[3]==13);
 for(int i=0;i<4;i++)halo_vita_menu_audio_feedback_probe();
 assert(feedback_calls==4 && feedbacks[0]==1 && feedbacks[1]==2 && feedbacks[2]==3 && feedbacks[3]==1);
-halo_vita_menu_audio_dispose();assert(destroyed && !halo_vita_menu_audio_ready());
+halo_vita_menu_audio_dispose();assert(destroyed && !halo_vita_menu_audio_ready() && !class_map_disposed);
 __wrap_sound_idle();assert(idled==1 && yields==2 && __wrap_sound_render_time()==1234);
 int calls=refresh_calls;halo_vita_menu_audio_frame();halo_vita_menu_audio_dispose();assert(calls==refresh_calls);
-puts("PASS actual staged audio: cold-cache rejection, original-owner order, no playback until rendered frame, first-frame unpause clock/source phases, feedback, pre/post-lifecycle cache-service gating and original disposal before SDL close");}
+puts("PASS actual staged audio: cold-cache rejection, original-owner order, no playback until rendered frame, first-frame unpause clock/source phases, feedback, per-map handoff contract, pre/post-lifecycle cache-service gating and original disposal before SDL close");}
 '''
 out=root/'build/vita/tests/menu-audio';out.mkdir(parents=True,exist_ok=True)
 p=out/'menu.c';p.write_text(code);exe=out/'menu'
