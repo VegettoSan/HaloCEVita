@@ -2,16 +2,19 @@
 
 Last updated: 2026-10-03
 
-Current source **00.40 / A120–A124: HOST VERIFIED; final native CI pending**.
+Current source **00.40 / A120–A125: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Default cache/maps now belong to Halo's original six-slot manager, streaming
 worker and resource request/completion worker. Vita supplies general Xbox I/O,
 issuing-thread Ex completion and checked native pointer/GPU registration.
 Removed default parallel manager/resource reader and retail build rewriting;
 restored native warm-slot acceptance and DirectSound packet event completion.
 All29 required host commands passed; original worker also matches both supplied
-read-only maps byte for byte. CI279's original cache ELF/SELF/VPK verifier passed;
-final code50280c6 is being rebuilt before delivery. Exact final provenance will
-be recorded in BUILD.md. No00.40 BOOTS/RENDERS/gameplay claim.
+read-only maps byte for byte. Final CI Build282/run37144066788 on50280c6 passes
+all29 host commands, real-SDK ELF/SELF/VPK verifier and release publication.
+Downloaded archive/manifest/88 symbols/ABI/SELF/SFO/LiveArea and release digests
+are independently verified. VPK2620309 bytes SHA-256c3579250c33400f952a5cb663114e4ab6f50e739afd13b8d194295556302baa5.
+Exact package and matching symbols: [Build282](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-282).
+BUILD.md records provenance and console test. No00.40 BOOTS/RENDERS/gameplay claim.
 
 [Complete A/B/C/D audit](DECOMP_ALIGNMENT_AUDIT_00.40.md) records selected owners,
 remaining harness/shell/main_loop/teardown work, actual vitaGL/VA incompatibilities

@@ -1,4 +1,45 @@
-## Current native test package —00.39 (2026-10-03)
+## Current native test package —00.40 (2026-10-03)
+
+[Vita Build #282](https://github.com/VegettoSan/HaloCEVita/actions/runs/37144066788),
+exact source `50280c69a420b9474be44ecf018f5044cb3a90dd`: all29 required host
+commands, real `vitasdk/vitasdk:2026.08` native build/verifier and publication PASS.
+[Install the exact CI HaloCE.vpk](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-282/HaloCE.vpk),
+2620309 bytes, SHA-256 `c3579250c33400f952a5cb663114e4ab6f50e739afd13b8d194295556302baa5`.
+[Matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-282)
+remain in the same release. ELF38991976 bytes SHA-256
+`47c923db3332e974c0f5b3a1378adb485eae759a102281dc957f5a91dc07b8b4`;
+map6790563 bytes SHA-256 `703000d8118a000873c455b3121585dfc0f839583884e155f9af5659a8cd91b5`.
+Artifact11281782210:16558353 bytes, ZIP digest
+`40d82c7314d148e9080c162caf526ea1c49d5319aaf210ba09a22a74f5104600`.
+Independent archive/clean-source manifest/every byte count+hash, ELF32 ARM
+hard-float/VFP,88 required original/core symbols, absent parallel cache/handoff
+owners, SELF/SFO/banner00.40, exact six VPK entries/no retail assets and indexed
+LiveArea checks PASS. Release digests match. Default reader ARM disassembly gate
+passes in the native verifier. State **LINKS**, console acceptance pending.
+Later documentation-only commits do not change this executable.
+
+Default maps/cache now use the original Halo manager/decompressor/queued resource
+worker with general native Xbox APIs. [Full A/B/C/D audit](DECOMP_ALIGNMENT_AUDIT_00.40.md)
+records remaining harness/main_loop/teardown and capability gaps. Keep original
+maps in `ux0:data/HaloCE/maps/`; allow at least732MiB for fixed original Z: slots
+under `ux0:data/HaloCE/z/`, plus maps/saves. Old root caches are separate and
+are not silently removed. No startup/FPS improvement or visual fix is promised.
+
+Install and confirm banner00.40. Test a cold launch and then warm launch without
+deleting generated slots. Expect original initialize/copy END/open markers and
+warm VALID when source/language/checksum/capacity match. Capture the menu,
+repeated D-pad/Cross/Circle entry/back, Settings/profile/name keyboard (Start
+confirms), at least60 seconds of music, then Select exit. Campaign entry is a UI
+test; the native outer loop still does not process the full original deferred
+world transition, so a10/gameplay is not promised. No complete-menu/STABLE claim.
+
+Return fresh complete `debug.txt` for each run, `gamestate.txt` if generated,
+all original/native `halo_vertex*.glsl` and `halo_pixel*.glsl`, before/after-input
+photos or video, startup time, free storage and any Vita crash dump. Preserve
+this exact ELF/map for decoding. Note the last completed cache/renderer milestone
+and action on failure. No additional full retail map upload is needed.
+
+## Historical native test package —00.39 (2026-10-03)
 
 [Vita Build #277 /00.39](https://github.com/VegettoSan/HaloCEVita/actions/runs/37133289890),
 exact executable source `28f6a50f10862d8799efd4c13e37cf726d156883`: all26 required

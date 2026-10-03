@@ -152,7 +152,7 @@ not game data. Neither map, extracted payload nor copyrighted assets are publish
 ## Verification and limitations
 
 **HOST VERIFIED:** all29 required commands in `vita-build.yml` passed locally;
-CI279/281 contracts passed. New tests execute the actual decompressor/APC queue,
+final CI282 contracts passed. New tests execute the actual decompressor/APC queue,
 slot/LRU/open/warm recovery/header verifier and request/callback functions.
 Synthetic2/4/8MiB streams cover complete4MiB output boundaries; malformed logical
 length/checksum keep headers invalid. Optional supplied maps are tested read-only.
@@ -160,8 +160,11 @@ LP64 projection models 32-bit `long` for worker behavior and omits XDK sizeof
 assertions; it is explicitly not ARM ABI or hardware timing evidence. Slot helper
 tests model provider I/O and do not simulate the whole native threaded game.
 
-**NATIVE BUILD VERIFIED:** CI279 already built original cache ELF/SELF/VPK and
-passed `vita_verify.py`; final code CI is pending until recorded in BUILD.md.
+**NATIVE BUILD VERIFIED:** final CI282/run37144066788 on50280c6 passed all
+required jobs, `vita_verify.py` and release publication. Independent downloaded
+artifact/clean-source/hash/88-symbol/ELF32 ARM hard-float/SELF/SFO00.40/LiveArea
+checks pass; no parallel cache/handoff owners are linked. BUILD.md records the
+exact VPK and matching release symbols. Earlier CI279–281 also passed.
 The real `vitasdk/vitasdk:2026.08` toolchain owns ABI/layout/native package gates.
 The unrelated imported desktop/Android workflow still fails on its missing guest
 runtime dependency, as before; no all-platform green claim.

@@ -1410,3 +1410,32 @@ No second reader/slot owner. Actual original verification regression accepts
 retail v5 and rejects oversized/negative/out-of-file tag spans, unterminated
 name/build and v7. PASS; host-only evidence. Native builds279 already passed the
 original cache closure/package,280/281 remain in progress at this checkpoint.
+
+
+### A125 — Complete alignment audit and exact00.40 CI282 delivery (2026-10-03)
+
+- Published A/B/C/D system audit, actual source body comparison and remaining
+  startup/main_loop/teardown/upstream drift/capability limitations. Source50280c6
+  contains all functional changes;73dd6c8 and this checkpoint are docs only.
+- All29 required host commands PASS again on final source. Full original worker
+  read-only ui/Bloodgulch hashes and logical-byte matches are recorded in the
+  audit. Final source map hashes remain35e3e560... and50fe5240... unchanged.
+- Vita Build282/run37144066788 on50280c69a420b9474be44ecf018f5044cb3a90dd:
+  contracts, real-SDK native ELF/SELF/VPK verifier and publication all SUCCESS.
+  Earlier incremental native builds279–281 also PASS. Separate imported desktop/
+  Android workflow306 remains failed on the prior missing guest runtime.
+- Downloaded artifact11281782210 (16558353 bytes) has exact GitHub ZIP digest
+  40d82c7314d148e9080c162caf526ea1c49d5319aaf210ba09a22a74f5104600.
+  Independent clean-source manifest, every hash/count, ELF32 ARM hard-float/VFP,
+  all88 required symbols, local original main_new_map, absent parallel cache/
+  handoff/audio wraps, SELF, SFO/banner00.40, six owned VPK entries and LiveArea
+  PNG/XML checks PASS. Native verifier inspects actual reader ARM dispatch.
+- Release vita-build-282 matches downloaded VPK2620309 bytes SHA-256
+  c3579250c33400f952a5cb663114e4ab6f50e739afd13b8d194295556302baa5;
+  ELF38991976 bytes SHA-256
+  47c923db3332e974c0f5b3a1378adb485eae759a102281dc957f5a91dc07b8b4.
+  Matching symbols remain in the release; no local executable substituted.
+- State LINKS / HOST VERIFIED / NATIVE BUILD VERIFIED. REAL VITA VERIFIED is
+  pending. Fixed732MiB Z: preallocation, original resource/APC timing, UI/music,
+  visual faults, main_loop/Campaign/world/teardown are not accepted from CI.
+  BUILD.md records cold/warm/input/profile/keyboard/log/photo test instructions.
