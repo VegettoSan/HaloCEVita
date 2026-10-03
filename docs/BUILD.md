@@ -1,4 +1,40 @@
-## Current native test package —00.40 (2026-10-03)
+## Current native test package —00.41 (2026-10-03)
+
+Native CI source `864668d8650c8ad3ed92c1909116550704442180` (functional correction
+`8313c1b840f8f5e836fad882ded53be98440b0ba`); [Vita Build284](https://github.com/VegettoSan/HaloCEVita/actions/runs/37148267284)
+contracts, native build/verifier and publication SUCCESS.
+[Install exact CI HaloCE.vpk](https://github.com/VegettoSan/HaloCEVita/releases/download/vita-build-284/HaloCE.vpk):
+2620654 bytes, SHA-256 `e32c1f41f03bfb460e9a102db2f836d09910ecc142cf677683b08811fef1b76a`.
+[Matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-284): ELF38992212 bytes
+SHA-256 `3dd3f5985d0dbd993031cfe6596017a489bdd6c0dd2f08b81e430a16641d3d90`;
+map6790524 bytes SHA-256 `9c52bcc68759ea9feed71d489274807f3f25cf2c7d93dfda7505f7e33bd4d926`.
+Artifact11283263424:16557747 bytes, ZIP SHA-256
+`b57c5d862b1b2b22eb24b262757e274637806c67594eabc6bd381e6e09fed0ac`.
+Independent exact/clean-source manifest, all counts/hashes,88 original symbols,
+ARM32 hard-float/VFP, SELF/SFO/banner00.41, owned six-entry VPK, PNG CRC/palette
+and LiveArea XML PASS; release digests match. Native disassembly confirms
+ASCII/Unicode and retained hardware font consumers call tag_data_get_pointer,
+which calls the active compiled-image resolver. State LINKS; hardware pending.
+Later docs-only commits do not change this exact executable.
+All30 required host commands PASS locally and in GitHub. A126 fixes original
+localization startup dereferencing Xbox80489668 after original ui cache/tag/BSP
+completion. ASCII/Unicode and both font pixel consumers cross existing typed
+accessors; no language/UI/glyph/cache/renderer replacement.
+
+Install00.41 over the existing HCEV00001 package; retain maps and original Z:
+slots. First check for `[VITA ORIGINAL] main_menu_load PASS` and the original
+Main Menu root/frame after the last BSP marker. Test a warm launch, visible
+menu, D-pad/Cross/Circle entry/back, Settings/profile/name keyboard (Start
+confirms), at least60 seconds of music, then Select exit.
+Return complete fresh debug.txt, gamestate.txt and the new dump if it crashes,
+plus a photo/video if it draws. No additional retail map upload is needed.
+
+This fixes the identified text-data boundary in source; real Vita confirmation
+remains pending. White panels, full menu/stability, Campaign/world and complete
+original main_loop are separate unaccepted milestones. Keep maps under
+ux0:data/HaloCE/maps/ and allow732MiB for original z slots plus maps/saves.
+
+## Historical native test package —00.40 (2026-10-03)
 
 [Vita Build #282](https://github.com/VegettoSan/HaloCEVita/actions/runs/37144066788),
 exact source `50280c69a420b9474be44ecf018f5044cb3a90dd`: all29 required host

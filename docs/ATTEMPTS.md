@@ -1488,3 +1488,38 @@ ASCII/Unicode getters and original hardware font cache: each must call original
 tag_data_get_pointer, which must call the active compiled-image resolver. The
 software font path is not linked in this shipping closure; actual C host execution
 covers it. Native gates and final package remain pending; no console acceptance.
+
+
+### A128 — Exact00.41 CI284 native verification and delivery (2026-10-03)
+
+- Source8313c1b functional fix and864668d native gates both build successfully
+  in Vita CI283/284. Final Build284/run37148267284 all30 host contracts, native
+  build/ELF-SELF-VPK verifier and release publication SUCCESS. A127 ARM gates
+  explicitly PASS for ASCII, Unicode and original hardware font-cache consumers;
+  original data accessor calls the real compiled-image resolver.
+- Downloaded artifact11283263424,16557747 bytes, GitHub ZIP digest
+  b57c5d862b1b2b22eb24b262757e274637806c67594eabc6bd381e6e09fed0ac matches.
+  Independent clean-source manifest, every file count/hash,88 required original
+  symbols plus text/accessor/local cache owners, absent recovery cache owners,
+  ELF32 ARM hardfp/VFP, SELF, SFO/banner00.41, six owned VPK entries, indexed
+  PNG CRCs/dimensions and LiveArea XML PASS. Release digests match exact files.
+- VPK2620654 bytes SHA-256
+  e32c1f41f03bfb460e9a102db2f836d09910ecc142cf677683b08811fef1b76a;
+  ELF38992212 bytes SHA-256
+  3dd3f5985d0dbd993031cfe6596017a489bdd6c0dd2f08b81e430a16641d3d90;
+  map6790524 bytes SHA-256
+  9c52bcc68759ea9feed71d489274807f3f25cf2c7d93dfda7505f7e33bd4d926.
+  Exact864668d package and matching symbols remain in release vita-build-284.
+- Delivered the unchanged CI VPK as HaloCEVita-00.41-Build284.vpk. Source and
+  package state LINKS / HOST VERIFIED / NATIVE BUILD VERIFIED. No local SDK
+  substituted; current environment lacks VitaSDK. Prior00.40 boots through
+  original ui copy/tag/BSP;00.41 REAL VITA VERIFIED remains pending.
+- SDK linking retains its pre-existing wchar_t/enum attribute warnings: original
+  Halo units keep16-bit wchar_t/32-bit enum flags, SDK boundaries remain separate.
+  This experiment changes typed data consumers, not the SDK ABI contract.
+  Separate imported desktop/Android CI307/308 still fails on prior missing guest
+  runtime, and is not evidence of native Vita failure.
+- BUILD.md gives first main_menu_load/root/frame and warm/menu/input/profile/
+  keyboard/music/log/photo/core checks. White panels, all windows, stability,
+  Campaign/world and complete main_loop remain unaccepted. No maps/assets/core
+  included in git or the VPK.

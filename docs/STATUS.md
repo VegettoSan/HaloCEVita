@@ -2,11 +2,17 @@
 
 Last updated: 2026-10-03
 
-Current source **00.41 / A126: HOST VERIFIED; native CI pending**.
+Current source **00.41 / A126–A128: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Exact00.40 core identifies a serialized tag_data pointer dereference in original
 localization startup. ASCII/Unicode and original software/hardware font pixels
 now use Halo's existing typed accessor/native image resolver. Negative old-path
-faults and corrected actual C consumers pass. Console root/frame/visual/stability
+faults and corrected actual C consumers pass. All30 CI host commands, real-SDK
+Build284/run37148267284 ARM accessor disassembly, native package verifier and
+release publication PASS on864668d. Downloaded package/archive/manifest/hashes/
+ABI/SELF/SFO00.41/LiveArea match the release; VPK2620654 bytes SHA-256
+e32c1f41f03bfb460e9a102db2f836d09910ecc142cf677683b08811fef1b76a.
+Exact package/symbols: [Build284](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-284).
+Console root/frame/visual/stability
 acceptance is pending; original cache ownership and renderer behavior remain.
 
 Previous source **00.40 / A120–A125: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.

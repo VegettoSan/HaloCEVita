@@ -349,5 +349,12 @@ rollback until console acceptance; default native verifier rejects their linkage
 ui cache/tag/BSP completion (A126).00.41 routes ASCII/Unicode and both original
 font pixel consumers through tag_data_get_pointer. Four negative host fixtures
 reproduce old faults and fixed consumers preserve original bytes/cache/ownership.
-Native CI and real-console language/new-map/root/frame acceptance remain pending;
+Build284 passes all30 host commands, actual ARM text-accessor disassembly, native
+package verification and publication. Real-console language/new-map/root/frame
+acceptance remains pending;
 this does not prove a visible or stable full menu or repair white panels.
+
+A126 updates KI-069:00.40 now has actual console evidence for original ui copy
+completion,983-tag registration and its tiny BSP relocation. Language startup
+then aborts at the direct text-data pointer, addressed by00.41. Warm reuse, queued
+resource/audio behavior and repeated complete menu acceptance are still pending.
