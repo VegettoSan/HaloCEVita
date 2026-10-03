@@ -75,3 +75,27 @@ Preserve upstream `LICENSE.md` and all third-party licenses/notices when source 
 ## Focused native Vita platform reuse (2026-10-02, V5 reintegration)
 
 Source reference BirchWoodGod/halo-ce-vita at5ceb8e89f2c1219046d070a3f306348a5da30c85 supplies the native SceNet socket adapter (host/vita_net.c, excluding diagnostic probes) and ARMv7 fenv/MSVC control-word adaptation. The socket unit now logs through our native logger. No donor frontend, executable, maps, GXM renderer or shaders are imported. These adapted portions retain GPL-3.0-only attribution; full source license is LICENSES/BirchWoodGod-GPL-3.0.txt. The combined executable containing them is distributed under GPL-3.0, with this public repository providing its corresponding modified source; existing compatible permissive notices remain intact.
+
+## Focused original cache/decompression audit (2026-10-03)
+
+This is a **reference audit, not a new blanket source import**. The imported baseline above remains `21714ac0860e9b9ca08fbdc8a1d620f1b8a03797` until a deliberate upstream synchronization is performed.
+
+```text
+CACHE_AUDIT_REPOSITORY=https://github.com/cybersecurity/halo-ce-universal
+CACHE_AUDIT_COMMIT=80d30410c8db28f4008b92f4e012a1b046ece14e
+CACHE_AUDIT_DATE=2026-10-03
+```
+
+Direct upstream files inspected at that exact commit:
+
+- `source/cache/cache_files.c`
+- `source/cache/cache_files_windows.c`
+- `source/cache/cache_files_decompress_windows.c`
+- `port/linux/port.json`
+- `port/linux/src/xbox_files.c`
+
+The audit confirms that original Halo separates source maps on `d:\maps` from six persistent writable `z:\cacheNNN.map` slots. Main Menu uses slot 2; solo uses slots 0–1; multiplayer uses slots 3–5. The decompressor invalidates the destination header first, writes/inflates the payload beginning at offset `0x800`, waits for successful payload completion, then commits the original source `0x800` header at offset zero last. `cache_file_open/read` consume a prepared logical cache rather than implicitly materializing a temporary file while opening the compressed source.
+
+Current upstream Linux keeps the original cache/precache/decompression source closure and maps Xbox drive paths to host storage; it does not use HaloCEVita's historical `<map>.vita-logical.tmp` binding model.
+
+HaloCEVita now follows that storage/lifetime contract through Vita-native synchronous file I/O and persistent `ux0:data/HaloCE/cache000.map` .. `cache005.map`. Exact findings, supplied `ui.map` read-only validation, intentional Vita deviations and host regression gates are recorded in `docs/CACHE_UPSTREAM_AUDIT.md`.
