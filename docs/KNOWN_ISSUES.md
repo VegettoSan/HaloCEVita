@@ -1,5 +1,10 @@
 # Known issues / open risks
 
+2026-10-03 /00.40: default original cache/threaded resource ownership is now
+selected (A121–A124/D064). No attached-console acceptance. See KI-069 and the
+[complete alignment audit](DECOMP_ALIGNMENT_AUDIT_00.40.md). Older build evidence
+below remains historical; no previous visual/UI/audio result accepts this binary.
+
 2026-10-03 / A118 /00.39: corrections are documented in
 [RENDERER_AUDIT_00.39.md](RENDERER_AUDIT_00.39.md). White panels, text/geometry
 placement and navigation stability remain open until this exact CI binary is
@@ -320,3 +325,19 @@ A102 supersedes the pending authorization/native-closure state above: user expli
 ## KI-068 — V5 original runtime requires first hardware acceptance
 
 00.36 restores full UI and game lifetime source owners, but console evidence is required for first frame, fonts/colors, complete widget/keyboard/profile transitions and performance. Linked callbacks are not sufficient proof. The native mounted `ui.map` does not yet perform full original scenario/BSP/camera/new-map loading; Campaign/gameplay are not accepted. Desktop Internet invite overlay and Bink decoding have no Vita backend; native LAN/loopback is a real platform adapter but untested. The native test shell retains active owners until process exit.
+
+
+## KI-069 — Original cache worker route awaits native console acceptance
+
+00.40 replaces default parallel cache ownership with the actual original manager,
+streaming worker and queued resource worker. Host tests execute original C and
+match both supplied logical maps, but real Vita must establish first activation,
+APC/event/thread timing, sector-rounded reads, tag/BSP address registration,
+sustained menu music and repeated cold/warm/profile UI. Fixed cache capacities
+consume732MiB under Z: plus maps/saves, and preallocation may be slow. Old root
+A116 caches remain separate; storage errors must be returned with full logs.
+Original warm validation follows capacity/language/source checksum, not A116's
+full-header identity. Header publication follows original I/O completion without
+an extra power-loss/fsync guarantee. No performance, STABLE, complete main_loop,
+a10/gameplay, or existing white-panel fix claim. Recovery-only owners remain as
+rollback until console acceptance; default native verifier rejects their linkage.

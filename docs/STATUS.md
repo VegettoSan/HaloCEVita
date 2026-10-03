@@ -2,17 +2,26 @@
 
 Last updated: 2026-10-03
 
-Current source **00.39 / A118–A119: LINKS, exact CI Build277 verified and delivered**. The [function comparison](RENDERER_AUDIT_00.39.md)
-retains original UI, rasterizer, NV2A shader equations and presentation. It restores
-upstream indexed base-vertex handling, bounds exact native register-array storage,
-records effective compiler sources, and removes the duplicate Vita DXT1 decoder
-in favor of the original DXT1/3/5 decoder. All26 required host commands and the
-exact-SDK native package verifier pass locally and in CI. Native build and publication
-PASS on28f6a50; independently downloaded VPK hash b4b3e020 matches the clean-source
-manifest and release. Complete provenance is in BUILD.md; console acceptance is pending. Shipping now selects
-original `main_menu_load`/new-map owners rather than the staged subset.
-Full gameplay-loop/world activation and reported visual faults remain unaccepted.
-The00.38 clip-position experiment had no hardware visual improvement and was not retried.
+Current source **00.40 / A120–A124: HOST VERIFIED; final native CI pending**.
+Default cache/maps now belong to Halo's original six-slot manager, streaming
+worker and resource request/completion worker. Vita supplies general Xbox I/O,
+issuing-thread Ex completion and checked native pointer/GPU registration.
+Removed default parallel manager/resource reader and retail build rewriting;
+restored native warm-slot acceptance and DirectSound packet event completion.
+All29 required host commands passed; original worker also matches both supplied
+read-only maps byte for byte. CI279's original cache ELF/SELF/VPK verifier passed;
+final code50280c6 is being rebuilt before delivery. Exact final provenance will
+be recorded in BUILD.md. No00.40 BOOTS/RENDERS/gameplay claim.
+
+[Complete A/B/C/D audit](DECOMP_ALIGNMENT_AUDIT_00.40.md) records selected owners,
+remaining harness/shell/main_loop/teardown work, actual vitaGL/VA incompatibilities
+and current upstream drift. Original slots require732MiB under
+`ux0:data/HaloCE/z/`; old data-root caches are not automatically deleted.
+Main Menu/new-map source owners remain original, with full UI tables, XInput,
+rasterizer/NV2A and DirectSound. The outer loop is still native pregame bring-up,
+so Campaign/world transitions and complete main_loop are not accepted.
+White panels/placement, all-window/profile/keyboard coverage, queued resource
+latency, sustained audio and cold/warm behavior need the matching real-Vita test.
 
 The following entries are historical milestones, not the current implementation.
 

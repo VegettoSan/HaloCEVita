@@ -1,5 +1,14 @@
 # Xbox-v5 cache / decompression audit
 
+**Current ownership: A121–A124 / D064 /00.40.** The default now executes the
+original manager, streaming decompressor and queued reader through native Xbox
+APIs. A116's parallel manager/serializer/reader is recovery-only. Original Z:
+slots have fixed capacity totaling732MiB under `ux0:data/HaloCE/z/`, not A116's
+exact-size root files. Retail build strings are preserved. See
+[DECOMP_ALIGNMENT_AUDIT_00.40.md](DECOMP_ALIGNMENT_AUDIT_00.40.md) for direct
+upstream23b5426 comparison, executable evidence, narrow safety fixes and remaining
+hardware gates. The text below records the earlier A116 implementation.
+
 Date: 2026-10-03
 Engineering record: **A116 / D062**
 

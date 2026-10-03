@@ -99,3 +99,16 @@ The audit confirms that original Halo separates source maps on `d:\maps` from si
 Current upstream Linux keeps the original cache/precache/decompression source closure and maps Xbox drive paths to host storage; it does not use HaloCEVita's historical `<map>.vita-logical.tmp` binding model.
 
 HaloCEVita now follows that storage/lifetime contract through Vita-native synchronous file I/O and persistent `ux0:data/HaloCE/cache000.map` .. `cache005.map`. Exact findings, supplied `ui.map` read-only validation, intentional Vita deviations and host regression gates are recorded in `docs/CACHE_UPSTREAM_AUDIT.md`.
+
+
+## Focused ownership alignment audit (2026-10-03,00.40)
+
+Authority `cybersecurity/halo-ce-universal` at
+`23b542601f2ca505c7a0143703e92fbda6075e18`, inspected directly against main6ac0718.
+Imported baseline remains21714ac; no blanket merge. Linux Xbox file/kernel APIs
+provide the model for default original cache manager/decompressor/request workers.
+A121–A124/D064 and DECOMP_ALIGNMENT_AUDIT_00.40.md record applied boundaries,
+actual C byte comparisons and all A/B/C/D systems. Current upstream still has
+newer distributed-network/interpolation/random-seed/widescreen desktop changes;
+these are explicitly open drift, not silently imported. No Android loader or
+external port executable/renderer/assets introduced.
