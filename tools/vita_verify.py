@@ -73,7 +73,9 @@ if original_runtime:
     # root construction and partial cleanup functions are correctly discarded
     # by --gc-sections; requiring them would reject the original implementation.
     recovery_only = {
-        'game_state_free_buffer', 'halo_vita_cache_mount_menu',
+        'game_state_free_buffer', 'lruv_delete', '_rasterizer_dispose',
+        'sound_refresh_looping', 'halo_vita_audio_mixer_shutdown',
+        'vita_cache_relocate_menu', 'halo_vita_cache_mount_menu',
         'halo_vita_cache_validate_menu', 'halo_vita_cache_unmount_menu',
         'vita_cache_read', 'vita_cache_resource_bind',
         'halo_vita_ui_runtime_initialize', 'halo_vita_ui_runtime_dispose',
@@ -94,7 +96,7 @@ if original_runtime:
                  'render_frame_present', 'global_scenario_get', 'scenario_get_game_globals',
                  'halo_vita_original_game_initialize', 'halo_vita_ui_process_shell_frame',
                  'halo_vita_original_main_menu_load', 'halo_vita_original_render_menu_frame',
-                 'main_menu_load', 'main_load_ui_scenario', 'main_new_map',
+                 'main_menu_load', 'main_load_ui_scenario',
                  'game_load', 'game_initialize_for_new_map', 'scenario_tags_load',
                  'cache_files_initialize', 'cache_file_open', 'tag_files_open',
                  'XGetDeviceChanges', 'XInputDebugGetKeystroke']
@@ -105,6 +107,9 @@ if original_runtime:
         assert not re.search(r'\b[TtW]\s+' + re.escape(name), symbols), f'Recovery substitute in original target: {name}'
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
+if original_runtime:
+    # This original owner is private to main.c, hence a local text symbol.
+    assert re.search(r'\bt\s+main_new_map$', symbols, re.M), 'Missing original main_new_map owner'
 # Retaining both a native reader and an Xbox reader in an archive is insufficient:
 # assert which implementation actually owns the public resource entry point.
 resource_disassembly = run('objdump', '-d', '--disassemble=cache_file_read', elf)

@@ -41,6 +41,9 @@ jobs:
           python3 tools/vita_stream_regression.py
           python3 tools/vita_renderer_contract_regression.py
           python3 tools/vita_nv2a_position_regression.py
+          python3 tools/vita_shader_uniform_regression.py
+          python3 tools/vita_program_regression.py
+          python3 tools/vita_index_base_regression.py
           python3 tools/vita_draw_target_regression.py
           python3 tools/vita_ui_render_contract_regression.py
           python3 tools/vita_original_ui_lifecycle_regression.py
