@@ -1,11 +1,17 @@
 # Xbox-v5 cache / decompression audit
 
 Date: 2026-10-03
+Engineering record: **A116 / D062**
 
 This document records the source audit that replaced HaloCEVita's temporary
 `ui.map.vita-logical.tmp` resource backing with the original Halo cache-file
 lifecycle adapted to Vita storage. It is intentionally separate from map data:
 no retail `.map` file is committed or packaged.
+
+A116/D062 explicitly supersede D036's per-bind temporary-file policy and the
+cache-storage clause in D061. Their historical performance/runtime evidence
+remains valid for the builds that used them; the original-runtime decision in
+D061 remains otherwise active.
 
 ## Authority used for this audit
 
@@ -90,6 +96,8 @@ No bytes were changed or committed.
 
 Observed facts:
 
+- source SHA-256:
+  `35e3e560478d85178749be310ad13d6d6ecde618d32675261a3554592333a833`
 - compressed file size: `14,145,536` bytes
 - header logical `file_length`: `33,582,080` bytes
 - zlib input begins at source offset `0x800`
@@ -131,7 +139,7 @@ caused by corrupted bytes. They do make the storage lifetime unlike the engine
 whose offsets/ownership we are trying to preserve.
 
 D036's per-launch scratch policy and the storage clause in D061 are superseded
-by this audit. Their historical performance evidence remains valid for the
+by A116/D062. Their historical performance evidence remains valid for the
 builds that used them.
 
 ## Vita adaptation now implemented
@@ -256,6 +264,10 @@ checks, among other cases:
   valid cache;
 - persistent reuse performs no new writes/inflates;
 - uncompressed sources use the same commit protocol without zlib.
+
+Required host regressions and the complete native Vita ELF/SELF/VPK verifier
+passed on code commit `a0954a60868dde4bd854b374c641faa7626e0e00`
+(Vita Build run 261). Hardware rendering/gameplay acceptance remains separate.
 
 ## What this does and does not prove
 
