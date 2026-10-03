@@ -1,76 +1,20 @@
 # HaloCEVita
 
-Independent PlayStation Vita porting workspace for **Halo: Combat Evolved**, based on the source-port work from [`cybersecurity/halo-ce-universal`](https://github.com/cybersecurity/halo-ce-universal).
+Port nativo ARM32 de Halo: Combat Evolved para PlayStation Vita con VitaSDK y
+vitaGL. **Reinicio completo autorizado el 2026-10-03.**
 
-This repository is intentionally **not a GitHub fork**. It is a separate Vita-focused project with its own history, build system, documentation, experiments and releases. The original project remains the upstream technical reference.
+La implementación anterior está descartada. La nueva base se obtiene
+directamente de [halo-ce-universal](https://github.com/cybersecurity/halo-ce-universal)
+y utiliza adaptaciones de plataforma obtenidas de
+[halo-ce-vita](https://github.com/BirchWoodGod/halo-ce-vita). La salida gráfica
+final debe ser vitaGL y el menú debe proceder del engine y sus tags originales.
 
-## Project goal
+Leer [la directiva de reinicio](docs/RESTART.md), [AGENTS.md](AGENTS.md),
+[estado](docs/STATUS.md) y [procedencia](docs/UPSTREAM.md).
 
-Current milestone (2026-10-03): **00.42 typed widget/keyboard access; CI Build285 verified LINKS**. The00.41 hardware log advances past localization and fails on the original Main Menu's serialized child list. All five widget block families and keyboard keys now use existing typed accessors/native image translation while retaining original graph, callbacks, offsets, focus, text, layout and renderer behavior. [Build285](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-285) passes all31 host contracts, actual ARM text/widget/keyboard accessor gates and native ELF/SELF/VPK verification/publication, including reproduced legacy faults and actual corrected original recursion/initialization/key lookup. Complete root/frame/menu, white panels, all windows, stability and gameplay still require console acceptance. See [status and crash evidence](docs/STATUS.md), [attempts A129–A130](docs/ATTEMPTS.md) and [exact package/test instructions](docs/BUILD.md).
+Las VPK 00.43/Build289 y anteriores pertenecen a la implementación descartada.
+Las pruebas de esas versiones no validan la nueva base. El reinicio aún no tiene
+una VPK nueva aceptada. Los intentos anteriores permanecen en el historial Git.
 
-Historical root package **00.11: BOOTS** (A031) creates the original nine-widget Main Menu root on real Vita after original handlers 86/23 complete. The vitaGL logo remains because original UI update/render and D3D8 frame submission are still pending; no Halo draw yet. The preserved **00.10: BOOTS** baseline validates the original Xbox `D:` file-reference/XDemos contract, UI mount/recheck/cleanup and Start exit. See [original Main Menu call graph](docs/MAIN_MENU_CALL_GRAPH.md).
-
-Historical **00.21** exposed texture-transfer lifetime and native uniform-handle defects;00.22 corrected those contracts and subsequently showed a partial menu.00.24 restores the missing original presentation worker;00.25 also selects each texture stage before upload (A072), preserving original authored pixels/shaders. This binding defect is not proven to explain all white backgrounds or missing labels. See [status](docs/STATUS.md) and [attempt evidence](docs/ATTEMPTS.md).
-
-Earlier **00.06: BOOTS** (A018) established the native96MiB Xbox-offset arena, original physical/game memory allocation and compressed ui/a10 tag reads. Hardware013/014 and both015/016 checkpoints passed: ui983/a10 3357 tags with matching CRCs. Its package/symbols remain in build/vita/attempts/a018-baseline-00.06/; newer00.07 hardware evidence is described above.
-
-Package correction **00.02** (A012): 00.01 was rejected by VitaShell with `0x8010113D`. Opaque indexed PNG-8 repaired the packaging; subsequent user logs establish boot (A013). The unchanged older executable banner still said 00.01; 00.03 derives the banner and SFO from the same build version.
-
-Build a native PlayStation Vita version of Halo CE from the decompiled/source-port code, targeting VitaSDK and the Vita's native 32-bit ARM environment.
-
-The preferred architecture is:
-
-- native ARMv7/32-bit Vita executable;
-- VitaSDK standard/native toolchain;
-- reuse the upstream Linux platform layer where practical;
-- reuse Android ARM/ABI fixes where they solve non-x86 assumptions;
-- graphics through vitaGL/VitaShaRK/libshacccg where feasible;
-- SDL3 or direct Vita APIs for platform services depending on actual compatibility;
-- no Android loader/host-guest architecture unless a concrete blocker proves it necessary.
-
-## Legal / data policy
-
-This repository must not contain proprietary Halo game data, Xbox disc images, extracted retail assets, keys or other copyrighted game content that is not already legitimately part of the upstream source repository.
-
-The Vita build should load user-provided game data from a path such as:
-
-```text
-ux0:data/HaloCE/
-├── maps/
-├── save/
-└── config.toml
-```
-
-Users are responsible for supplying data from a legally obtained copy of the game.
-
-## Upstream
-
-Primary upstream:
-
-- https://github.com/cybersecurity/halo-ce-universal
-
-Upstream ancestry/reference projects:
-
-- https://github.com/bnunu/halo-1
-- https://github.com/punpckhdq/halo
-
-See [`docs/UPSTREAM.md`](docs/UPSTREAM.md) before importing or synchronizing code.
-
-## Where to start
-
-Humans and coding agents should read these files in order:
-
-1. [`AGENTS.md`](AGENTS.md)
-2. [`docs/STATUS.md`](docs/STATUS.md)
-3. [`docs/ROADMAP.md`](docs/ROADMAP.md)
-4. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-5. [`docs/BUILD.md`](docs/BUILD.md)
-6. [`docs/ATTEMPTS.md`](docs/ATTEMPTS.md)
-7. [`docs/KNOWN_ISSUES.md`](docs/KNOWN_ISSUES.md)
-8. [`docs/DECISIONS.md`](docs/DECISIONS.md)
-
-The first Codex task is stored in [`prompts/01-first-vita-port.md`](prompts/01-first-vita-port.md).
-
-## Development rule
-
-Every meaningful experiment must leave evidence in the repository. A failed attempt is useful only if we record **what was tried, why, the exact result and what not to repeat**.
+No se incluyen mapas ni assets retail. ui.map y otros datos son suministrados
+por el usuario y deben permanecer fuera del repositorio y del paquete.
