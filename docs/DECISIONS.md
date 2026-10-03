@@ -315,3 +315,18 @@ requires these consumers to use original TAG_BLOCK_GET_ELEMENT. Apply only at
 known typed block expressions; retain original graph/callback/focus/controller/
 text/keyboard traversal and other-platform direct arithmetic. Do not restore the
 recovery UI, eager pointer scanning or hardcoded root construction to hide faults.
+
+
+## D067 — Reuse the engine thread and original frame transaction without changing renderer ownership
+
+2026-10-03 / A132–A133: adapt donor309b9de's16MiB engine-thread prerequisite
+with checked lifecycle and retained GPL attribution. Do not fall back to the
+small startup stack on allocation/start failure. Keep all engine/GL work on
+one thread. The additional16MiB and changed arena base require console memory
+and future save acceptance; no stable save-address policy is asserted.
+Within the selected original menu path restore clock-before-widgets and
+input-end-after-Present. Extend D065's typed inline-data boundary to original
+mouth envelopes, leaving external samples opaque. Preserve D066/accessor
+translation rather than transplanting the donor's complete eager schema without
+original-layout/resource compatibility gates. Full original main_loop must own
+game_initialize when promoted, avoiding duplicate game lifetime initialization.

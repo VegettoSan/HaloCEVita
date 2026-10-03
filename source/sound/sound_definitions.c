@@ -89,7 +89,13 @@ byte *sound_permutation_get_mouth_aperture(
 		800,
 		tick_index>=0 && tick_index<permutation->mouth_data.size);
 
+#ifdef HALO_VITA
+	/* Inline compiled mouth data follows the same typed address contract as
+	 * original text/font data. External audio samples retain their cache owner. */
+	return tag_data_get_pointer(&permutation->mouth_data, tick_index, sizeof(byte));
+#else
 	return (byte *)permutation->mouth_data.address + tick_index;
+#endif
 }
 
 short sound_definition_find_pitch_range_by_pitch(

@@ -176,8 +176,8 @@ int halo_vita_run(int platform)
 #ifdef HALO_VITA_MENU_BRINGUP
 #ifdef HALO_VITA_MENU_RENDER_PROBE
 		if (root_active && !scenario_active) {
-			halo_vita_ui_process_shell_frame();
 #ifndef HALO_VITA_ORIGINAL_RUNTIME
+			halo_vita_ui_process_shell_frame();
 			{
 				int transition = halo_vita_main_pump_deferred_map_change();
 				if (transition < 0) {

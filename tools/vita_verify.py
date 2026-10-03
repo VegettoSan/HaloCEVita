@@ -128,7 +128,8 @@ if original_runtime:
     # The software bitmap text path is covered by host execution but is GC'd
     # from this target; the hardware font cache is the retained renderer owner.
     for consumer in ('string_list_get_string', 'unicode_string_list_get_string',
-                     'cache_hardware_format_character'):
+                     'cache_hardware_format_character',
+                     'sound_permutation_get_real_mouth_aperture'):
         code = run('objdump', '-d', '--disassemble=' + consumer, elf)
         assert re.search(r'\bblx?\b.*<tag_data_get_pointer>', code), (
             consumer + ' bypasses the native typed tag_data accessor')

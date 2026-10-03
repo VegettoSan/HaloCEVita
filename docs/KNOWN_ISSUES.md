@@ -375,3 +375,15 @@ A129 refines KI-070:00.41 hardware advances beyond ASCII language initialization
 into original shell/filesystem checks. This supports the text-data correction;
 Unicode/fonts still need actual menu rendering acceptance. The next observed
 fault belongs to compiled widget traversal (KI-071), not repeated localization.
+
+
+## KI-072 —00.43 platform/frame integration awaits matching console acceptance
+
+A132–A133 add a checked16MiB engine-thread stack, original menu frame ordering
+and typed inline sound mouth-data access. Extra user-memory cost and the arena
+base change must be observed on Vita; earlier save compatibility is not claimed.
+All33 host contracts pass; first component CI286 passes native package gates.
+Final combined native build and root/draw/navigation/audio hardware acceptance
+remain separate. No supplied00.42 hardware trace proves another fault, and
+full main_loop/Campaign/world/teardown remains unaccepted. See the complete
+A/B/C audit in DECOMP_VITA_PLATFORM_AUDIT_00.43.md.

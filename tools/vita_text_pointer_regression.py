@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def definition(source, name):
-    match = re.search(r'(?m)^(?:static\s+)?(?:void|char|wchar_t)\s*\*?\s*'
+    match = re.search(r'(?m)^(?:static\s+)?(?:void|char|wchar_t|byte)\s*\*?\s*'
                       + re.escape(name) + r'\s*\([^;{}]*\)\s*\{', source)
     assert match, name
     brace = source.index('{', match.start())
@@ -55,6 +55,7 @@ typedef unsigned char byte;
 typedef uint16_t word;
 typedef uint32_t pixel32;
 struct tag_data { long size; void *address; };
+struct sound_permutation { struct tag_data mouth_data; };
 struct block_definition { long element_size; const char *name; };
 struct tag_block { long count; void *address; struct block_definition *definition; };
 struct string_list { struct tag_block strings; };
@@ -107,9 +108,12 @@ static void rasterizer_bitmap_changed(struct bitmap *b) { ++changes; }
     software = definition((ROOT / 'source/text/draw_string.c').read_text(), 'bitmap_draw_character')
     hardware = definition((ROOT / 'source/rasterizer/rasterizer_text.c').read_text(),
                           'cache_hardware_format_character')
-    legacy = text + software + hardware
+    mouth = definition((ROOT / "source/sound/sound_definitions.c").read_text(),
+                       "sound_permutation_get_mouth_aperture")
+    legacy = text + software + hardware + mouth
     for n in ('unicode_string_list_get_string', 'string_list_get_string',
-              'bitmap_draw_character', 'cache_hardware_format_character'):
+              'bitmap_draw_character', 'cache_hardware_format_character',
+              'sound_permutation_get_mouth_aperture'):
         legacy = re.sub(r'\b' + n + r'\b', 'legacy_' + n, legacy)
     legacy = '\n#undef HALO_VITA\n' + legacy + '\n#define HALO_VITA 1\n'
     test = r'''
@@ -121,6 +125,7 @@ static void expect_legacy_fault(int kind,struct font_header *font,struct font_ch
   if(kind==1)legacy_unicode_string_list_get_string(1,0);
   if(kind==2)legacy_bitmap_draw_character(NULL,font,glyph,0xff000000,0,0,0,0,2,2);
   if(kind==3)legacy_cache_hardware_format_character(font,glyph);
+  if(kind==4)legacy_sound_permutation_get_mouth_aperture((void *)(image+0x3200),1)[0]=0;
   _exit(0);
  }
  int status;assert(waitpid(pid,&status,0)==pid);
@@ -144,7 +149,11 @@ int main(void) {
  draw_character_software_globals.bitmap=&software_bitmap;
  word atlas[64]={0};struct bitmap hardware_bitmap={6,8,8,atlas};
  hardware_character_cache.initialized=1;hardware_character_cache.bitmap=&hardware_bitmap;
- for(int kind=0;kind<4;kind++)expect_legacy_fault(kind,font,glyph);
+ struct sound_permutation *permutation=(void *)(image+0x3200);
+ permutation->mouth_data=(struct tag_data){5,raw};
+ for(int kind=0;kind<5;kind++)expect_legacy_fault(kind,font,glyph);
+ for(int tick=0;tick<5;tick++)assert(sound_permutation_get_mouth_aperture(permutation,tick)==native+tick);
+ assert(permutation->mouth_data.address==raw);
  assert(string_list_get_string(1,0)==(char *)native && native[0]=='0' && native[1]==0);
  assert(entry->string.address==raw && list->strings.address==(void *)(HALO_XBOX_TAG_BASE+0x2000u));
  assert(!strcmp(string_list_get_string(NONE,0),"<missing string>"));
@@ -159,6 +168,9 @@ int main(void) {
  entry->string=(struct tag_data){2,(void *)(HALO_XBOX_TAG_BASE+active_size-1)};
  image[active_size-1]=0x7b;
  if(!setjmp(rejected)){string_list_get_string(1,0);assert(!"invalid span accepted");}
+ assert(image[active_size-1]==0x7b);
+ permutation->mouth_data=(struct tag_data){2,(void *)(HALO_XBOX_TAG_BASE+active_size-1)};
+ if(!setjmp(rejected)){sound_permutation_get_mouth_aperture(permutation,1);assert(!"invalid mouth span accepted");}
  assert(image[active_size-1]==0x7b);
  byte coverage[5]={0x5a,0,16,128,255};memcpy(native,coverage,5);
  bitmap_draw_character(NULL,font,glyph,0xff000000,0,0,0,0,2,2);
@@ -184,12 +196,12 @@ int main(void) {
 '''
     with tempfile.TemporaryDirectory(prefix='halo-text-pointers-') as tmp:
         path = Path(tmp)
-        (path / 'test.c').write_text(header + resolver + functions + text + software + hardware + legacy + test)
+        (path / 'test.c').write_text(header + resolver + functions + text + software + hardware + mouth + legacy + test)
         subprocess.run(['gcc', '-std=c11', '-O2', '-fshort-wchar', '-DHALO_VITA',
                         '-Werror=implicit-function-declaration', str(path / 'test.c'),
                         '-o', str(path / 'test')], check=True)
         subprocess.run([str(path / 'test')], check=True, timeout=10)
-    print('PASS: four legacy serialized text/font consumers fault; actual ASCII/UTF16 getters and software/hardware glyph consumers translate through original accessors and real Vita resolver; bytes, terminators, cache hit, bounds, recovery/runtime ownership preserved')
+    print('PASS: five legacy serialized text/font/mouth-data consumers fault; actual ASCII/UTF16 getters and software/hardware glyph consumers translate through original accessors and real Vita resolver; bytes, terminators, cache hit, bounds, recovery/runtime ownership preserved')
 
 
 if __name__ == '__main__':

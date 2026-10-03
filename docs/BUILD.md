@@ -1,3 +1,21 @@
+# Current00.43 test build (A132–A133)
+
+Final combined CI package is pending. Use only the new run whose source includes
+both the dedicated engine-thread bootstrap and original frame/mouth-data fixes;
+CI286 covers the first component only. No hardware acceptance is claimed.
+
+Install over the existing bubble. Keep Xbox maps in `ux0:data/HaloCE/maps/` and
+allow the original six Z: slots (732MiB). Check `[VITA BOOT] engine thread started`
+and the next free user-memory/arena logs, then `[VITA ORIGINAL] main_menu_load PASS`,
+original draw and Present. Test D-pad/Cross/Circle, Settings/profile/name keyboard
+(Start confirms),60 seconds of music and Select exit. Repeat a warm launch.
+
+Return fresh `ux0:data/HaloCE/debug.txt`, `gamestate.txt` if generated, original and
+native GLSL dumps, a photo/video and the complete newest `.psp2dmp` on a crash.
+Keep the exact final ELF/map; wait for the dump to finish rather than copying
+an incomplete `.tmp`. Extra engine stack16MiB requires hardware memory validation.
+Main Menu acceptance is pending; Campaign/world/full main_loop are not accepted.
+
 ## Current native test package —00.42 (2026-10-03)
 
 Native CI source `61568b4beab186e8d0d5a73b39065903700f63a7`.

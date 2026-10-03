@@ -58,9 +58,16 @@ int halo_vita_original_render_menu_frame(void)
 {
     if (!halo_vita_ui_original_root_ready())
         return FALSE;
-    halo_vita_main_render_time_update();
+    /* Preserve the original main_loop transaction: input/event collection,
+     * clock update, widgets, render/present, then input_frame_end. */
+    halo_vita_ui_process_shell_frame();
+    if (!halo_vita_ui_original_root_ready()) {
+        input_frame_end();
+        return FALSE;
+    }
     main_pregame_render();
     render_frame_present(NULL, NULL);
+    input_frame_end();
     return TRUE;
 }
 #endif
@@ -71,8 +78,13 @@ void halo_vita_ui_process_shell_frame(void)
     input_update();
     input_abstraction_update();
     event_manager_update();
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    halo_vita_main_render_time_update();
+#endif
     process_ui_widgets();
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
     input_frame_end();
+#endif
 }
 
 /* The staged menu handoff shares ui_widget.c's real widget globals in this

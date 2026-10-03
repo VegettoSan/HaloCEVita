@@ -1629,3 +1629,34 @@ covers it. Native gates and final package remain pending; no console acceptance.
 - Renderer/NV2A/equations/cache/widget graph remain unchanged. Donor complete
   typed relocation differs from our existing accessor translation; no wholesale
   schema import or value-based pointer scan was made.
+
+
+### A133 — Original frame transaction and remaining inline sound-data boundary (2026-10-03)
+
+- Current upstream601a4c1 and donor309b9de inspected directly. Full A/B/C
+  system comparison and decisions: DECOMP_VITA_PLATFORM_AUDIT_00.43.md.
+  First bootstrap divergence is the unconfigured native startup stack and
+  limited outer menu loop, not a reason to build replacement widgets.
+- A132 pushed via GitHub connector as cdd23ce; native CI286/run37153410712
+  all32 host commands, ARM ELF/SELF/VPK verification and publication PASS.
+  The combined final package still needs its own new native run.
+- HECHO COMPROBADO: prior native menu frame processed widgets before the
+  original clock update and closed input before rendering. Restore original
+  input/events -> clock -> widgets -> pregame rendering/Present -> input end.
+  Render entry now owns that transaction; main no longer processes UI twice.
+  Lost-root path closes an opened input frame without rendering. Recovery
+  retains its previous independent transaction. Actual C frame fixture PASS.
+- Route original sound_permutation_get_mouth_aperture through existing typed
+  tag_data_get_pointer on Vita. Preserve tick assertion and exact byte address;
+  external sample/resource data and other platforms unchanged. Fifth protected
+  page child reproduces legacy fault; fixed first/last byte and invalid-span
+  checks PASS through actual accessor/native resolver. Add ARM gate at retained
+  sound_permutation_get_real_mouth_aperture, which inlines the original helper.
+- All33 required CI host commands PASS locally. Original decompressor also
+  matches both attached maps byte-for-byte (logical ui33582080, bloodgulch44328960)
+  and source SHA-256 remains35e3e560/50fe5240 as in the00.40 audit. No map data,
+  SDK or executable from another port is committed/packaged.
+- HIPÓTESIS: frame ordering may improve UI timing; no observed white-panel,
+  placement, performance or new crash fix claim.00.42 had no fresh console
+  evidence in this turn. Full original main_loop/world/save/teardown, complete
+  pointer/GPU capability coverage and real menu acceptance remain open.
