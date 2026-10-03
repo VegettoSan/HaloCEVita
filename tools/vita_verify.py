@@ -13,7 +13,7 @@ import xml.etree.ElementTree as ET
 
 root = Path(__file__).resolve().parents[1]
 os.chdir(root)
-build = Path('build/vita')
+build = Path(os.environ.get('HALO_VITA_BUILD_DIR', 'build/vita'))
 (build / 'logs').mkdir(parents=True, exist_ok=True)
 app_version = re.search(r'set\(VITA_APP_VERSION "([^"]+)"\)',
                         Path('port/vita/CMakeLists.txt').read_text()).group(1)
@@ -75,7 +75,7 @@ if original_runtime:
     required += ['game_initialize', 'process_ui_widgets', 'main_screen_shell_load',
                  'event_manager_update', 'input_initialize', 'input_update',
                  'input_abstraction_update', 'main_pregame_render', 'render_frame_pregame',
-                 'render_frame_present', 'scenario_get', 'scenario_get_game_globals',
+                 'render_frame_present', 'global_scenario_get', 'scenario_get_game_globals',
                  'halo_vita_original_game_initialize', 'halo_vita_ui_process_shell_frame',
                  'XGetDeviceChanges', 'XInputDebugGetKeystroke']
     forbidden = ['halo_vita_menu_deferred_', 'halo_vita_move_menu_focus',
@@ -85,6 +85,11 @@ if original_runtime:
         assert not re.search(r'\b[TtW]\s+' + re.escape(name), symbols), f'Recovery substitute in original target: {name}'
 for name in required:
     assert re.search(r'\b[TW]\s+' + name + r'$', symbols, re.M), f'Missing real core symbol {name}'
+# Retaining both a native reader and an Xbox reader in an archive is insufficient:
+# assert which implementation actually owns the public resource entry point.
+resource_disassembly = run('objdump', '-d', '--disassemble=cache_file_read', elf)
+assert re.search(r'\bblx?\b.*<vita_cache_resource_read>', resource_disassembly), (
+    'cache_file_read bypasses the native logical resource reader')
 undefined = run('nm', '-u', elf)
 optional = {'_ITM_deregisterTMCloneTable', '_ITM_registerTMCloneTable', '__deregister_frame_info',
             '__gnu_Unwind_Find_exidx', '__libc_fini', '__register_frame_info', '_pthread_stack_default_user', 'pthread_cancel'}

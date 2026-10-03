@@ -145,14 +145,15 @@ if(HALO_VITA_ORIGINAL_RUNTIME)
     string(JSON ORIGINAL_STATUS GET "${ORIGINAL_CONFIG}" projects 0 objects ${I} status)
     if(ORIGINAL_SOURCE MATCHES "\\.c$" AND NOT ORIGINAL_STATUS STREQUAL "MISSING"
         AND NOT ORIGINAL_SOURCE MATCHES "source/interface/(ui_widget|event_manager|ui_widget_event_handler_functions)\\.c$"
-        AND NOT ORIGINAL_SOURCE MATCHES "source/cseries/(cseries_windows|stack_walk_windows)\\.c$")
+        AND NOT ORIGINAL_SOURCE MATCHES "source/cseries/(cseries_windows|stack_walk_windows)\\.c$"
+        AND NOT ORIGINAL_SOURCE STREQUAL "source/cache/cache_files_windows.c")
       if(NOT "${ROOT}/${ORIGINAL_SOURCE}" IN_LIST EXISTING_CORE_SOURCES)
         target_sources(halo_core PRIVATE "${ROOT}/${ORIGINAL_SOURCE}")
       endif()
     endif()
   endforeach()
   target_sources(halo_core PRIVATE
-    src/vita_original_file_api.c
+    src/vita_original_file_api.c src/halo_cache_windows_vita.c
     ${ROOT}/port/linux/src/bink_null.c
     ${ROOT}/port/linux/src/msvc_crt.c
     ${ROOT}/port/linux/src/xnet.c

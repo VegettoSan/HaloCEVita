@@ -10,7 +10,8 @@ and deferred world-resume aliases remain only in the explicitly selected
 recovery build. Native logical-range map reading, typed relocation, vitaGL/NV2A
 and original 2D menu sound/cache adaptations are reused.
 All21 host regression commands pass locally after adapting their presentation
-check to both original/recovery callers. First complete native CI package and
+check to both original/recovery callers. Local exact-SDK00.36 ELF/SELF/VPK passes the full native verifier after fixing
+archive selection of the Xbox resource reader (A115). Final pushed CI artifact and
 Vita runtime acceptance are pending; no BOOTS/menu/gameplay claim for00.36.
 Scenario/BSP/camera world activation remains a separate unaccepted boundary.
 The matching original source closure must link/package before delivery.
