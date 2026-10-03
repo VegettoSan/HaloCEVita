@@ -8,6 +8,8 @@ on:
       - "port/linux/src/**"
       - "port/linux/include/**"
       - "source/**"
+      # Documentation checkpoints must also produce an exact-main test package.
+      - "docs/**"
       - "tools/vita_*.py"
       - "tools/fixtures/vita_cache_worker_*"
       - ".github/workflows/vita-build.yml"

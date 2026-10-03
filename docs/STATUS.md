@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-03
 
-Current source **00.43 / A132–A134: LINKS; HOST VERIFIED; FINAL PACKAGE GATE PENDING**.
+Current source **00.43 / A132–A135: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.
 Dedicated16MiB engine-thread bootstrap adapted from the working Vita source
 passed CI286 on cdd23ce. Combined source restores original clock/widgets/input/
 render/Present ordering and adds the remaining inline sound mouth-data accessor.
@@ -11,8 +11,15 @@ attached maps PASS. [A/B/C platform audit](DECOMP_VITA_PLATFORM_AUDIT_00.43.md)
 records reuse choices and remaining original main_loop/world/teardown boundary.
 Combined CI287 passes all33 host commands and native ELF/SELF/VPK creation,
 then rejects an inlined/GC'd helper requirement. A134 verifies actual original
-consumers in the retained frame owner instead. Matching final native package
-gate and real-console root/frame/menu acceptance are pending; prior00.42 has no fresh hardware evidence in this turn.
+consumers in the retained frame owner instead. CI288/run37154544674 on
+d86dadba62cb0ae4e9d069c3b45a81ea00f9f072 passes all33 host commands, actual ARM
+frame/text/font/sound/widget gates, native package verification and publication.
+Independent downloaded archive/source/digest/ABI/SELF/SFO/LiveArea checks PASS.
+Exact CI288 package/symbols: [Build288](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-288).
+Documentation pushes now trigger native CI so the final delivery can match the
+final main SHA even after recording results. Real-console root/frame/menu,
+extra16MiB memory and full main_loop acceptance remain pending; prior00.42 has
+no fresh hardware evidence in this turn.
 
 
 Current source **00.42 / A129–A131: LINKS; HOST VERIFIED + NATIVE BUILD VERIFIED**.

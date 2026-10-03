@@ -1,9 +1,18 @@
-# Current00.43 test build (A132–A133)
+# Current00.43 test build (A132–A135)
 
-Final combined CI package gate is pending (A134). CI287 linked and created the
-VPK but rejected the obsolete out-of-line shell helper; it was not published. Use only the new run whose source includes
-both the dedicated engine-thread bootstrap and original frame/mouth-data fixes;
-CI286 covers the first component only. No hardware acceptance is claimed.
+Combined native CI288/run37154544674 on
+`d86dadba62cb0ae4e9d069c3b45a81ea00f9f072` passes all33 host commands, actual
+ARM frame and typed-accessor gates, ELF/SELF/VPK verification and publication.
+[Verified package and matching ELF/map](https://github.com/VegettoSan/HaloCEVita/releases/tag/vita-build-288).
+VPK2620900 bytes SHA-256
+`fcba87a86c790757941272dbddf40dc460310212043fd8f53198795558c63e03`.
+CI287 linked/created its VPK but was not published because the old gate required
+an inlined helper. CI286 covers only the bootstrap. No hardware acceptance.
+
+The final documentation checkpoint triggers another official build. Deliver
+only its new artifact whose clean `artifacts.json` source_commit equals final
+main; do not substitute the earlier CI288 package or its ELF/map. Documentation
+pushes now trigger native CI to preserve that exact-source delivery contract.
 
 Install over the existing bubble. Keep Xbox maps in `ux0:data/HaloCE/maps/` and
 allow the original six Z: slots (732MiB). Check `[VITA BOOT] engine thread started`

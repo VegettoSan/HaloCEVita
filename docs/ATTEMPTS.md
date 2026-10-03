@@ -1682,3 +1682,38 @@ covers it. Native gates and final package remain pending; no console acceptance.
 - Manifest now records16MiB engine-stack/frame route and the actual latest
   hardware00.41 child-pointer abort, preserving separate historical partial
   UI/audio evidence. No game behavior changed by this verification correction.
+
+
+### A135 — Combined00.43 native verification and exact-main delivery policy (2026-10-03)
+
+- HECHO COMPROBADO: CI288/run37154544674 on
+  d86dadba62cb0ae4e9d069c3b45a81ea00f9f072 passes all33 host commands,
+  native ARM compile/link/LOAD/SELF/VPK, nine original frame consumers and
+  all original text/font/sound/widget/keyboard accessor disassembly gates,
+  package verifier and pre-release publication. A134's missing helper issue
+  is resolved without changing engine code or disabling original consumers.
+- Downloaded artifact11285163958:16559586 bytes, ZIP SHA-256
+  e65e1733ac489254da64b64fa97bac08388d39d94dcdaa1bac1f4b2292ad42f3,
+  exactly matching GitHub's artifact digest. Independent extraction verifies
+  clean source_commit, all counts/hashes,91 required symbols, original private
+  cache/main owners, absent recovery cache owners, ARM32 hardfp/VFP, SELF,
+  SFO00.43/HCEV00001, six owned VPK entries, indexed PNG CRC/palette/XML.
+- VPK2620900 bytes SHA-256
+  fcba87a86c790757941272dbddf40dc460310212043fd8f53198795558c63e03;
+  ELF38998024 bytes SHA-256
+  d483d33a355ae68a7903a31b94fe8bcb60af0f621943c123860d420f1c84e333;
+  map6792307 bytes SHA-256
+  cd5176796aadee3e12a9b9468682a994e7646581b6c1330c638a7e78bf8cae16.
+  Matching symbols/package remain in release vita-build-288. This intermediate
+  VPK is not the final deliverable after this documentation checkpoint.
+- Native logs retain known original-source diagnostics and wchar/enum linker
+  attribute warnings (see ABI_VITA.md); this is not a warning-free build or
+  proof of every cross-unit contract. New bootstrap/frame/data accessor
+  contracts and actual native consumers are checked; hardware still pending.
+- Include docs/** in the official push trigger: recording verified results
+  must also yield a newly compiled exact-main package. Final delivery must
+  validate that later run's clean source SHA, archive digest, VPK and matching
+  ELF/map rather than reuse CI288 under a newer commit name.
+- State LINKS / HOST VERIFIED / NATIVE BUILD VERIFIED. No fresh00.42/00.43
+  console run, menu correctness, memory budget, stability or Campaign/world
+  acceptance. BUILD.md records the exact next logs/actions/dump to collect.

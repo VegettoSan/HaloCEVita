@@ -383,13 +383,14 @@ A132–A133 add a checked16MiB engine-thread stack, original menu frame ordering
 and typed inline sound mouth-data access. Extra user-memory cost and the arena
 base change must be observed on Vita; earlier save compatibility is not claimed.
 All33 host contracts pass; first component CI286 passes native package gates.
-Final combined native build and root/draw/navigation/audio hardware acceptance
-remain separate. No supplied00.42 hardware trace proves another fault, and
+CI288 verifies the combined native package; root/draw/navigation/audio hardware
+acceptance remains separate. No supplied00.42 hardware trace proves another fault, and
 full main_loop/Campaign/world/teardown remains unaccepted. See the complete
 A/B/C audit in DECOMP_VITA_PLATFORM_AUDIT_00.43.md.
 
 A134: combined CI287 all33 host commands and native ELF/SELF/VPK creation pass;
-publication is blocked by a verifier requiring an inlined/GC'd shell helper.
-The corrected gate checks actual retained original frame consumers; package
-acceptance remains pending that run. No executable behavior was changed for
+publication was blocked by a verifier requiring an inlined/GC'd shell helper.
+The corrected gate checks actual retained original frame consumers; CI288
+passes these actual ARM calls, all typed-accessor gates, native verification
+and publication. No executable behavior was changed for
 this verifier failure.
