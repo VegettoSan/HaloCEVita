@@ -19,6 +19,7 @@ Before changing code:
 5. Inspect the exact upstream code involved before proposing a replacement.
 6. Inspect the current local working tree before assuming GitHub is up to date. The local tree may contain newer, unpushed Vita work.
 7. If the task touches rendering, shaders, textures, D3D8/NV2A, vitaGL, FBOs or GPU memory, read `docs/VITAGL_RENDERER_PLAN.md`, `docs/GRAPHICS_COMPATIBILITY.md` and `docs/VITA_RENDERER_BEHAVIOR_CONTRACTS.md` before changing code.
+8. If the task touches Xbox-v5 map decompression, `cache_file_*`, precaching or map/resource backing storage, read `docs/CACHE_UPSTREAM_AUDIT.md`. Its A116/D062 cache-storage decision supersedes D036's per-bind temporary-file policy and the cache-storage clause in D061; their historical evidence remains historical only.
 
 When local unpushed code/logs contradict the public GitHub status, treat the local working tree and fresh hardware evidence as the current implementation state. Do not overwrite, discard, or "restore" newer local work merely because the remote documentation is older. Reconcile documentation after inspecting the local changes.
 
