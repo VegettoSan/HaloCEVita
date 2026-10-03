@@ -9,6 +9,7 @@ on:
       - "port/linux/include/**"
       - "source/**"
       - "tools/vita_*.py"
+      - "tools/fixtures/vita_cache_worker_*"
       - ".github/workflows/vita-build.yml"
   workflow_dispatch:
 
@@ -38,6 +39,8 @@ jobs:
           python3 tools/vita_menu_audio_regression.py
           python3 tools/vita_lru_dispose_regression.py
           python3 tools/vita_cache_regression.py
+          python3 tools/vita_original_cache_regression.py
+          python3 tools/vita_original_cache_owner_regression.py
           python3 tools/vita_resource_seek_regression.py
           python3 tools/vita_stream_regression.py
           python3 tools/vita_renderer_contract_regression.py

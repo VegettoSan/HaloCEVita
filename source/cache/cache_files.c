@@ -602,7 +602,7 @@ boolean cache_file_header_verify(
 		return FALSE;
 	}
 
-#ifndef HALO_LINUX
+#if !defined(HALO_LINUX) && !defined(HALO_VITA_ORIGINAL_RUNTIME)
 	/* (the native builds try a cache file whatever build made it, NTSC's
 	01.10.12.2276 included) */
 	if (csstrcmp(header->build, "01.01.14.2342"))
@@ -695,6 +695,12 @@ long scenario_tags_load(
 				SwitchToThread();
 			}
 
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+            /* Reading/completion stays with Halo. Convert serialized addresses
+             * only after the original owner has waited for the tag read. */
+            halo_vita_cache_activate_original_tags(tag_cache_base_address,
+                cache_file_globals.header.tag_data_size);
+#endif
 			cache_file_globals.tag_header = tag_cache_base_address;
 			match_vassert(
 				"c:\\halo\\SOURCE\\cache\\cache_files.c",
@@ -752,6 +758,9 @@ boolean scenario_structure_bsp_load(
 		}
 	}
 
+#ifdef HALO_VITA_ORIGINAL_RUNTIME
+    halo_vita_cache_activate_original_bsp(reference->base_address, reference->file_size);
+#endif
 	cache_file_globals.structure_bsp_header = reference->base_address;
 	match_assert(
 		"c:\\halo\\SOURCE\\cache\\cache_files.c",

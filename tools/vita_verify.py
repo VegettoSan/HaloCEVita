@@ -77,7 +77,7 @@ if original_runtime:
         'sound_refresh_looping', 'halo_vita_audio_mixer_shutdown',
         'vita_cache_relocate_menu', 'halo_vita_cache_mount_menu',
         'halo_vita_cache_validate_menu', 'halo_vita_cache_unmount_menu',
-        'vita_cache_read', 'vita_cache_resource_bind',
+        'vita_cache_read', 'vita_cache_resource_bind', 'vita_cache_resource_read', 'vita_cache_resource_error',
         'halo_vita_ui_runtime_initialize', 'halo_vita_ui_runtime_dispose',
         'halo_vita_menu_root_checkpoint', 'halo_vita_menu_root_load',
         'halo_vita_ui_widgets_dispose_checkpoint', 'halo_vita_menu_tags_probe',
@@ -99,6 +99,9 @@ if original_runtime:
                  'main_menu_load', 'main_load_ui_scenario',
                  'game_load', 'game_initialize_for_new_map', 'scenario_tags_load',
                  'cache_files_initialize', 'cache_file_open', 'tag_files_open',
+                 'cache_file_read', 'cache_copy_begin', 'cache_copy_initialize', 'cache_copy_get_status',
+                 'WriteFileEx', 'ReadFileEx', 'halo_vita_cache_activate_original_tags',
+                 'halo_vita_cache_activate_original_bsp',
                  'XGetDeviceChanges', 'XInputDebugGetKeystroke']
     forbidden = ['halo_vita_menu_deferred_', 'halo_vita_move_menu_focus',
                  'halo_vita_dispatch_focused_button', '__wrap_compute_sound_obstruction',
@@ -111,10 +114,17 @@ if original_runtime:
     # This original owner is private to main.c, hence a local text symbol.
     assert re.search(r'\bt\s+main_new_map$', symbols, re.M), 'Missing original main_new_map owner'
 # Retaining both a native reader and an Xbox reader in an archive is insufficient:
-# assert which implementation actually owns the public resource entry point.
 resource_disassembly = run('objdump', '-d', '--disassemble=cache_file_read', elf)
-assert re.search(r'\bblx?\b.*<vita_cache_resource_read>', resource_disassembly), (
-    'cache_file_read bypasses the native logical resource reader')
+if original_runtime:
+    # The native package must retain Halo's request worker, not the recovery reader.
+    assert '<vita_cache_resource_read>' not in resource_disassembly, 'parallel Vita resource reader selected'
+    assert re.search(r'\bblx?\b.*<(?:cache_file_windows_thread_wake|SetEvent)>', resource_disassembly), (
+        'cache_file_read does not wake the original cache request worker')
+    for obsolete in ('vita_cache_prepare_slot', 'vita_cache_resource_bind', 'vita_cache_resource_read',
+                     'halo_vita_main_pump_deferred_map_change'):
+        assert not re.search(r'\b[Tt]\s+' + obsolete + r'$', symbols, re.M), 'recovery owner linked: ' + obsolete
+else:
+    assert re.search(r'\bblx?\b.*<vita_cache_resource_read>', resource_disassembly), 'recovery cache reader missing'
 undefined = run('nm', '-u', elf)
 optional = {'_ITM_deregisterTMCloneTable', '_ITM_registerTMCloneTable', '__deregister_frame_info',
             '__gnu_Unwind_Find_exidx', '__libc_fini', '__register_frame_info', '_pthread_stack_default_user', 'pthread_cancel'}

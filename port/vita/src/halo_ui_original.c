@@ -78,4 +78,6 @@ void halo_vita_ui_process_shell_frame(void)
 /* The staged menu handoff shares ui_widget.c's real widget globals in this
  * translation unit. Keep it at the UI ownership boundary rather than teaching
  * game/scenario code about the special bring-up mount. */
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 #include "vita_menu_handoff.c"
+#endif

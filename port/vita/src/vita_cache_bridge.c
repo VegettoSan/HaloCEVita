@@ -1,12 +1,6 @@
-/* Game-ABI side of the Vita cache resource boundary.
- *
- * Xbox cache_file_read() is asynchronous because the retail path reads a
- * sector-aligned uncompressed cache. Vita now prepares a seekable logical
- * resource stream at binding time, validating compressed data before menu/audio
- * activation. Requests synchronously seek/read only their exact bytes; they no
- * longer decompress every prefix. Completion is raised after the read, and the
- * original texture/sound caches still own their destinations and lifetimes.
- */
+/* Typed native address registration after original Halo I/O completion.
+ * Default runtime leaves requests, scheduling and file ownership in Halo.
+ * The synchronous resource reader below is compiled only for recovery. */
 #include "cseries/cseries.h"
 #include "cache/cache_files.h"
 #include "bitmaps/bitmap_group.h"
@@ -271,7 +265,7 @@ static void vita_rebase_structure_bsp_top_level(const struct vita_scenario_bsp_b
 #undef RB_BSP_DATA
 }
 
-static void vita_activate_original_scenario_tag_image(void *buffer, long size)
+void halo_vita_cache_activate_original_tags(void *buffer, long size)
 {
 	struct vita_cache_info info;
 	unsigned char *tags = buffer;
@@ -334,7 +328,7 @@ static void vita_activate_original_scenario_tag_image(void *buffer, long size)
 		uint32_t arena_offset;
 		if (reference->file_offset < 0 || reference->file_size <= 0 ||
 			reference->structure_bsp.group_tag != VITA_SBSP_GROUP ||
-			!vita_cache_resource_range_valid((uint32_t)reference->file_offset, (size_t)reference->file_size) ||
+			!halo_vita_cache_original_range_valid((uint32_t)reference->file_offset, (size_t)reference->file_size) ||
 			raw_base < HALO_XBOX_MEMORY_BASE || !native_base)
 			vita_fatal("original scenario BSP reference failed typed Vita activation");
 		arena_offset = (uint32_t)(raw_base - HALO_XBOX_MEMORY_BASE);
@@ -360,7 +354,7 @@ static void vita_activate_original_scenario_tag_image(void *buffer, long size)
 		info.vertices, info.indices);
 }
 
-static void vita_activate_original_bsp_payload(void *buffer, long size)
+void halo_vita_cache_activate_original_bsp(void *buffer, long size)
 {
 	uint32_t i;
 	for (i = 0; i < vita_scenario_bsp_count; ++i) {
@@ -397,6 +391,7 @@ static void vita_activate_original_bsp_payload(void *buffer, long size)
 	}
 }
 
+#ifndef HALO_VITA_ORIGINAL_RUNTIME
 static boolean first_bitmap_request_traced = FALSE;
 static boolean trace_first_bitmap_request(long tag_index, long offset, long size, void *buffer)
 {
@@ -467,9 +462,9 @@ short cache_file_read(
 	}
 	if (tag_index == NONE) {
 		if (buffer == (void *)halo_vita_memory_address(HALO_XBOX_TAG_BASE))
-			vita_activate_original_scenario_tag_image(buffer, size);
+			halo_vita_cache_activate_original_tags(buffer, size);
 		else
-			vita_activate_original_bsp_payload(buffer, size);
+			halo_vita_cache_activate_original_bsp(buffer, size);
 	}
 	*completion_flag_reference = TRUE;
 	if (resource_reads_traced < 12) {
@@ -503,3 +498,5 @@ void cache_file_block_until_not_busy(void)
 	/* There is no outstanding Vita cache I/O: current resource reads are
 	 * synchronous and validated before their completion flag is raised. */
 }
+
+#endif /* recovery synchronous resource reader */

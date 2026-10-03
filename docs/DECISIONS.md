@@ -277,3 +277,19 @@ exactly; reject unrepresentable references/native limits and dump final compiler
 input. Preserve upstream indexed-base semantics instead of compensating in
 widget data. Package gates follow selected original lifetime owners without
 fake functions or unselected recovery requirements.
+
+
+## D064 — Halo owns cache copies, slots and queued resource reads
+
+2026-10-03 / A121 supersedes the storage-owner clause of D061 and the A116/D062
+parallel implementation. The original streaming decompressor demonstrably reads
+Xbox v5 compressed maps. Compile original cache manager/request worker by default;
+translate D:/Z: through the general native file API. Keep the old manager/reader
+only in explicit recovery until console acceptance. Native address registration
+is still required because Vita cannot reserve Xbox virtual addresses. Run it at
+original tag/BSP consumers after original I/O completion. Do not rewrite header
+build strings. Keep original fixed slot capacities and original reuse policy.
+The historical worker accepted a stream longer than its header: narrow Vita
+publication validation and a status snapshot race fix prevent valid headers for
+failed/incomplete copies without replacing the worker. No main_loop/gameplay or
+real-console acceptance follows from host/native build success.

@@ -937,6 +937,10 @@ static void cache_files_open_cache_files(
 	boolean valid;
 	short map_file_index;
 
+#ifdef HALO_VITA
+    /* Do not write uninitialized stack bytes as an invalid cache header. */
+    memset(&blank_header, 0, sizeof(blank_header));
+#endif
 	cached_map_files_delete(NUMBER_OF_CACHED_MAP_FILES);
 	for (map_file_index = 0;
 		map_file_index < NUMBER_OF_CACHED_MAP_FILES;

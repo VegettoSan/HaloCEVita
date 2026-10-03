@@ -114,8 +114,8 @@ int halo_vita_original_shell_initialize(void)
     /* cseries and native GL are owned by main; game-state owns one allocation.
      * Restore shell.c's remaining owners before game_initialize. */
     errors_initialize();
-    /* Native logical map mount owns cache I/O; Xbox HDD precaching would
-     * create fixed DVD cache files and cannot read compressed Xbox maps. */
+    /* Original tag_files_open owns cache initialization before main_menu_load.
+     * Vita translates the Xbox drive/API contracts used by its cache workers. */
     real_math_initialize();
     return 1;
 }

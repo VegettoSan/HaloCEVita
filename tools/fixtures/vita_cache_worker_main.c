@@ -1,0 +1,2 @@
+
+int main(int argc,char**argv){assert(argc==4);int capacity=strtoul(argv[3],0,0);int fd=open(argv[2],O_RDWR|O_CREAT|O_TRUNC,0600);assert(fd>=0);assert(!ftruncate(fd,capacity));cache_copy_initialize();int n=cache_copy_buffer_size(1);void*b=malloc(n);cache_copy_begin(b,n,(void*)(intptr_t)(fd+1),capacity,argv[1]);real progress;int st;do{st=cache_copy_get_status(&progress);}while(st==3);printf("status=%d progress=%f\n",st,progress);cache_copy_end();return st==4?0:1;}

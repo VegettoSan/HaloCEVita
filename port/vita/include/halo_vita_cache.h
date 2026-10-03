@@ -48,6 +48,9 @@ int vita_cache_resource_read(uint32_t logical_offset, void *destination, size_t 
  * owns a Vita cache slot. The manual ui.map bring-up mount intentionally does
  * not claim this lifetime. */
 size_t halo_vita_cache_direct_tag_size(void);
+int halo_vita_cache_original_range_valid(uint32_t offset, size_t bytes);
+void halo_vita_cache_activate_original_tags(void *buffer, long size);
+void halo_vita_cache_activate_original_bsp(void *buffer, long size);
 /* Original cache tag blocks/data/references retain serialized Xbox addresses
  * below their already-relocated roots. This resolver is used only by original
  * tag accessors: runtime/native owners pass through unchanged, while owners in

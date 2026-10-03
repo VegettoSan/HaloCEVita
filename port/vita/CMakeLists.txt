@@ -4,7 +4,7 @@ if(NOT DEFINED ENV{VITASDK})
 endif()
 set(CMAKE_TOOLCHAIN_FILE "$ENV{VITASDK}/share/vita.toolchain.cmake" CACHE FILEPATH "Vita toolchain")
 project(HaloCEVita C)
-set(VITA_APP_VERSION "00.39")
+set(VITA_APP_VERSION "00.40")
 option(HALO_VITA_MENU_BRINGUP "Start original Main Menu root after ui.map mount" ON)
 option(HALO_VITA_ORIGINAL_RUNTIME "Run original UI/game lifetime and frame callers" ON)
 option(HALO_VITA_MENU_UPDATE_PROBE "Link original process_ui_widgets closure (research only)" OFF)
@@ -146,14 +146,15 @@ if(HALO_VITA_ORIGINAL_RUNTIME)
     if(ORIGINAL_SOURCE MATCHES "\\.c$" AND NOT ORIGINAL_STATUS STREQUAL "MISSING"
         AND NOT ORIGINAL_SOURCE MATCHES "source/interface/(ui_widget|event_manager|ui_widget_event_handler_functions)\\.c$"
         AND NOT ORIGINAL_SOURCE MATCHES "source/cseries/(cseries_windows|stack_walk_windows)\\.c$"
-        AND NOT ORIGINAL_SOURCE STREQUAL "source/cache/cache_files_windows.c")
+        AND NOT ORIGINAL_SOURCE STREQUAL "source/cache/cache_files_windows.c"
+        AND NOT ORIGINAL_SOURCE STREQUAL "source/cache/cache_files_decompress_windows.c")
       if(NOT "${ROOT}/${ORIGINAL_SOURCE}" IN_LIST EXISTING_CORE_SOURCES)
         target_sources(halo_core PRIVATE "${ROOT}/${ORIGINAL_SOURCE}")
       endif()
     endif()
   endforeach()
   target_sources(halo_core PRIVATE
-    src/vita_original_file_api.c src/halo_cache_windows_vita.c
+    src/vita_original_file_api.c src/halo_cache_windows_vita.c src/halo_cache_decompress_vita.c
     ${ROOT}/port/linux/src/bink_null.c
     ${ROOT}/port/linux/src/msvc_crt.c
     ${ROOT}/port/linux/src/xnet.c
@@ -170,6 +171,9 @@ if(HALO_VITA_ORIGINAL_RUNTIME)
   target_compile_definitions(halo_core PRIVATE HALO_VITA_ORIGINAL_RUNTIME=1)
   set_source_files_properties(${ROOT}/source/shell/shell_xbox.c
     PROPERTIES COMPILE_DEFINITIONS main=halo_original_main)
+else()
+  # The legacy parallel cache manager is recovery-only.
+  target_sources(halo_core PRIVATE src/halo_cache_windows_recovery.c)
 endif()
 
 if(HALO_VITA_MENU_AUDIO)

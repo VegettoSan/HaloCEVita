@@ -1340,3 +1340,35 @@ Commands: vita_xapi_regression.py and vita_file_completion_regression.py PASS.
 Tests execute actual adapter/APC functions, including EOF, failed/short writes,
 64-bit offsets and independent thread queues. No cache owner switched yet; native
 build and real Vita acceptance remain separate. Required CI includes both tests.
+
+
+### A121 — Restore original cache/decompressor/request ownership (2026-10-03)
+
+- Reference: upstream23b542601f2ca505c7a0143703e92fbda6075e18, compared directly
+  with main6ac0718 and its imported baseline21714ac. Original streaming worker
+  supports the supplied compressed Xbox v5 maps; the former D061 claim that it
+  cannot read them was incorrect.
+- Default target compiles the original six-slot/LRU manager and resource request
+  worker. Removed their public Vita replacements, header-build normalization and
+  default resource bind/read. D: and Z: go through the general Xbox filesystem.
+  The old manager/reader and menu handoff remain explicitly recovery-only.
+- Original decompressor owns scratch/copy sequencing and publication. Vita only
+  validates its scratch spans in place of unavailable XPhysicalProtect and provides
+  positioned Ex I/O/issuing-thread APC completion. Original tags/BSP consumers
+  perform existing checked native address registration after original completion.
+- Actual C worker host projection reproduces a historical bad-length valid-header
+  publication. Added narrow HALO_VITA stream-end/exact-output/failure checks and
+  completion-before-flags sampling (otherwise blocking status can report stale
+  success). Initialized the original blank slot header deterministically.
+- Commands: vita_original_cache_regression.py [read-only ui.map bloodgulch.map]
+  and vita_original_cache_owner_regression.py PASS. Actual worker matches complete
+  logical header/payload for2/4/8MiB synthetic fixtures and both supplied maps,
+  including4MiB buffer boundaries. Bad length/checksum retain invalid headers.
+  Actual manager helpers preserve six-slot/LRU/active-slot policy and queue-owned
+  sector rounding/completion. Host projection is not a native ARM ABI test.
+- Original fixed capacities total732MiB under ux0:data/HaloCE/z/, unlike A116's
+  exact-size files at the data root. Warm reuse/language/checksum follow Halo.
+  Required native verifier rejects old owners and inspects cache_file_read dispatch.
+  Version00.40; native CI and real Vita acceptance pending at this checkpoint.
+- Maps remain unmodified and uncommitted. No UI coordinates, shader equations,
+  opacity, controller navigation or independent map transition introduced.
