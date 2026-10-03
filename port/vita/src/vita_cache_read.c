@@ -10,10 +10,6 @@
 #define CACHE_HEADER_SIZE 2048u
 #define MAX_LOGICAL_SIZE (512u * 1024u * 1024u)
 #define RESOURCE_PATH_CAPACITY 320u
-/* The Xbox path also separates source maps (d:\\maps) from its writable z:\\
- * cache slots. Keep Vita's derived seekable logical copy out of maps/ for the
- * same ownership reason: maps/ contains only user-supplied source .map files. */
-#define RESOURCE_SCRATCH_PATH "ux0:data/HaloCE/cache0.vita-logical.tmp"
 
 struct vita_cache_header_state {
 	unsigned char bytes[CACHE_HEADER_SIZE];
@@ -220,6 +216,41 @@ int vita_cache_read_logical_range(FILE *file, uint32_t expected_logical_size,
 	return cache_capture_range(file, &state, logical_offset, (uint32_t)bytes, destination, 1,
 		progress, context, error, error_size, NULL);
 }
+
+static int resource_scratch_path_from_source(const char *source, char *out, size_t capacity)
+{
+	char directory[RESOURCE_PATH_CAPACITY];
+	char *slash, *parent;
+	int length;
+	size_t source_length;
+
+	if (!source || !*source || !out || !capacity)
+		return 0;
+	source_length = strlen(source);
+	if (source_length >= sizeof(directory))
+		return 0;
+	memcpy(directory, source, source_length + 1);
+	slash = strrchr(directory, '/');
+	if (!slash)
+		slash = strrchr(directory, '\\');
+	if (!slash) {
+		length = snprintf(out, capacity, "cache0.vita-logical.tmp");
+		return length > 0 && (size_t)length < capacity;
+	}
+	*slash = 0;
+	parent = strrchr(directory, '/');
+	if (!parent)
+		parent = strrchr(directory, '\\');
+	/* Vita source paths are .../HaloCE/maps/<name>.map. Put the derived
+	 * seekable copy one level above maps/, analogous to Xbox d:\\maps versus
+	 * writable z:\\cache slots. Other host/test paths remain in their writable
+	 * source directory. */
+	if (parent && !strcmp(parent + 1, "maps"))
+		*parent = 0;
+	length = snprintf(out, capacity, "%s/cache0.vita-logical.tmp", directory);
+	return length > 0 && (size_t)length < capacity;
+}
+
 /* Original cache_file_read callers retain their offsets/completion semantics.
  * Compressed maps get one disk-backed logical stream during binding, before
  * audio/rendering begin. Live reads then seek directly instead of re-inflating
@@ -232,7 +263,8 @@ int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 	FILE *source = NULL, *copy = NULL;
 	struct vita_cache_header_state state;
 	unsigned char probe;
-	int result = 0;
+	char legacy_path[RESOURCE_PATH_CAPACITY];
+	int result = 0, legacy_length;
 	vita_cache_resource_unbind();
 	resource_bind_error[0] = 0;
 	if (!path || !*path || logical_size < CACHE_HEADER_SIZE || logical_size > MAX_LOGICAL_SIZE)
@@ -244,10 +276,15 @@ int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 		fail(resource_bind_error, sizeof(resource_bind_error), "resource logical size changed"); goto done;
 	}
 	if (state.compressed) {
-		/* Always rebuild this process-owned slot from the selected source map.
-		 * It is never considered a map candidate by vita_map_path(). */
-		remove(RESOURCE_SCRATCH_PATH);
-		memcpy(resource_map_path, RESOURCE_SCRATCH_PATH, sizeof(RESOURCE_SCRATCH_PATH));
+		if (!resource_scratch_path_from_source(path, resource_map_path, sizeof(resource_map_path))) {
+			fail(resource_bind_error, sizeof(resource_bind_error), "logical resource scratch path failed"); goto done;
+		}
+		/* Clean the old sibling naming scheme once. A stale file from a crash is
+		 * never a map candidate, but leaving it in maps/ is misleading. */
+		legacy_length = snprintf(legacy_path, sizeof(legacy_path), "%s.vita-logical.tmp", path);
+		if (legacy_length > 0 && (size_t)legacy_length < sizeof(legacy_path))
+			remove(legacy_path);
+		remove(resource_map_path);
 		copy = fopen(resource_map_path, "w+b");
 		if (!copy) { fail(resource_bind_error, sizeof(resource_bind_error), "logical resource scratch open failed"); goto done; }
 		resource_file_owned = 1;
@@ -258,6 +295,9 @@ int vita_cache_resource_bind(const char *path, uint32_t logical_size)
 		}
 		resource_file = copy; copy = NULL;
 	} else {
+		if (strlen(path) + 1 > sizeof(resource_map_path)) {
+			fail(resource_bind_error, sizeof(resource_bind_error), "resource path too long"); goto done;
+		}
 		memcpy(resource_map_path, path, strlen(path) + 1);
 		resource_file = source; source = NULL;
 	}
