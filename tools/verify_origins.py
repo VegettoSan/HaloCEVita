@@ -13,7 +13,7 @@ def digest(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def verify(reference=None):
+def verify(reference=None, vita_reference=None):
     manifest = json.loads((ROOT / 'tools/origins.json').read_text())
     assert manifest['schema'] == 1
     assert manifest['sources']['decomp']['repository'] == 'https://github.com/cybersecurity/halo-ce-universal'
@@ -24,9 +24,10 @@ def verify(reference=None):
         assert item['origin'] in manifest['sources'], relative
         assert item['source_commit'] == manifest['sources'][item['origin']]['commit'], relative
         assert digest(ROOT / relative) == item['sha256'], 'Imported file changed without updating provenance: ' + relative
-        if reference and item['origin'] == 'decomp':
+        checkout = {'decomp': reference, 'vita': vita_reference}.get(item['origin'])
+        if checkout:
             expected = item.get('source_sha256', item['sha256'])
-            assert digest(reference / item['source_path']) == expected, 'Original source differs: ' + relative
+            assert digest(checkout / item['source_path']) == expected, 'Original source differs: ' + relative
     for relative, item in project.items():
         assert item['reason'], relative
         assert digest(ROOT / relative) == item['sha256'], 'Project file changed without updating provenance: ' + relative
@@ -45,5 +46,6 @@ def verify(reference=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--reference', type=Path, help='Direct checkout of the pinned original decomp')
+    parser.add_argument('--vita-reference', type=Path, help='Direct checkout of the pinned Vita donor')
     args = parser.parse_args()
-    verify(args.reference)
+    verify(args.reference, args.vita_reference)

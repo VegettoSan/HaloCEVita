@@ -14044,12 +14044,150 @@
       "git_blob": "3a9c8b8a9054e67c7054ae9324de4218b055f32f",
       "mode": "100644",
       "adaptation": null
+    },
+    "port/vita/host/vita_input.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_input.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "cef1933f21c66b72d07dbf410497845eb944a5514037e917d7888fbe5a70b3c6",
+      "git_blob": "b179ac11109bbed1fb43a916640a5bfc32f8dfbc",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/host/vita_net.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_net.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "12cc8a10b4e7c82af047aadfba5de10114963e6eb84b3f46ac5c1e65a3b9f47f",
+      "git_blob": "72012cdac2554f8308febc3384b24ec94068f6e9",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/host/vita_cpu.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_cpu.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "6507fb099298e7a8a38d3e05851d3f8022c02c8026a16f34e88e4db369abe17b",
+      "git_blob": "51c68910b7b6896fe599f447bebe38c2365228f2",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/host/vita_movie.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_movie.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "ac6db1df02485c50cdaad4e61eca4b11db33075f2939ce183657ef06cfe55666",
+      "git_blob": "96e56e7efd3e076ac4d57b3b8c78fafe747aff4c",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/include/vita_host.h": {
+      "origin": "vita",
+      "source_path": "port/vita/include/vita_host.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "5902f96f74a6899082662469bf9cb6bb76bf503c09d4637da48bc9b075296698",
+      "git_blob": "6b5ef111e530ab315f6c5b27a3227aa424cf9b4b",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/linux/src/tag_relocate.c": {
+      "origin": "vita",
+      "source_path": "port/linux/src/tag_relocate.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "20af884148a17989390f6128b107940a88501d279e5d0fa40154e0f806ea443b",
+      "git_blob": "c1d6de87ce315afe7d5161de8ce018fe9b7ed0fc",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/linux/src/tag_layouts.h": {
+      "origin": "vita",
+      "source_path": "port/linux/src/tag_layouts.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "38bb436f47e494310aaf079ea231f1a8b6c29042417324b2e36446643af009ef",
+      "git_blob": "d46a5db0487534bc27ad5d55ff6c5ea1d724ab50",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/linux/include/tag_relocate.h": {
+      "origin": "vita",
+      "source_path": "port/linux/include/tag_relocate.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "c31aa40ca06776bbdea6b50998c8b50f8b8037316357b82659d36eeb66971bd7",
+      "git_blob": "3b280bcf66dd96f204aadca26cccb2498ab426c5",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/tests/vita_net_test.c": {
+      "origin": "vita",
+      "source_path": "port/vita/tests/vita_net_test.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "822a7e69073809b2ed104c9dbefcd017e82b6fc09241893069033065195dd4dd",
+      "git_blob": "4f9c0c776a8be4e630dc32bd58d08a454af64795",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/tests/mock_scenet.c": {
+      "origin": "vita",
+      "source_path": "port/vita/tests/mock_scenet.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "190d2f050aaa314d22767c40f432d63bb156b6f663956e3be636c0486fffe779",
+      "git_blob": "405353171b0a4ae23ff0580d77d0f31ff36ea823",
+      "mode": "100644",
+      "adaptation": null
+    },
+    "port/vita/tests/run_vita_net_test.sh": {
+      "origin": "vita",
+      "source_path": "port/vita/tests/run_vita_net_test.sh",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "cbf90ebfb94e13eae9f33eb5f1d59aa6e1d727abdac69112826f2718654f94c3",
+      "git_blob": "6f8612b153b50a21e897ee1694fe60b5fbc9c5e3",
+      "mode": "100755",
+      "adaptation": null
+    },
+    "LICENSES/BirchWoodGod-GPL-3.0.txt": {
+      "origin": "vita",
+      "source_path": "LICENSE",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
+      "mode": "100644",
+      "adaptation": null
     }
   },
   "project_files": {
     "tools/verify_origins.py": {
-      "sha256": "c9492ecff60d18b22c577f7c1ec6d135891175a729989e0753ec340f334982d0",
-      "reason": "New provenance validator for the authorized restart; no prior implementation imported"
+      "sha256": "8ae393dd4ed3690f125e2db987225dee2d34322e6551fb7f8bd0a86f9d287d84",
+      "reason": "Extend clean-source validation to independently imported Vita donor files"
+    },
+    "port/vita/host/vita_gl_host.c": {
+      "sha256": "03e124573eeae7710d62cc63ccd973d61a43637e85de259c1194e207253d7bf6",
+      "reason": "New native ABI context boundary based on official vitaGL vglInitExtended/vglGetProcAddress/vglSwapBuffers APIs"
+    },
+    "port/vita/include/vita_gl_host.h": {
+      "sha256": "9a3ec1d466a54a60681200ed3b6bb7f93640190b0d36a3e72c3625aee4ff7834",
+      "reason": "New SDK-free scalar interface for the vitaGL host"
+    },
+    "port/vita/tests/abi_engine.c": {
+      "sha256": "5fa29dd24afc499d886a95e514d25373f752177fe5ac5f01464380a7b420c488",
+      "reason": "New compile-time ARM32 Xbox ABI assertions"
+    },
+    "port/vita/tests/abi_host.c": {
+      "sha256": "839227e587716f522fea0f6f1f09d77764a760c5426d02cf9edcf5423f720849",
+      "reason": "New compile-time VitaSDK ABI assertions"
+    }
+  },
+  "dependencies": {
+    "vitaGL": {
+      "repository": "https://github.com/Rinnegatamante/vitaGL",
+      "commit": "1ae86f65718675b797d3cd8ffc021ad2527096cb",
+      "audit_files": {
+        "source/lookup.c": "acbddd752720dafb8d3afdf00cb21d8e18ece1003e7d936370823b60969b7ca3",
+        "source/vitaGL.h": "a6163bf4a712d52ac83373ad0fba1b4eba596027891fb6491f5539f6858cbf1b"
+      }
+    },
+    "vita_headers": {
+      "repository": "https://github.com/vitasdk/vita-headers",
+      "commit": "e66ebe90b73d1fa4cce005a5b2072cec27322544"
     }
   }
 }

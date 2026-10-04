@@ -5,8 +5,8 @@ Importación directa del 2026-10-03:
 - Decomp: https://github.com/cybersecurity/halo-ce-universal
   SHA `933aac61754eb5de2c8496dbe9b8278f033e4c1f`.
 - Donante Vita revisado: https://github.com/BirchWoodGod/halo-ce-vita
-  SHA `309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2`; su código se importará
-  separadamente con atribución y licencia.
+  SHA `309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2`; sus primeras adaptaciones ya están importadas
+  con atribución y licencia en LICENSES/BirchWoodGod-GPL-3.0.txt.
 - vitaGL revisado directamente: https://github.com/Rinnegatamante/vitaGL
   SHA `1ae86f65718675b797d3cd8ffc021ad2527096cb`.
 
@@ -27,3 +27,14 @@ al donante: hay que adaptar el generador Vita a su port.json actual.
 El código del renderer, helpers y tests antiguos se ha retirado. El nuevo
 verificador compara importaciones con el checkout original y rechaza código
 sin procedencia registrada, además de los módulos descartados conocidos.
+
+## Primera importación Vita (R003)
+
+Copias directas del donante: host input/net/cpu/movie, vita_host.h, el walker
+tag_relocate.c y sus layouts/cabecera, y su prueba de sockets con SceNet simulado.
+Estos módulos aún no constituyen un ejecutable integrado. El manifiesto compara
+sus hashes con el checkout del donante y conserva los del engine original.
+
+Código nuevo: frontera vita_gl_host que usa exclusivamente las APIs oficiales
+vglInitExtended, vglGetProcAddress y vglSwapBuffers; asserts independientes de
+ABI para Clang/engine y GCC/SDK. No dibuja widgets ni altera los tags.

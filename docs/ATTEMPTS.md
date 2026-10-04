@@ -36,3 +36,12 @@ No constituyen contratos ni baselines para esta implementación.
   no se reformatea el decomp para mantener la comparación de bytes. Se excluye
   el ejecutable auxiliar libtiff/mkg3states: no es código fuente ni dependencia
   del engine. Quedan1490 importaciones,967 archivos source/, todos verificables.
+
+## R003 — Importar módulos Vita independientes (2026-10-03)
+
+- Procedencia verificada: 1502 importaciones y 5 archivos nuevos registrados.
+- Incluye el walker de reubicación por layouts del donante; su invocación por
+  cache_files y el arranque del host aún requieren integración.
+- Se importa la prueba de red del donante. Su primera ejecución local no pudo
+  compilar porque no había cabeceras VitaSDK instaladas; no se registra PASS.
+- Se prepara una toolchain nueva; no se reutilizan binarios del port descartado.
