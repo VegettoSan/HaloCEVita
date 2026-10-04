@@ -123,6 +123,9 @@ symbols in this file:
 /* ---------- headers */
 
 #include "cseries.h"
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+#include "tag_relocate.h"
+#endif
 #include "cseries_windows.h"
 #include "errors.h"
 #include "tag_files/tag_groups.h"
@@ -433,7 +436,11 @@ long tag_loaded(
 void cache_files_enable_writes(
 	void)
 {
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READWRITE);
+#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READWRITE);
+#endif
 
 	return;
 }
@@ -441,7 +448,11 @@ void cache_files_enable_writes(
 void cache_files_disable_writes(
 	void)
 {
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+	XPhysicalProtect(physical_memory_get_tag_cache_base_address(), 0x01600000, PAGE_READONLY);
+#else
 	XPhysicalProtect((void *)0x803A6000, 0x01600000, PAGE_READONLY);
+#endif
 	XPhysicalProtect(
 		cache_file_globals.tag_header->vertex_buffers,
 		cache_file_globals.tag_header->vertex_buffer_count * 12,
@@ -806,6 +817,9 @@ long scenario_tags_load(
 				SwitchToThread();
 			}
 
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+			halo_tag_relocate_tags(tag_cache_base_address, cache_file_globals.header.tag_data_size);
+#endif
 			cache_file_globals.tag_header = tag_cache_base_address;
 			match_vassert(
 				"c:\\halo\\SOURCE\\cache\\cache_files.c",
@@ -881,6 +895,9 @@ boolean scenario_structure_bsp_load(
 		}
 	}
 
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+	halo_tag_relocate_structure_bsp(tag_cache_base_address, reference->base_address, reference->file_size);
+#endif
 	cache_file_globals.structure_bsp_header = reference->base_address;
 	match_assert(
 		"c:\\halo\\SOURCE\\cache\\cache_files.c",

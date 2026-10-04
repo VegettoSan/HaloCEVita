@@ -73,6 +73,14 @@ static struct physical_memory_map_globals physical_memory_map_globals;
 void physical_memory_allocate(
 	void)
 {
+#ifdef HALO_RELOCATABLE_TAG_CACHE
+	/* Vita donor: tag pointers are relocated after reading; the host arena
+	   cannot be allocated at fixed Xbox addresses. */
+	physical_memory_map_globals.game_state_base_address = XPhysicalAlloc(GAME_STATE_SIZE, -1, 0, PAGE_READWRITE);
+	match_assert(__FILE__, __LINE__, physical_memory_map_globals.game_state_base_address);
+	physical_memory_map_globals.tag_cache_base_address = XPhysicalAlloc(TAG_CACHE_SIZE, -1, 0, PAGE_READWRITE);
+	match_assert(__FILE__, __LINE__, physical_memory_map_globals.tag_cache_base_address);
+#else
 	physical_memory_map_globals.game_state_base_address = XPhysicalAlloc(GAME_STATE_SIZE, GAME_STATE_BASE_ADDRESS & 0x7FFFFFFF, 0, PAGE_READWRITE);
 #line 46 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"
 	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.game_state_base_address==GAME_STATE_BASE_ADDRESS);
@@ -80,6 +88,7 @@ void physical_memory_allocate(
 	physical_memory_map_globals.tag_cache_base_address = XPhysicalAlloc(TAG_CACHE_SIZE, TAG_CACHE_BASE_ADDRESS & 0x7FFFFFFF, 0, PAGE_READWRITE);
 #line 50 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"
 	match_assert(__FILE__, __LINE__, (unsigned long)physical_memory_map_globals.tag_cache_base_address==TAG_CACHE_BASE_ADDRESS);
+#endif
 
 	physical_memory_map_globals.texture_cache_base_address = XPhysicalAlloc(TEXTURE_CACHE_SIZE, -1, 0, PAGE_READWRITE | PAGE_WRITECOMBINE);
 #line 55 "c:\\halo\\SOURCE\\cache\\physical_memory_map.c"

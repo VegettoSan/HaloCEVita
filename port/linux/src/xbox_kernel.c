@@ -14,7 +14,11 @@ threads, asynchronous procedure calls, time, memory and debug output.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef HALO_VITA
 #include <sys/mman.h>
+#else
+#include "vita_host.h"
+#endif
 #include <time.h>
 #include <unistd.h>
 
@@ -25,12 +29,21 @@ threads, asynchronous procedure calls, time, memory and debug output.
 void platform_log(const char *format, ...)
 {
 	va_list arguments;
+#ifdef HALO_VITA
+	char line[1024];
+
+	va_start(arguments, format);
+	vsnprintf(line, sizeof(line), format, arguments);
+	va_end(arguments);
+	vita_host_log(line);
+#else
 
 	fputs("halo-linux: ", stderr);
 	va_start(arguments, format);
 	vfprintf(stderr, format, arguments);
 	va_end(arguments);
 	fputc('\n', stderr);
+#endif
 }
 
 void platform_unimplemented(const char *name)
@@ -641,13 +654,36 @@ VOID WINAPI Sleep(DWORD milliseconds)
 
 /* ---------- time */
 
+#ifdef HALO_VITA
+/* the game reads the clock thousands of times a frame: no 64-bit division
+(a library call on 32-bit ARM). Milliseconds accumulate from a base that
+moves forward whenever the microseconds since it would no longer fit a
+32-bit division. */
+DWORD WINAPI GetTickCount(void)
+{
+	static unsigned long long base_us;
+	static DWORD base_ms;
+	unsigned long long now = vita_host_time_us();
+	unsigned long long since = now - base_us;
+
+	if (since >= 0x40000000ULL)
+	{
+		/* move the base by a whole number of milliseconds */
+		base_ms += (DWORD)since / 1000UL;
+		base_us += (unsigned long long)((DWORD)since / 1000UL) * 1000ULL;
+		since = now - base_us;
+	}
+	return base_ms + (DWORD)since / 1000UL;
+}
+#else
 DWORD WINAPI GetTickCount(void)
 {
 	struct timespec now;
 
 	clock_gettime(CLOCK_MONOTONIC, &now);
-	return (DWORD)((unsigned long long)now.tv_sec * 1000ULL + (unsigned long long)now.tv_nsec / 1000000ULL);
+	return (DWORD)((unsigned long long)now.tv_sec * 1000ULL + (unsigned long)now.tv_nsec / 1000000UL);
 }
+#endif
 
 /* The Xbox performance counter runs at the 733 MHz CPU clock. Report a
 microsecond counter instead: coarse enough that 32-bit intermediate
@@ -658,9 +694,16 @@ BOOL WINAPI QueryPerformanceCounter(LARGE_INTEGER *count)
 {
 	struct timespec now;
 
+#ifdef HALO_VITA
+	count->QuadPart = (LONGLONG)vita_host_time_us();
+	return TRUE;
+#endif
 	clock_gettime(CLOCK_MONOTONIC, &now);
+	/* (a 32-bit division of the nanoseconds: the 64-bit one is a library
+	call on 32-bit ARM, and the game reads the counter thousands of times
+	a frame) */
 	count->QuadPart = (LONGLONG)((unsigned long long)now.tv_sec * PLATFORM_PERFORMANCE_FREQUENCY +
-		(unsigned long long)now.tv_nsec / (1000000000ULL / PLATFORM_PERFORMANCE_FREQUENCY));
+		(unsigned long)now.tv_nsec / (unsigned long)(1000000000ULL / PLATFORM_PERFORMANCE_FREQUENCY));
 	return TRUE;
 }
 

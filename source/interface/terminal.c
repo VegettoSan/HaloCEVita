@@ -347,7 +347,8 @@ void terminal_printf(
 	...)
 {
 	real_argb_color default_terminal_printf_color;
-	char *arglist;
+	/* Vita donor: ARM's va_list is not an x86 argument-stack pointer. */
+	va_list arglist;
 
 	va_start(arglist, format);
 

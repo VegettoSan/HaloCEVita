@@ -10,7 +10,8 @@ set -e
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../../.." && pwd)
 sdk=${VITASDK:-$HOME/vitasdk}
-out=${TMPDIR:-/tmp}/vita_net_test.$$
+out=$(mktemp -d "${TMPDIR:-/tmp}/vita_net_test.XXXXXX")
+trap 'rm -rf "$out"' EXIT HUP INT TERM
 mkdir -p "$out/include"
 ln -s "$sdk/arm-vita-eabi/include/psp2" "$out/include/psp2"
 ln -s "$sdk/arm-vita-eabi/include/psp2common" "$out/include/psp2common"

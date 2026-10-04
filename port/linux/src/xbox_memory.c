@@ -18,8 +18,13 @@ Xbox kernel does.
 
 #include <errno.h>
 #include <string.h>
+#ifndef HALO_VITA
 #include <sys/mman.h>
+#endif
 #include <unistd.h>
+#ifdef HALO_VITA
+#include "vita_host.h"
+#endif
 
 #define PAGE_SIZE_BYTES 0x1000UL
 #define CONTIGUOUS_PAGE_COUNT (PLATFORM_CONTIGUOUS_SIZE / PAGE_SIZE_BYTES)
@@ -31,6 +36,58 @@ static unsigned long block_page_count[CONTIGUOUS_PAGE_COUNT];
 static BOOL arena_reserved = FALSE;
 static pthread_mutex_t arena_lock = PTHREAD_MUTEX_INITIALIZER;
 
+#ifdef HALO_VITA
+/* no page protection on the Vita: protections are only recorded */
+unsigned long platform_contiguous_base;
+
+/* Where the blocks are laid out from, top down. The game state lives in
+the window and keeps absolute pointers (data arrays to their datums,
+object headers to objects, memory pool links, and the tag data it points
+into), which a campaign save keeps too: a save resumes only with every
+block where it was. The window itself lands where the system puts it,
+which moves by a megabyte whenever the program's data segment crosses a
+megabyte (v1.0 and v1.0.1: window at 0x86400000; a build whose data
+segment reached 10 MB: 0x86500000, and v1.0.1 saves did not resume). The
+blocks are therefore laid out from v1.0's window top, 0x8D400000, down -
+the game state at 0x8C0E4000 as in v1.0 and v1.0.1 - whenever the window
+reaches that high; the space above stays unused. */
+#define VITA_LAYOUT_TOP 0x8D400000UL
+static unsigned long layout_top_page = CONTIGUOUS_PAGE_COUNT;
+
+static void contiguous_arena_reserve(void)
+{
+	unsigned long size = 0;
+	void *arena = vita_host_arena(&size);
+
+	if (arena && size >= PLATFORM_CONTIGUOUS_SIZE)
+	{
+		unsigned long base = (unsigned long)arena;
+
+		platform_contiguous_base = base;
+		/* the first page stays unused: physical address 0 means none */
+		page_protection[0] = PAGE_NOACCESS;
+		block_page_count[0] = 1;
+		arena_reserved = TRUE;
+		if (VITA_LAYOUT_TOP > base + 64UL * 1024 * 1024 && VITA_LAYOUT_TOP <= base + PLATFORM_CONTIGUOUS_SIZE)
+		{
+			layout_top_page = (VITA_LAYOUT_TOP - base) / PAGE_SIZE_BYTES;
+			platform_log("memory window at 0x%08lx: blocks laid out from 0x%08lx down, as in v1.0 and v1.0.1",
+				base, VITA_LAYOUT_TOP);
+		}
+		else
+		{
+			platform_log("memory window at 0x%08lx: WARNING: it does not reach 0x%08lx, so the blocks are not where "
+				"v1.0 and v1.0.1 put them, and their campaign saves will not resume (the level starts over)",
+				base, VITA_LAYOUT_TOP);
+		}
+	}
+	else
+	{
+		platform_log("the host has no %lu byte memory window (it has %lu)",
+			(unsigned long)PLATFORM_CONTIGUOUS_SIZE, size);
+	}
+}
+#else
 static int protection_to_host(DWORD protect)
 {
 	switch (protect & 0xff)
@@ -64,6 +121,7 @@ static void contiguous_arena_reserve(void)
 			wanted, strerror(errno));
 	}
 }
+#endif
 
 BOOL platform_is_contiguous(const void *address)
 {
@@ -102,6 +160,10 @@ void *platform_contiguous_alloc(unsigned long size, unsigned long alignment,
 		protect = PAGE_READWRITE;
 
 	pthread_mutex_lock(&arena_lock);
+#ifdef HALO_VITA
+	if (!arena_reserved)
+		contiguous_arena_reserve();
+#endif
 	if (!arena_reserved)
 	{
 		pthread_mutex_unlock(&arena_lock);
@@ -117,7 +179,12 @@ void *platform_contiguous_alloc(unsigned long size, unsigned long alignment,
 	else if (count <= CONTIGUOUS_PAGE_COUNT)
 	{
 		/* top-down first fit, like the Xbox contiguous allocator */
-		unsigned long candidate = CONTIGUOUS_PAGE_COUNT - count;
+#ifdef HALO_VITA
+		unsigned long top = layout_top_page;
+#else
+		unsigned long top = CONTIGUOUS_PAGE_COUNT;
+#endif
+		unsigned long candidate = count <= top ? top - count : 0;
 
 		for (;;)
 		{
@@ -140,6 +207,9 @@ void *platform_contiguous_alloc(unsigned long size, unsigned long alignment,
 
 	address = (void *)(PLATFORM_CONTIGUOUS_BASE + first * PAGE_SIZE_BYTES);
 	memory_watch_forget(address, count * PAGE_SIZE_BYTES);
+#ifdef HALO_VITA
+	memset(address, 0, count * PAGE_SIZE_BYTES);
+#else
 	/* map fresh zeroed pages over the reservation */
 	if (mmap(address, count * PAGE_SIZE_BYTES, protection_to_host(protect),
 		MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0) != address)
@@ -147,9 +217,23 @@ void *platform_contiguous_alloc(unsigned long size, unsigned long alignment,
 		pthread_mutex_unlock(&arena_lock);
 		return NULL;
 	}
+#endif
 	for (page = first; page < first + count; page++)
 		page_protection[page] = protect;
 	block_page_count[first] = count;
+#ifdef HALO_VITA
+	{
+		/* the lowest page ever handed out: blocks come top-down */
+		static unsigned long lowest = CONTIGUOUS_PAGE_COUNT;
+
+		if (first < lowest && count >= 256)
+		{
+			lowest = first;
+			platform_log("memory window: %lu KB block, %lu KB of %lu KB in use at most", count * 4,
+				(CONTIGUOUS_PAGE_COUNT - lowest) * 4, CONTIGUOUS_PAGE_COUNT * 4);
+		}
+	}
+#endif
 	pthread_mutex_unlock(&arena_lock);
 	return address;
 }
@@ -166,8 +250,10 @@ void platform_contiguous_free(void *address)
 	if (count)
 	{
 		memory_watch_forget(address, count * PAGE_SIZE_BYTES);
+#ifndef HALO_VITA
 		mmap(address, count * PAGE_SIZE_BYTES, PROT_NONE,
 			MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED, -1, 0);
+#endif
 		for (page = first; page < first + count; page++)
 			page_protection[page] = 0;
 		block_page_count[first] = 0;
@@ -209,11 +295,13 @@ BOOL WINAPI VirtualProtect(LPVOID address, SIZE_T size, DWORD new_protect, PDWOR
 		*old_protect = platform_is_contiguous(address) ?
 			page_protection[(start - PLATFORM_CONTIGUOUS_BASE) / PAGE_SIZE_BYTES] : PAGE_READWRITE;
 	memory_watch_forget((void *)start, end - start);
+#ifndef HALO_VITA
 	if (mprotect((void *)start, end - start, protection_to_host(new_protect)) != 0)
 	{
 		platform_set_last_error_from_errno(errno);
 		return FALSE;
 	}
+#endif
 	if (platform_is_contiguous((void *)start))
 	{
 		unsigned long page;

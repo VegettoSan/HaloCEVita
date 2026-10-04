@@ -10,8 +10,15 @@ byte-for-byte identical to what the matching MSVC build compiles.
 #ifndef __HALO_LINUX_PREFIX_H
 #define __HALO_LINUX_PREFIX_H
 
-#if !defined(__i386__) && !defined(HALO_ANDROID)
-#error the Linux port targets 32-bit x86: game data structures assume 32-bit pointers
+#if !defined(__i386__) && !defined(HALO_ANDROID) && !(defined(__arm__) && __SIZEOF_POINTER__ == 4)
+#error the Linux port targets 32-bit x86 or 32-bit ARM: game data structures assume 32-bit pointers
+#endif
+
+#define HALO_LINUX 1
+/* the handheld ports (Android, Vita): no desktop updater, disc image import,
+invite hand-off or environment; settings live with the game data */
+#if defined(HALO_ANDROID) || defined(HALO_VITA)
+#define HALO_NOT_DESKTOP 1
 #endif
 
 /* ---------- XDK architecture selection (MSVC predefines these) */
@@ -86,6 +93,19 @@ Game code sees the XDK's Winsock under private names (see the header). The
 platform layer includes the XDK headers itself, via platform.h. */
 
 #ifndef HALO_LINUX_PLATFORM_LAYER
+#ifdef HALO_VITA
+/* newlib's stdio reaches its timeval and select declarations, which glibc's
+does not: they are declared first, under their own names */
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/select.h>
+/* Current VitaSDK newlib reaches limits.h through these system headers.
+   The original engine defines these names as enum members in cseries.h. */
+#undef LONG_MAX
+#undef LONG_MIN
+#undef CHAR_MAX
+#undef CHAR_MIN
+#endif
 #include "halo_linux_winsock_names.h"
 #include "halo_linux_source_fixups.h"
 #endif

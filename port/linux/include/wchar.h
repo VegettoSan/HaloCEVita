@@ -23,7 +23,7 @@ swprintf()/vswprintf() take no buffer size.
 #error the Linux build requires -fshort-wchar
 #endif
 
-#ifndef __wint_t_defined
+#if !defined(__wint_t_defined) && !defined(_WINT_T)
 #define __wint_t_defined 1
 #define _WINT_T 1
 typedef unsigned short wint_t;

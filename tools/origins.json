@@ -1032,13 +1032,14 @@
       "adaptation": null
     },
     "port/linux/include/halo_linux_prefix.h": {
-      "origin": "decomp",
+      "origin": "vita",
       "source_path": "port/linux/include/halo_linux_prefix.h",
-      "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "398b2a7494d273260dd0b4675ffeb0a71e43eaa5067d881271c4ea1ad65e8a52",
-      "git_blob": "dc3660457ef433a016cfca86981c04f62c4ddc94",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "2d84514359a91ddb3231180d58abae24888eaca7",
+      "sha256": "6ad683870f7164594fd522a0f491ec5a2d3cc3afb5f9ffdf7bacea11fa1aa022",
       "mode": "100644",
-      "adaptation": null
+      "source_sha256": "b5c98fcec3b9f2f7fd070f83d49efd32aa9ddd28024422cff682291d0a91ccd8",
+      "adaptation": "Donor ARM/newlib prefix plus undef of limits macros introduced by current newlib; engine enum names preserved"
     },
     "port/linux/include/halo_linux_source_fixups.h": {
       "origin": "decomp",
@@ -1170,10 +1171,16 @@
       "origin": "decomp",
       "source_path": "port/linux/include/wchar.h",
       "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "133f2e8fa603d308eac9fd501644ea122cc81cb9ab7d68012e7487a46995f4ba",
+      "sha256": "6531a7e13b54d4da15fe4fb1f1e7daa110887c135aef26343c766ec26990b1b7",
       "git_blob": "e04daf7669afc7d2bd91721d85093249b2b90619",
       "mode": "100644",
-      "adaptation": null
+      "adaptation": "Transplant donor _WINT_T guard to preserve newlib wint_t and original 16-bit engine wide strings",
+      "source_sha256": "133f2e8fa603d308eac9fd501644ea122cc81cb9ab7d68012e7487a46995f4ba",
+      "adapted_from": {
+        "origin": "vita",
+        "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+        "source_path": "port/linux/include/wchar.h"
+      }
     },
     "port/linux/include/wctype.h": {
       "origin": "decomp",
@@ -1395,10 +1402,16 @@
       "origin": "decomp",
       "source_path": "port/linux/src/platform.h",
       "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "ecf745e35e04795fa1e0b3a7e4372db4123897db02a304b8a01bc25534d58a51",
+      "sha256": "4fd8a3b671ef9ab3091b684799d879fdeb89c64d2b801040df3f0fbd19162459",
       "git_blob": "4e686d11b458400f4621b30c6fd53d5462aa5c5a",
       "mode": "100644",
-      "adaptation": null
+      "adaptation": "Transplant donor dynamic physical address arena macros without removing new upstream APIs",
+      "source_sha256": "ecf745e35e04795fa1e0b3a7e4372db4123897db02a304b8a01bc25534d58a51",
+      "adapted_from": {
+        "origin": "vita",
+        "source_path": "port/linux/src/platform.h",
+        "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2"
+      }
     },
     "port/linux/src/port_config.c": {
       "origin": "decomp",
@@ -1536,22 +1549,20 @@
       "adaptation": null
     },
     "port/linux/src/xbox_kernel.c": {
-      "origin": "decomp",
+      "origin": "vita",
       "source_path": "port/linux/src/xbox_kernel.c",
-      "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "6b252864fbddb7c1602258aa80b502bfae66548b2be9d3c1e26c562891fe3c56",
-      "git_blob": "04fc3267a13c125ce62b03f0b54099ae6d5bf3e4",
-      "mode": "100644",
-      "adaptation": null
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "3f9f850414ab380979dbe15e750e5a867bde3a30",
+      "sha256": "042030b07c42165a6ab094052b64fc1b7fd2b0c1110dfeab68174bfd11991187",
+      "mode": "100644"
     },
     "port/linux/src/xbox_memory.c": {
-      "origin": "decomp",
+      "origin": "vita",
       "source_path": "port/linux/src/xbox_memory.c",
-      "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "86c7d950049ee74ddbd5052df2064bfdfa122e8d4f8ddf01cbeccaf8fecf5fb7",
-      "git_blob": "7ece346d510a966ec717f3cc33648cd6c8810d80",
-      "mode": "100644",
-      "adaptation": null
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "6216309dedc4e4b90f71ca97fbdb944aa65146c6",
+      "sha256": "05cbd4b515396ab1babcc03d3f198133e56518d5176c34bf7c1ece2c0eb64d6b",
+      "mode": "100644"
     },
     "port/linux/src/xbox_textures.c": {
       "origin": "decomp",
@@ -6705,10 +6716,16 @@
       "origin": "decomp",
       "source_path": "source/cache/cache_files.c",
       "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "00fe2a03b32c41e8cc9f927ab42949b36b10b7cf4c759c635137f043f0542e08",
+      "sha256": "766e167376d77bd2966d4749cf4d021a74cb722e22ce63c754f1955f051964e6",
       "git_blob": "80d53d27573cc4a733ef1b05efc40cf06bac73e2",
       "mode": "100644",
-      "adaptation": null
+      "adaptation": "Transplant only donor HALO_RELOCATABLE_TAG_CACHE hooks into current original cache load/protection/BSP flow",
+      "source_sha256": "00fe2a03b32c41e8cc9f927ab42949b36b10b7cf4c759c635137f043f0542e08",
+      "adapted_from": {
+        "origin": "vita",
+        "source_path": "source/cache/cache_files.c",
+        "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2"
+      }
     },
     "source/cache/cache_files.h": {
       "origin": "decomp",
@@ -6750,10 +6767,16 @@
       "origin": "decomp",
       "source_path": "source/cache/physical_memory_map.c",
       "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "7fbb4a7e435b5211e165bc3b960190e843e857a6e8581e748963d5c6eb6530b5",
+      "sha256": "546f0228de52dc1caff099a89b8952e66239d81f44a4b07c4a0c9cc435be171d",
       "git_blob": "911047556b3e72d7da103a114a285ea4e171ba0f",
       "mode": "100644",
-      "adaptation": null
+      "adaptation": "Transplant donor relocatable allocations while keeping current original capacity constants",
+      "source_sha256": "7fbb4a7e435b5211e165bc3b960190e843e857a6e8581e748963d5c6eb6530b5",
+      "adapted_from": {
+        "origin": "vita",
+        "source_path": "source/cache/physical_memory_map.c",
+        "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2"
+      }
     },
     "source/cache/physical_memory_map.h": {
       "origin": "decomp",
@@ -8811,10 +8834,16 @@
       "origin": "decomp",
       "source_path": "source/interface/terminal.c",
       "source_commit": "933aac61754eb5de2c8496dbe9b8278f033e4c1f",
-      "sha256": "f3df06ee9b129d4711b13d15b88539b5dcf46b4aec76d12a0ed4d990cd1a5a87",
+      "sha256": "bdc9c9a200767d960c1cc90eb3aa1c22e90406ab18c6d0b26331da158cfbc94d",
       "git_blob": "2a950a8616df6b989bf8092449fb7152c0371f2a",
       "mode": "100644",
-      "adaptation": null
+      "adaptation": "Transplant donor va_list declaration; retain every current original terminal behavior",
+      "source_sha256": "f3df06ee9b129d4711b13d15b88539b5dcf46b4aec76d12a0ed4d990cd1a5a87",
+      "adapted_from": {
+        "origin": "vita",
+        "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+        "source_path": "source/interface/terminal.c"
+      }
     },
     "source/interface/terminal.h": {
       "origin": "decomp",
@@ -14139,10 +14168,11 @@
       "origin": "vita",
       "source_path": "port/vita/tests/run_vita_net_test.sh",
       "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
-      "sha256": "cbf90ebfb94e13eae9f33eb5f1d59aa6e1d727abdac69112826f2718654f94c3",
+      "sha256": "04560364847256d3a92785ac3e5e501acb2fdd308b629baabe52dcdee95a14c8",
       "git_blob": "6f8612b153b50a21e897ee1694fe60b5fbc9c5e3",
       "mode": "100755",
-      "adaptation": null
+      "adaptation": "Keep donor runtime socket checks; use mktemp and trap for reliable isolated execution",
+      "source_sha256": "cbf90ebfb94e13eae9f33eb5f1d59aa6e1d727abdac69112826f2718654f94c3"
     },
     "LICENSES/BirchWoodGod-GPL-3.0.txt": {
       "origin": "vita",
@@ -14152,6 +14182,90 @@
       "git_blob": "f288702d2fa16d3cdf0035b15a9fcbc552cd88e7",
       "mode": "100644",
       "adaptation": null
+    },
+    "port/vita/host/vita_main.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_main.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "d60e9b17f738ed7fc1b3cab087bcafa4fdae52ee",
+      "sha256": "d26b86443563b6d241b8c1ae2439fa69768d68ef04b7f55ed25c90baaf8a07bd",
+      "mode": "100644"
+    },
+    "port/vita/host/overlay_font.h": {
+      "origin": "vita",
+      "source_path": "port/vita/host/overlay_font.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "9ae50a6c2e7b0a1a5d896d83b6bf8189754048bc",
+      "sha256": "a52583f9660faa1728d01165a7ec2a97e325b929df1029f1dfc2da56fc39a97c",
+      "mode": "100644"
+    },
+    "port/vita/host/vita_settings.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_settings.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "6a40355f13e2f4688f33991dd88e6ded0cbdd8db",
+      "sha256": "79267d632241fe03ff708357c7b1ee98476e5acf8ec7f5ee8b6c5b6266f09841",
+      "mode": "100644"
+    },
+    "port/vita/host/vita_stubs.c": {
+      "origin": "vita",
+      "source_path": "port/vita/host/vita_stubs.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "d28284a31acf8be1631b180d6c239757700423b7",
+      "sha256": "5e032b6e32a6c4f18b44add5b3705014a8e3f45355483dcdc66d5cb72307ab7c",
+      "mode": "100644",
+      "source_sha256": "0b3ce4ff2eafc474ccc1452259b410224ccebb17da182bdc18868ca6c9f59a02",
+      "adaptation": "Adapt donor unsupported UPnP failure API to original current preferred_port parameter"
+    },
+    "port/vita/include/vita_compat.h": {
+      "origin": "vita",
+      "source_path": "port/vita/include/vita_compat.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "e6c3751e1ea9d08cbc35da8e8859ce2e440d616b",
+      "sha256": "17a624b6cb3eda38e4d652d0fedd505601bbeb7119c0f413d7ce0545753ce7d2",
+      "mode": "100644"
+    },
+    "port/vita/include/vita_gxm.h": {
+      "origin": "vita",
+      "source_path": "port/vita/include/vita_gxm.h",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "e4f4ef3aac4e323616292bbff470b9bdc1095e95",
+      "sha256": "b11277f2e0d7cc8efa0e2749092b81ac54942c9216650eb5195dbfd5ec2a63ea",
+      "mode": "100644"
+    },
+    "port/vita/platform/vita_memory_watch.c": {
+      "origin": "vita",
+      "source_path": "port/vita/platform/vita_memory_watch.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "25be85cd166e4f81f73aea8196e78b98693b31c5",
+      "sha256": "24a64336f43b6e98b174b6838934cbbfb84b436940c980b4ecc2155da096cdc0",
+      "mode": "100644"
+    },
+    "port/vita/platform/bink_vita.c": {
+      "origin": "vita",
+      "source_path": "port/vita/platform/bink_vita.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "1c7800e794cb3967ed32805f31b9025ca82e896b",
+      "sha256": "664f9589d213c21d57bfaf590f683f97afb879342d69fbde34dcd45101ebf1e2",
+      "mode": "100644"
+    },
+    "port/vita/platform/vita_pad.c": {
+      "origin": "vita",
+      "source_path": "port/vita/platform/vita_pad.c",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "fd0d734fd831c7e2faba2e166795d9c2953bded7",
+      "sha256": "d031abf3b5b291dcd0d106c15785251a476ef5f112fe1cd49d0e274b6cbe3c9d",
+      "mode": "100644"
+    },
+    "tools/vita_build.py": {
+      "origin": "vita",
+      "source_path": "tools/vita_build.py",
+      "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
+      "source_blob": "ea2d1753835997d5095430f87fb5cb177e3c9e2b",
+      "source_sha256": "01337e4aa09db0762a0a6ca69f0013c0097c3d5721d08356a6dc68364ab2ba8a",
+      "sha256": "3a53edce14e2334f8bb1b614c0bec8229784e57518762fdb53443f0b764e8f04",
+      "mode": "100644",
+      "adaptation": "Adapt donor compiler/ABI boundary to current original port.json and standalone compile-only Ninja graph; linking explicitly pending"
     }
   },
   "project_files": {
@@ -14174,6 +14288,10 @@
     "port/vita/tests/abi_host.c": {
       "sha256": "839227e587716f522fea0f6f1f09d77764a760c5426d02cf9edcf5423f720849",
       "reason": "New compile-time VitaSDK ABI assertions"
+    },
+    "tools/vitagl_contract.py": {
+      "sha256": "ad5b9177d5aa4659ed72de3b08fbeba5155be6082b3a625356b65a1b5dd73f1a",
+      "reason": "New audit of original required GL entry points versus pinned official lookup table; never generates fake mappings"
     }
   },
   "dependencies": {
