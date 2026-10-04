@@ -58,12 +58,14 @@ int posix_discord_write(int handle, const void *buffer, int length) { (void)hand
 int posix_discord_read(int handle, void *buffer, int length) { (void)handle; (void)buffer; (void)length; return -1; }
 void posix_discord_close(int handle) { (void)handle; }
 
-/* newlib has no utimensat (posix_files.c sets file times with it): the
-Vita keeps the times it sets itself */
+/* The donor does not implement explicit file timestamps. Report that limit
+   instead of claiming the requested timestamps were stored. Native Vita
+   timestamp support is a remaining integration task. */
 int utimensat(int directory, const char *path, const struct timespec times[2], int flags)
 {
 	(void)directory; (void)path; (void)times; (void)flags;
-	return 0;
+	errno = ENOSYS;
+	return -1;
 }
 
 /* nor clock_nanosleep (dsound_sdl.c paces its mixer with it) */

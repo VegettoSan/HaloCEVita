@@ -45,3 +45,33 @@ No constituyen contratos ni baselines para esta implementación.
 - Se importa la prueba de red del donante. Su primera ejecución local no pudo
   compilar porque no había cabeceras VitaSDK instaladas; no se registra PASS.
 - Se prepara una toolchain nueva; no se reutilizan binarios del port descartado.
+
+## R004 — Compilación ARM de la base limpia y hooks de caché (2026-10-04 UTC)
+
+- Adaptado generador del donante al port.json actual: 466 unidades engine,
+  6 plataforma, 6 host y 2 sondas ABI. Los 480 objetos compilan.
+- Toolchain obtenida directamente del snapshot oficial y digest comprobado.
+- Fallos corregidos: macros limits de newlib contra enum engine; guard wint_t;
+  terminal va_list x86; cambio de firma preferred_port en UPnP; dependencia
+  oficial vitaShaRK de vitaGL.h. No se cambiaron geometría ni datos de widgets.
+- Se conserva -fmax-type-align=1 como el donante. Interlocked emite advertencias
+  de alineación que requieren validación de consumidores reales (R-KI003).
+- No se afirma LINKS/BOOTS/RENDERS: el host completo y renderer no están ligados.
+
+## R005 — Pruebas de datos reales y contratos (2026-10-04 UTC)
+
+- Walker del donante ejecutado como i386 bajo QEMU 8.2.2 sobre copias
+  descomprimidas de los dos mapas adjuntos. Resultados y límites en STATUS.
+- ui.map: 983 tags, 485 widgets, 195 bitmaps, 862 textos; 6448 relocaciones.
+- bloodgulch.map: 1806 tags, 30 widgets, 368 bitmaps, 181 textos; 17319 relocaciones.
+- Ambos BSP cargan/recargan con resultados idénticos; solo cambian words que
+  cumplen el desplazamiento de una dirección en la ventana Xbox.
+- La prueba SceNet del donante pasó 51/51 comprobaciones de errores, TCP/UDP,
+  lobby, actualizaciones y sockets conectados bajo su mock. No prueba Wi-Fi real.
+- Auditoría GL oficial: 89/104 exports; 15 ausentes. Reporta BLOCKED y no
+  genera stubs. Tampoco valida las semánticas de los 89 presentes.
+- Nuevo workflow prepara solo estas comprobaciones; no publica un VPK.
+- Dos intentos de push fueron rechazados por revisión automática: publicar
+  código en main del repo público sin autorización considerada confiable.
+  Se verificó el destino exacto y permisos, pero persistió el rechazo. No
+  se elude el bloqueo. Los commits nuevos permanecen locales.

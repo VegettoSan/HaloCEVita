@@ -6,7 +6,8 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-CODE_SUFFIXES = {'.c', '.h', '.cc', '.cpp', '.cxx', '.S', '.s', '.asm', '.py'}
+CODE_SUFFIXES = {'.c', '.h', '.cc', '.cpp', '.cxx', '.S', '.s', '.asm', '.py',
+                 '.inl', '.glsl', '.vert', '.frag', '.cg'}
 
 
 def digest(path):
@@ -26,6 +27,10 @@ def verify(reference=None, vita_reference=None):
         assert digest(ROOT / relative) == item['sha256'], 'Imported file changed without updating provenance: ' + relative
         checkout = {'decomp': reference, 'vita': vita_reference}.get(item['origin'])
         if checkout:
+            import subprocess
+            actual_commit = subprocess.check_output(
+                ['git', '-C', str(checkout), 'rev-parse', 'HEAD'], text=True).strip()
+            assert actual_commit == item['source_commit'], 'Reference checkout is not pinned: ' + relative
             expected = item.get('source_sha256', item['sha256'])
             assert digest(checkout / item['source_path']) == expected, 'Original source differs: ' + relative
     for relative, item in project.items():

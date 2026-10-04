@@ -10,6 +10,14 @@
     "vita": {
       "repository": "https://github.com/BirchWoodGod/halo-ce-vita",
       "commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2"
+    },
+    "vitagl": {
+      "repository": "https://github.com/Rinnegatamante/vitaGL",
+      "commit": "1ae86f65718675b797d3cd8ffc021ad2527096cb"
+    },
+    "vitashark": {
+      "repository": "https://github.com/Rinnegatamante/vitaShaRK",
+      "commit": "df24065e65098b2d1ac533760109ad4367573f28"
     }
   },
   "excluded_upstream": [
@@ -14168,7 +14176,7 @@
       "origin": "vita",
       "source_path": "port/vita/tests/run_vita_net_test.sh",
       "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
-      "sha256": "04560364847256d3a92785ac3e5e501acb2fdd308b629baabe52dcdee95a14c8",
+      "sha256": "8e6b6792c8109a19da0c2cbe4f041b105739063a59d19be74677fbb3579779cd",
       "git_blob": "6f8612b153b50a21e897ee1694fe60b5fbc9c5e3",
       "mode": "100755",
       "adaptation": "Keep donor runtime socket checks; use mktemp and trap for reliable isolated execution",
@@ -14212,10 +14220,10 @@
       "source_path": "port/vita/host/vita_stubs.c",
       "source_commit": "309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2",
       "source_blob": "d28284a31acf8be1631b180d6c239757700423b7",
-      "sha256": "5e032b6e32a6c4f18b44add5b3705014a8e3f45355483dcdc66d5cb72307ab7c",
+      "sha256": "d96fe38a43829321d55361b38507839584e913369a93e5e2674d757ff7bc4b38",
       "mode": "100644",
       "source_sha256": "0b3ce4ff2eafc474ccc1452259b410224ccebb17da182bdc18868ca6c9f59a02",
-      "adaptation": "Adapt donor unsupported UPnP failure API to original current preferred_port parameter"
+      "adaptation": "Adapt donor unsupported UPnP failure API to original current preferred_port parameter; report ENOSYS for unimplemented explicit timestamp writes instead of false success"
     },
     "port/vita/include/vita_compat.h": {
       "origin": "vita",
@@ -14270,7 +14278,7 @@
   },
   "project_files": {
     "tools/verify_origins.py": {
-      "sha256": "8ae393dd4ed3690f125e2db987225dee2d34322e6551fb7f8bd0a86f9d287d84",
+      "sha256": "e9f9b9c905cb0503668b0f771aa2104da538b9b26b49f9652b05be58d52c9c12",
       "reason": "Extend clean-source validation to independently imported Vita donor files"
     },
     "port/vita/host/vita_gl_host.c": {
@@ -14292,6 +14300,10 @@
     "tools/vitagl_contract.py": {
       "sha256": "ad5b9177d5aa4659ed72de3b08fbeba5155be6082b3a625356b65a1b5dd73f1a",
       "reason": "New audit of original required GL entry points versus pinned official lookup table; never generates fake mappings"
+    },
+    "port/vita/tests/tag_relocation_map.c": {
+      "sha256": "38a3e66de0255208c8846480216823cafc5361547d43f019020d526d47846d99",
+      "reason": "New 32-bit runtime check of the real donor walker on user map data: identities, UTF-16 bytes, widget bounds and pointer-only mutations; no fake menu or renderer"
     }
   },
   "dependencies": {
@@ -14306,6 +14318,12 @@
     "vita_headers": {
       "repository": "https://github.com/vitasdk/vita-headers",
       "commit": "e66ebe90b73d1fa4cce005a5b2072cec27322544"
+    }
+  },
+  "build_dependencies": {
+    "vitasdk": {
+      "url": "https://github.com/vitasdk/autobuilds/releases/download/sdk-snapshot-20260926.790.1/vitasdk-x86_64-linux-gnu-2026-09-26_08-31-53.tar.bz2",
+      "sha256": "87b111ff350c1f36bde1c2923e57467c1f86b044d54bc616631260486f2a512c"
     }
   }
 }

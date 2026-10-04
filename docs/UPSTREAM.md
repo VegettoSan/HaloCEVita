@@ -38,3 +38,23 @@ sus hashes con el checkout del donante y conserva los del engine original.
 Código nuevo: frontera vita_gl_host que usa exclusivamente las APIs oficiales
 vglInitExtended, vglGetProcAddress y vglSwapBuffers; asserts independientes de
 ABI para Clang/engine y GCC/SDK. No dibuja widgets ni altera los tags.
+
+## Adaptaciones R004/R005
+
+Memoria/physical address/log/timers y prefix de ARM vienen directamente del
+donante. De su cache se trasladan solamente los hooks HALO_RELOCATABLE_TAG_CACHE
+y las asignaciones sin dirección fija al decomp actual; se preserva su main
+loop y capacidad actuales. La terminal usa va_list como en el donante.
+Se aplicó su guard _WINT_T y se quitaron los macros limits de newlib que
+colisionaban con enum originales. tools/vita_build.py deriva la frontera ABI
+del generador del donante y usa la estructura nueva de port.json.
+
+Los módulos main/settings/overlay/compat/pad/bink/memory-watch del donante se
+importan como fuente; main/settings aún no entran en esta etapa de compilación.
+Su cabecera vita_gxm.h documenta la dependencia pendiente del panel, pero no
+se compila el renderer d3d8_gxm ni se incluye un ejecutable del donante.
+
+Los archivos nuevos de auditoría y prueba real de mapas se registran como
+código propio nuevo. SDK y headers oficiales se obtuvieron de nuevo; URLs,
+SHAs y digest figuran en el manifiesto. Solo tres archivos de source/ difieren
+del original: cache_files.c, physical_memory_map.c y terminal.c.

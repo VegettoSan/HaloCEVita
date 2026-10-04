@@ -1,20 +1,37 @@
 # Estado del reinicio
 
-Actualizado: 2026-10-03.
+Actualizado: 2026-10-04 UTC.
 
-**CLEAN DECOMP IMPORTED / VITA INTEGRATION IN PROGRESS.**
+**COMPILES: engine ARM32 + módulos seleccionados. LINKS / BOOTS / RENDERS pendientes.**
 
-La directiva de docs/RESTART.md sustituye todos los baselines anteriores.
-1490 archivos proceden directamente del decomp original933aac6; los967 archivos
-del engine son copias sin cambios. El árbol anterior y su pipeline se retiraron.
-Procedencia/hash/ausencia de código no registrado se comprueban mediante
-`python3 tools/verify_origins.py --reference /ruta/al/checkout-original`.
+Base obtenida directamente del decomp original `933aac61754eb5de2c8496dbe9b8278f033e4c1f`
+y del donante Vita `309b9deeb8f4e5b5155ca1e187c81e4ae207d1f2`.
+El engine conserva 964 de sus 967 archivos idénticos al original; solo se
+adaptaron cache_files.c, physical_memory_map.c y la declaración va_list de la
+terminal con los contratos del donante. No se usa código del port descartado.
 
-La plataforma Vita se está integrando desde el donante309b9de. Se preservará
-su frontera Clang(engine)/GCC(host); el backend final debe ser vitaGL.
-El generador del donante utiliza la estructura antigua de port.json y necesita
-adaptarse al decomp actual. Aún no hay build ni evidencia BOOTS/RENDERS del
-reinicio. El workflow nuevo comprueba procedencia; todavía no publica VPK.
+La etapa local compiló 480 objetos: 466 unidades C originales del engine,
+6 módulos de plataforma, 6 módulos host y 2 sondas ABI. La prueba del donante
+con SceNet simulado pasó 51/51 comprobaciones en un ejecutable i386 bajo QEMU.
 
-Build289 y anteriores siguen descartadas. El reporte de cuadros blancos y UI/
-texto incorrectos es evidencia del trabajo archivado, no de esta base nueva.
+Prueba de reubicación del walker real del donante, usando copias en memoria:
+
+| Mapa | Tags/nombres | Widgets, primeros campos intactos | Bitmaps | Textos UTF-16 intactos | Palabras reubicadas | BSP carga/recarga |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| ui.map | 983 | 485 | 195 | 862 | 6448 | 1 |
+| bloodgulch.map | 1806 | 30 | 368 | 181 | 17319 | 1 |
+
+Estas pruebas no ejecutan el main loop ni prueban la pantalla. Los mapas
+originales se abrieron solo para lectura; no están en el repo ni en un VPK.
+
+La frontera host vitaGL ya compila contra las cabeceras oficiales. La auditoría
+del renderer original encuentra 89/104 entry points exportados y 15 ausentes
+(ver docs/RENDERER.md). La presencia de exports tampoco prueba sus semánticas.
+El renderer, sdl_platform, files/audio y la integración completa del host aún
+requieren adaptación y enlace real; main/settings importados no participan de
+esta etapa. No existe un VPK del reinicio.
+
+El workflow nuevo añade compilación ARM y pruebas de red; aún no se ha ejecutado
+para los commits locales porque la revisión automática bloqueó el push.
+No publica VPK. Los commits anteriores hasta ef5529b sí estaban en main al
+iniciar esta continuación. Los nuevos checkpoints están en Git local.

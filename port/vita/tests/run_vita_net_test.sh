@@ -21,6 +21,10 @@ cc=${CC:-gcc}
 $cc -m32 -pthread -g -O1 -Wall -Wno-unused-function -D_GNU_SOURCE -I"$out/include" -I"$root/port/linux/src" -I"$root/port/vita/include" \
 	"$here/vita_net_test.c" "$here/mock_scenet.c" -o "$out/vita_net_test"
 status=0
-"$out/vita_net_test" || status=$?
+if [ -n "${VITA_NET_TEST_RUNNER:-}" ]; then
+	"$VITA_NET_TEST_RUNNER" "$out/vita_net_test" || status=$?
+else
+	"$out/vita_net_test" || status=$?
+fi
 rm -rf "$out"
 exit $status

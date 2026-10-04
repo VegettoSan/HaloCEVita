@@ -12,3 +12,33 @@ jobs:
       - uses: actions/checkout@v4
       - name: Verify direct-source imports and absence of discarded modules
         run: python3 tools/verify_origins.py
+  arm-objects:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install host compiler and 32-bit runtime for donor socket checks
+        run: sudo apt-get update && sudo apt-get install -y clang-18 ninja-build gcc-multilib
+      - name: Fetch pinned official SDK and graphics headers
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/haloce-tools"
+          cd "$RUNNER_TEMP/haloce-tools"
+          curl -fL -o vitasdk.tar.bz2 https://github.com/vitasdk/autobuilds/releases/download/sdk-snapshot-20260926.790.1/vitasdk-x86_64-linux-gnu-2026-09-26_08-31-53.tar.bz2
+          echo '87b111ff350c1f36bde1c2923e57467c1f86b044d54bc616631260486f2a512c  vitasdk.tar.bz2' | sha256sum -c -
+          tar -xjf vitasdk.tar.bz2
+          git clone https://github.com/Rinnegatamante/vitaGL.git vitaGL
+          git -C vitaGL checkout 1ae86f65718675b797d3cd8ffc021ad2527096cb
+          git clone https://github.com/Rinnegatamante/vitaShaRK.git vitaShaRK
+          git -C vitaShaRK checkout df24065e65098b2d1ac533760109ad4367573f28
+      - name: Compile original engine, donor modules and both ABI probes
+        run: |
+          python3 -m tools.vita_build --sdk "$RUNNER_TEMP/haloce-tools/vitasdk" --cc clang-18 --vitagl "$RUNNER_TEMP/haloce-tools/vitaGL" --vitashark "$RUNNER_TEMP/haloce-tools/vitaShaRK"
+          ninja -f build/vita/build.ninja vita-objects
+      - name: Run donor socket checks with SceNet mock
+        run: VITASDK="$RUNNER_TEMP/haloce-tools/vitasdk" sh port/vita/tests/run_vita_net_test.sh
+      - name: Record remaining original renderer entry-point blockers
+        run: python3 tools/vitagl_contract.py --vitagl "$RUNNER_TEMP/haloce-tools/vitaGL" --output build/vita/renderer-contract.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: restart-compile-evidence-${{ github.sha }}
+          path: build/vita/renderer-contract.json
